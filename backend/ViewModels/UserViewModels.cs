@@ -49,10 +49,15 @@ public class PersonViewModel : EntityViewModel
 
 public class SignupRequest
 {
-    [Required, StringLength(100, MinimumLength = 1)]
+    [Required(ErrorMessage = "Please enter your name.")]
+    [StringLength(100, MinimumLength = 2, ErrorMessage = "Name must be between 2 and 100 characters.")]
     public string Name { get; set; } = "";
 
-    [Required, EmailAddress, StringLength(255)]
+    // [EmailAddress] alone accepts "a@b", so also require a dot in the domain.
+    [Required(ErrorMessage = "Please enter your email address.")]
+    [StringLength(255, ErrorMessage = "Email must be at most 255 characters.")]
+    [EmailAddress(ErrorMessage = "Please enter a valid email address.")]
+    [RegularExpression(@"^\s*[^@\s]+@[^@\s]+\.[^@\s]+\s*$", ErrorMessage = "Please enter a valid email address.")]
     public string Email { get; set; } = "";
 
     [StringLength(30)]
@@ -61,16 +66,19 @@ public class SignupRequest
     [StringLength(20)]
     public string? Role { get; set; }
 
-    [Required, StringLength(128, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters.")]
+    [Required(ErrorMessage = "Please choose a password.")]
+    [StringLength(128, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters.")]
+    [RegularExpression(@"^(?=.*[A-Za-z])(?=.*\d).+$", ErrorMessage = "Password must contain at least one letter and one number.")]
     public string Password { get; set; } = "";
 }
 
 public class LoginRequest
 {
-    [Required, EmailAddress]
+    [Required(ErrorMessage = "Please enter your email address.")]
+    [EmailAddress(ErrorMessage = "Please enter a valid email address.")]
     public string Email { get; set; } = "";
 
-    [Required]
+    [Required(ErrorMessage = "Please enter your password.")]
     public string Password { get; set; } = "";
 }
 

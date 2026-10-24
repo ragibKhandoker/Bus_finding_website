@@ -1,8 +1,10 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using SmartCommute.Server.Data;
 using SmartCommute.Server.Models;
 using SmartCommute.Server.Services;
@@ -23,32 +25,64 @@ public class AuthController(
     [HttpPost("signup")]
     public async Task<IActionResult> Signup(SignupRequest request)
     {
-        var email = request.Email.Trim().ToLowerInvariant();
-        if (await db.Users.AnyAsync(u => u.Email == email))
+        var name = request.Name.Trim();
+        if (name.Length < 2)
         {
-            return BadRequestError("An account with this email already exists.");
+            return BadRequestError("Name must be between 2 and 100 characters.");
+        }
+        if (request.Password.Trim().Length == 0)
+        {
+            return BadRequestError("Password cannot be only spaces.");
         }
 
-        var role = (request.Role ?? UserRoles.Commuter).Trim().ToLowerInvariant();
+        var role = string.IsNullOrWhiteSpace(request.Role) ? UserRoles.Commuter : request.Role.Trim().ToLowerInvariant();
         if (!UserRoles.SelfAssignable.Contains(role))
         {
             return BadRequestError("Role must be commuter or driver.");
         }
+        if (UserGenders.Normalize(request.Gender) is not { } gender)
+        {
+            return BadRequestError($"Gender must be one of: {string.Join(", ", UserGenders.All)}.");
+        }
+
+        var email = request.Email.Trim().ToLowerInvariant();
+        if (await db.Users.AnyAsync(u => u.Email == email))
+        {
+            return Error(StatusCodes.Status409Conflict, "An account with this email already exists.");
+        }
 
         var user = new User
         {
-            Name = request.Name.Trim(),
+            Name = name,
             Email = email,
-            Gender = string.IsNullOrWhiteSpace(request.Gender) ? "Prefer not to say" : request.Gender.Trim(),
+            Gender = gender,
             Role = role,
             FriendCode = await friendCodes.GenerateUniqueAsync(),
         };
         user.PasswordHash = Hasher.HashPassword(user, request.Password);
         db.Users.Add(user);
         db.Wallets.Add(new Wallet { User = user });
-        await db.SaveChangesAsync();
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg
+                                           && pg.ConstraintName?.Contains("email") == true)
+        {
+            // Another sign-up with the same email won the race between the check above and the insert.
+            return Error(StatusCodes.Status409Conflict, "An account with this email already exists.");
+        }
 
-        return Ok(new { success = true, message = "Account created successfully.", user = UserViewModel.From(user) });
+        // Sign the new user straight in so the client does not need a second login call.
+        var session = await StartSessionAsync(user);
+        return Ok(new
+        {
+            success = true,
+            message = "Account created successfully.",
+            token = tokens.CreateToken(user, session),
+            expiresAt = session.ExpiresAt,
+            user = UserViewModel.From(user),
+        });
     }
 
     [EnableRateLimiting("strict")]
@@ -70,10 +104,30 @@ public class AuthController(
         if (result == PasswordVerificationResult.SuccessRehashNeeded)
         {
             user.PasswordHash = Hasher.HashPassword(user, request.Password);
-            await db.SaveChangesAsync();
         }
 
-        return Ok(new { success = true, token = tokens.CreateToken(user), user = UserViewModel.From(user) });
+        var session = await StartSessionAsync(user);
+        return Ok(new
+        {
+            success = true,
+            token = tokens.CreateToken(user, session),
+            expiresAt = session.ExpiresAt,
+            user = UserViewModel.From(user),
+        });
+    }
+
+    // Ends the session behind the current token; the token is rejected from then on.
+    [Authorize]
+    [HttpPost("logout")]
+    public async Task<IActionResult> Logout()
+    {
+        if (CurrentSessionId is { } sessionId)
+        {
+            await db.UserSessions
+                .Where(s => s.Id == sessionId && s.RevokedAt == null)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, DateTime.UtcNow));
+        }
+        return Ok(new { success = true, message = "Signed out." });
     }
 
     [Authorize]
@@ -85,7 +139,36 @@ public class AuthController(
         {
             return Error(StatusCodes.Status401Unauthorized, "Account no longer exists.");
         }
-        return Ok(new { success = true, valid = true, user = UserViewModel.From(user) });
+        var expiresAt = await db.UserSessions
+            .Where(s => s.Id == CurrentSessionId)
+            .Select(s => (DateTime?)s.ExpiresAt)
+            .FirstOrDefaultAsync();
+        return Ok(new { success = true, valid = true, expiresAt, user = UserViewModel.From(user) });
+    }
+
+    private Guid? CurrentSessionId => Guid.TryParse(User.FindFirstValue("jti"), out var id) ? id : null;
+
+    // Records a new sign-in and clears out this user's sessions that can no longer be used.
+    private async Task<UserSession> StartSessionAsync(User user)
+    {
+        var now = DateTime.UtcNow;
+        await db.UserSessions
+            .Where(s => s.UserId == user.Id && (s.ExpiresAt <= now || s.RevokedAt != null))
+            .ExecuteDeleteAsync();
+
+        var userAgent = Request.Headers.UserAgent.ToString();
+        var session = new UserSession
+        {
+            UserId = user.Id,
+            CreatedAt = now,
+            ExpiresAt = tokens.NewExpiry(),
+            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
+            UserAgent = userAgent.Length > 300 ? userAgent[..300] : userAgent,
+        };
+        db.UserSessions.Add(session);
+        user.LastLoginAt = now;
+        await db.SaveChangesAsync();
+        return session;
     }
 
     [Authorize]
@@ -113,7 +196,11 @@ public class AuthController(
         }
         if (!string.IsNullOrWhiteSpace(request.Gender))
         {
-            user.Gender = request.Gender.Trim();
+            if (UserGenders.Normalize(request.Gender) is not { } gender)
+            {
+                return BadRequestError($"Gender must be one of: {string.Join(", ", UserGenders.All)}.");
+            }
+            user.Gender = gender;
         }
         user.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync();

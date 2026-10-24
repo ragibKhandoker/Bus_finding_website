@@ -10,6 +10,19 @@ public static class UserRoles
 
     // Roles a person may pick for themselves at sign-up. Admins are seeded from configuration.
     public static readonly string[] SelfAssignable = [Commuter, Driver];
+    public static readonly string[] All = [Commuter, Driver, Admin];
+}
+
+public static class UserGenders
+{
+    public const string Unspecified = "Prefer not to say";
+
+    public static readonly string[] All = [Unspecified, "Male", "Female", "Other"];
+
+    // Matches case-insensitively and returns the stored spelling, or null if the value is not allowed.
+    public static string? Normalize(string? value) => string.IsNullOrWhiteSpace(value)
+        ? Unspecified
+        : All.FirstOrDefault(g => string.Equals(g, value.Trim(), StringComparison.OrdinalIgnoreCase));
 }
 
 public class User
@@ -26,7 +39,7 @@ public class User
     public string PasswordHash { get; set; } = "";
 
     [MaxLength(30)]
-    public string Gender { get; set; } = "Prefer not to say";
+    public string Gender { get; set; } = UserGenders.Unspecified;
 
     [MaxLength(20)]
     public string Role { get; set; } = UserRoles.Commuter;
@@ -40,6 +53,7 @@ public class User
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? LastLoginAt { get; set; }
 
     public Wallet? Wallet { get; set; }
 }

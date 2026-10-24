@@ -11,12 +11,15 @@ public class JwtTokenService(IOptions<JwtOptions> options)
 {
     private readonly JwtOptions _options = options.Value;
 
-    public string CreateToken(User user)
+    public DateTime NewExpiry() => DateTime.UtcNow.AddDays(_options.ExpiryDays);
+
+    public string CreateToken(User user, UserSession session)
     {
         // The Flutter wallet screen decodes the token and reads the "id" claim directly.
         var claims = new[]
         {
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+            new Claim(JwtRegisteredClaimNames.Jti, session.Id.ToString()),
             new Claim("id", user.Id.ToString()),
             new Claim("email", user.Email),
             new Claim("name", user.Name),
@@ -28,7 +31,7 @@ public class JwtTokenService(IOptions<JwtOptions> options)
             issuer: _options.Issuer,
             audience: _options.Audience,
             claims: claims,
-            expires: DateTime.UtcNow.AddDays(_options.ExpiryDays),
+            expires: session.ExpiresAt,
             signingCredentials: new SigningCredentials(key, SecurityAlgorithms.HmacSha256));
 
         return new JwtSecurityTokenHandler().WriteToken(token);

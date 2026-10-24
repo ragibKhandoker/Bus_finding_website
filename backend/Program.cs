@@ -73,11 +73,30 @@ builder.Services
         // Keep 401/403 bodies in the same JSON shape as every other error.
         options.Events = new JwtBearerEvents
         {
+            // A valid signature is not enough: the token's session must still exist and not be signed out.
+            OnTokenValidated = async context =>
+            {
+                if (!Guid.TryParse(context.Principal?.FindFirst("jti")?.Value, out var sessionId))
+                {
+                    context.Fail("Token has no session.");
+                    return;
+                }
+                var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                var now = DateTime.UtcNow;
+                var active = await db.UserSessions.AnyAsync(s => s.Id == sessionId && s.RevokedAt == null && s.ExpiresAt > now);
+                if (!active)
+                {
+                    context.Fail("Session has ended.");
+                }
+            },
             OnChallenge = async context =>
             {
                 context.HandleResponse();
                 context.Response.StatusCode = StatusCodes.Status401Unauthorized;
-                await context.Response.WriteAsJsonAsync(new ErrorResponse("Please sign in to continue."));
+                var message = context.AuthenticateFailure is null
+                    ? "Please sign in to continue."
+                    : "Your session has expired. Please sign in again.";
+                await context.Response.WriteAsJsonAsync(new ErrorResponse(message));
             },
             OnForbidden = context =>
             {

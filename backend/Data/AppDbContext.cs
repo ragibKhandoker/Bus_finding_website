@@ -6,6 +6,7 @@ namespace SmartCommute.Server.Data;
 public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<User> Users => Set<User>();
+    public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<FriendRequest> FriendRequests => Set<FriendRequest>();
     public DbSet<Friendship> Friendships => Set<Friendship>();
     public DbSet<Bus> Buses => Set<Bus>();
@@ -41,6 +42,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.HasIndex(x => x.Email).IsUnique();
             e.HasIndex(x => x.FriendCode).IsUnique();
+            e.ToTable(t => t.HasCheckConstraint("ck_users_role", "role IN ('commuter', 'driver', 'admin')"));
+        });
+
+        b.Entity<UserSession>(e =>
+        {
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.UserId, x.ExpiresAt });
         });
 
         b.Entity<FriendRequest>(e =>

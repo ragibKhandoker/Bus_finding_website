@@ -2,20 +2,25 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   ArrowDownUp, ArrowLeft, ArrowRight, ArrowUpRight, BusFront, Check, ChevronDown,
-  CircleHelp, Clock3, Compass, CreditCard, Heart, History, Home, LogOut, MapPin,
-  Menu, MessageCircle, Plus, Search, ShieldCheck, Sparkles, Users, Wallet, X,
+  CircleAlert, CircleHelp, Clock3, Compass, CreditCard, Eye, EyeOff, Heart, History, Home, Lock, LogOut,
+  Mail, MapPin, Menu, MessageCircle, Plus, Search, ShieldCheck, Sparkles, UserRound, Users, Wallet, X,
 } from 'lucide-react'
 import './style.css'
 import { BusReviews, ChatPage, FriendsPage, GpayPage, MapPage, NotificationsPage, OffersPage, VerificationPage } from './MorePages'
-import { API_BASE, UNAUTHORIZED_EVENT, apiRequest as request } from './api'
+import { API_BASE, UNAUTHORIZED_EVENT, apiRequest as request, isTokenExpired, tokenExpiry } from './api'
 
 const money = (value) => `৳${Number(value || 0).toLocaleString('en-BD')}`
 const errorText = (error) => error?.message || 'Something went wrong. Please try again.'
 const getStops = (bus) => Array.isArray(bus.stops) ? bus.stops.map((stop) => typeof stop === 'string' ? stop : stop.name).filter(Boolean) : []
 
 function App() {
-  const [user, setUser] = useState(() => { try { return JSON.parse(localStorage.getItem('sc_user') || 'null') } catch { return null } })
-  const [token, setToken] = useState(() => localStorage.getItem('sc_token'))
+  // A saved token that has already expired is dropped before the first render.
+  const [token, setToken] = useState(() => {
+    const saved = localStorage.getItem('sc_token')
+    if (saved && isTokenExpired(saved)) { localStorage.removeItem('sc_token'); localStorage.removeItem('sc_user'); return null }
+    return saved
+  })
+  const [user, setUser] = useState(() => { try { return token ? JSON.parse(localStorage.getItem('sc_user') || 'null') : null } catch { return null } })
   const [page, setPage] = useState('Home')
   const [mobileMenu, setMobileMenu] = useState(false)
   const [moreMenu, setMoreMenu] = useState(false)
@@ -26,7 +31,12 @@ function App() {
     setToast(message)
     window.setTimeout(() => setToast(''), 3600)
   }, [])
-  const signOut = useCallback((message = 'You have been signed out.') => {
+  // revoke: also end the session on the server. Skipped when the server already rejected the token.
+  const signOut = useCallback((message = 'You have been signed out.', { revoke = true } = {}) => {
+    const current = localStorage.getItem('sc_token')
+    if (revoke && current) {
+      request('/auth/logout', { token: current, method: 'POST', ignoreUnauthorized: true }).catch(() => {})
+    }
     localStorage.removeItem('sc_token')
     localStorage.removeItem('sc_user')
     setToken(null)
@@ -36,10 +46,29 @@ function App() {
   }, [notify])
   // Any request that comes back 401 with our token means the sign-in expired or the account is gone.
   useEffect(() => {
-    const expired = () => signOut('Your session has expired. Please sign in again.')
+    const expired = () => signOut('Your session has expired. Please sign in again.', { revoke: false })
     window.addEventListener(UNAUTHORIZED_EVENT, expired)
     return () => window.removeEventListener(UNAUTHORIZED_EVENT, expired)
   }, [signOut])
+  // Sign out by itself the moment the token expires, even if no request is made.
+  useEffect(() => {
+    const expiry = token && tokenExpiry(token)
+    if (!expiry) return
+    // setTimeout overflows past ~24.8 days, so cap the wait; the effect re-arms when the token changes.
+    const timer = window.setTimeout(() => signOut('Your session has expired. Please sign in again.', { revoke: false }), Math.min(Math.max(expiry - Date.now(), 0), 2 ** 31 - 1))
+    return () => window.clearTimeout(timer)
+  }, [token, signOut])
+  // Keep other open tabs in step when this tab signs in or out.
+  useEffect(() => {
+    const sync = (event) => {
+      if (event.key !== 'sc_token') return
+      if (!event.newValue) { setToken(null); setUser(null); setPage('Home'); return }
+      setToken(event.newValue)
+      try { setUser(JSON.parse(localStorage.getItem('sc_user') || 'null')) } catch { setUser(null) }
+    }
+    window.addEventListener('storage', sync)
+    return () => window.removeEventListener('storage', sync)
+  }, [])
   // Check a saved sign-in once on load and refresh the stored profile from the server.
   useEffect(() => {
     if (!token) return
@@ -109,8 +138,8 @@ function App() {
       </footer>
       {toast && <div className="toast"><Check size={16} /> {toast}</div>}
       {authMode && <AuthModal mode={authMode} onMode={setAuthMode} onClose={() => setAuthMode('')} onSuccess={(nextUser, nextToken) => {
-        localStorage.setItem('sc_token', nextToken)
         localStorage.setItem('sc_user', JSON.stringify(nextUser))
+        localStorage.setItem('sc_token', nextToken)
         setToken(nextToken)
         setUser(nextUser)
         setAuthMode('')
@@ -405,24 +434,125 @@ function SignInPrompt({ openAuth, message }) {
   return <div className="signin-prompt panel"><span className="service-icon mint"><ShieldCheck size={20} /></span><div><b>Good to have you here.</b><p>{message}</p></div><button className="button button-dark button-small" onClick={openAuth}>Sign in <ArrowRight size={14} /></button></div>
 }
 
+// Same rules the server applies to /auth/signup, checked first so the user gets instant feedback.
+function signupProblem({ name, email, password, confirmPassword, role }) {
+  if (name.length < 2 || name.length > 100) return 'Name must be between 2 and 100 characters.'
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return 'Please enter a valid email address.'
+  if (password.length < 6) return 'Password must be at least 6 characters.'
+  if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) return 'Password must contain at least one letter and one number.'
+  if (password !== confirmPassword) return 'Passwords do not match.'
+  if (!['commuter', 'driver'].includes(role)) return 'Role must be commuter or driver.'
+  return ''
+}
+
+// Label, icon-led input box and an optional hint line, shared by every field in the sign-in / sign-up form.
+function AuthField({ label, icon: Icon, hint, tone, children, action }) {
+  return <label className={`auth-field${tone ? ` is-${tone}` : ''}`}>
+    <span className="auth-label">{label}</span>
+    <span className="auth-input">{Icon && <Icon size={17} aria-hidden="true" />}{children}{action}</span>
+    {hint && <span className="auth-hint">{hint}</span>}
+  </label>
+}
+
+// text is shown as a tooltip on the role toggle.
+const ROLE_OPTIONS = [
+  { value: 'commuter', title: 'Commuter', text: 'I travel by bus around the city' },
+  { value: 'driver', title: 'Driver', text: 'I drive a bus or offer rides' },
+]
+
 function AuthModal({ mode, onMode, onClose, onSuccess }) {
-  const [form, setForm] = useState({ name: '', email: '', password: '', gender: 'Prefer not to say', role: 'commuter' })
+  const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '', gender: 'Prefer not to say', role: 'commuter' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
   const signup = mode === 'signup'
+  const set = (key) => (event) => setForm({ ...form, [key]: event.target.value })
+  const rules = [
+    { ok: form.password.length >= 6, text: 'At least 6 characters' },
+    { ok: /[A-Za-z]/.test(form.password), text: 'At least one letter' },
+    { ok: /\d/.test(form.password), text: 'At least one number' },
+  ]
+  const confirmTone = !form.confirmPassword ? '' : form.confirmPassword === form.password ? 'ok' : 'bad'
   const submit = async (event) => {
     event.preventDefault()
+    const name = form.name.trim()
+    const email = form.email.trim()
+    const problem = signup ? signupProblem({ ...form, name, email }) : (!email ? 'Please enter your email address.' : !form.password ? 'Please enter your password.' : '')
+    if (problem) { setError(problem); return }
     setLoading(true); setError('')
     try {
-      if (signup) {
-        await request('/auth/signup', { method: 'POST', body: JSON.stringify({ name: form.name, email: form.email, gender: form.gender, role: form.role, password: form.password }) })
-      }
-      const data = await request('/auth/login', { method: 'POST', body: JSON.stringify({ email: form.email, password: form.password }) })
+      // Sign-up signs the new account straight in; log in only if an older server sent no token.
+      let data = signup ? await request('/auth/signup', { method: 'POST', body: JSON.stringify({ name, email, gender: form.gender, role: form.role, password: form.password }) }) : null
+      if (!data?.token) data = await request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password: form.password }) })
       onSuccess(data.user, data.token)
     } catch (e) { setError(errorText(e)) } finally { setLoading(false) }
   }
-  return <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}><section className="auth-modal panel"><button className="modal-close icon-button" onClick={onClose} aria-label="Close"><X size={19} /></button><span className="auth-mark"><BusFront size={20} /></span><div className="eyebrow">{signup ? 'YOUR NEXT JOURNEY STARTS HERE' : 'WELCOME BACK'}</div><h2>{signup ? 'Join the commute.' : 'Good to see you.'}</h2><p>{signup ? 'Create an account and make the city feel a little smaller.' : 'Sign in to pick up right where you left off.'}</p>
-    <form onSubmit={submit}>{signup && <><label className="field"><small>YOUR NAME</small><input required autoComplete="name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="How should we call you?" /></label><div className="form-fields"><label className="field"><small>GENDER</small><select value={form.gender} onChange={(e) => setForm({ ...form, gender: e.target.value })}><option>Prefer not to say</option><option>Male</option><option>Female</option><option>Other</option></select></label><label className="field"><small>I AM A</small><select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}><option value="commuter">Commuter</option><option value="driver">Driver</option></select></label></div></>}<label className="field"><small>EMAIL ADDRESS</small><input required type="email" autoComplete="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} placeholder="you@example.com" /></label><label className="field"><small>PASSWORD</small><input required type="password" minLength="6" autoComplete={signup ? 'new-password' : 'current-password'} value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} placeholder="At least 6 characters" /></label>{error && <div className="inline-error">{error}</div>}<button className="button button-green auth-submit" disabled={loading}>{loading ? 'One moment…' : signup ? 'Create account' : 'Sign in'} <ArrowRight size={15} /></button></form><div className="auth-switch">{signup ? 'Already on board?' : 'New to SmartCommute?'} <button onClick={() => { setError(''); onMode(signup ? 'login' : 'signup') }}>{signup ? 'Sign in' : 'Create an account'}</button></div><small className="auth-api">Connected to {API_BASE}</small></section></div>
+  const switchMode = () => { setError(''); setShowPassword(false); onMode(signup ? 'login' : 'signup') }
+  // While the form is open the page behind it does not scroll, and Escape closes it.
+  useEffect(() => {
+    const previous = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (event) => { if (event.key === 'Escape') onClose() }
+    window.addEventListener('keydown', onKey)
+    return () => { document.body.style.overflow = previous; window.removeEventListener('keydown', onKey) }
+  }, [onClose])
+  const eye = <button type="button" className="auth-eye" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? 'Hide password' : 'Show password'}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button>
+
+  return <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
+    <section className="auth-modal panel" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+      <button className="modal-close icon-button" onClick={onClose} aria-label="Close"><X size={19} /></button>
+      <header className="auth-header">
+        <span className="auth-mark"><BusFront size={22} /></span>
+        <div>
+          <h2 id="auth-title">{signup ? 'Create your account' : 'Welcome back'}</h2>
+          <p>{signup ? 'All fields are required.' : 'Sign in to continue to SmartCommute.'}</p>
+        </div>
+      </header>
+
+      <form noValidate onSubmit={submit} className="auth-form">
+        {signup && <>
+          <AuthField label="Full name" icon={UserRound}>
+            <input autoComplete="name" value={form.name} onChange={set('name')} placeholder="e.g. Rahim Ahmed" />
+          </AuthField>
+          <div className="auth-row">
+            <fieldset className="auth-roles">
+              <legend className="auth-label">I am a</legend>
+              <div>{ROLE_OPTIONS.map((option) => <label key={option.value} className={`auth-role${form.role === option.value ? ' selected' : ''}`} title={option.text}>
+                <input type="radio" name="role" value={option.value} checked={form.role === option.value} onChange={set('role')} />
+                {option.value === 'driver' ? <BusFront size={16} /> : <Users size={16} />}<b>{option.title}</b>
+              </label>)}</div>
+            </fieldset>
+            <AuthField label="Gender">
+              <select value={form.gender} onChange={set('gender')}><option>Prefer not to say</option><option>Male</option><option>Female</option><option>Other</option></select>
+              <ChevronDown size={16} className="auth-select-arrow" aria-hidden="true" />
+            </AuthField>
+          </div>
+        </>}
+
+        <AuthField label="Email address" icon={Mail}>
+          <input type="email" autoComplete="email" value={form.email} onChange={set('email')} placeholder="you@example.com" />
+        </AuthField>
+
+        <AuthField label="Password" icon={Lock} action={eye}>
+          <input type={showPassword ? 'text' : 'password'} autoComplete={signup ? 'new-password' : 'current-password'} value={form.password} onChange={set('password')} placeholder={signup ? 'Create a password' : 'Enter your password'} />
+        </AuthField>
+        {signup && <ul className="auth-rules" aria-label="Password requirements">
+          {rules.map((rule) => <li key={rule.text} className={rule.ok ? 'ok' : ''}>{rule.ok ? <Check size={14} /> : <span className="auth-rule-dot" />}{rule.text}</li>)}
+        </ul>}
+
+        {signup && <AuthField label="Confirm password" icon={Lock} tone={confirmTone}
+          hint={confirmTone === 'ok' ? <><Check size={14} /> Passwords match</> : confirmTone === 'bad' ? <><X size={14} /> Passwords do not match</> : ''}>
+          <input type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={form.confirmPassword} onChange={set('confirmPassword')} placeholder="Type the same password again" aria-invalid={confirmTone === 'bad'} />
+        </AuthField>}
+
+        {error && <div className="auth-error" role="alert"><CircleAlert size={17} /><span>{error}</span></div>}
+        <button className="button button-green auth-submit" disabled={loading}>{loading ? 'Please wait…' : signup ? 'Create account' : 'Sign in'} {!loading && <ArrowRight size={16} />}</button>
+      </form>
+
+      <div className="auth-switch">{signup ? 'Already have an account?' : "Don't have an account?"} <button onClick={switchMode}>{signup ? 'Sign in' : 'Create one'}</button></div>
+      <small className="auth-api">Connected to {API_BASE}</small>
+    </section>
+  </div>
 }
 
 createRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>)
