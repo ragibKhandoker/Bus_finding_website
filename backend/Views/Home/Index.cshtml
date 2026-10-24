@@ -1,0 +1,53 @@
+@model StatusViewModel
+@{
+    Layout = null;
+}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SmartCommute API</title>
+    <style>
+        :root { --bg: #f6f4ee; --card: #fff; --ink: #1d2b24; --muted: #63736a; --ok: #19865e; --bad: #c2412d; --line: #e4e0d5; }
+        @@media (prefers-color-scheme: dark) {
+            :root { --bg: #131a16; --card: #1c2520; --ink: #e8efe9; --muted: #9db0a5; --line: #2c3832; }
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+        main { max-width: 760px; margin: 0 auto; padding: 40px 16px; }
+        h1 { margin: 0 0 4px; font-size: 28px; }
+        p { color: var(--muted); margin: 0 0 24px; }
+        .status { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: var(--card); border: 1px solid var(--line); font-weight: 600; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin: 24px 0; }
+        .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+        .card b { display: block; font-size: 26px; }
+        .card small { color: var(--muted); }
+        code { background: var(--card); border: 1px solid var(--line); border-radius: 6px; padding: 2px 6px; }
+    </style>
+</head>
+<body>
+<main>
+    <h1>SmartCommute API</h1>
+    <p>ASP.NET Core MVC backend for the SmartCommute Dhaka web and mobile apps · @Model.Environment</p>
+
+    <span class="status">
+        <span class="dot" style="background:@(Model.DatabaseConnected ? "var(--ok)" : "var(--bad)")"></span>
+        @(Model.DatabaseConnected ? "Neon database connected" : "Database not reachable — check ConnectionStrings:DefaultConnection")
+    </span>
+
+    @if (Model.DatabaseConnected)
+    {
+        <div class="grid">
+            <div class="card"><b>@Model.Users</b><small>Users</small></div>
+            <div class="card"><b>@Model.Buses</b><small>Bus routes</small></div>
+            <div class="card"><b>@Model.Stops</b><small>Stops</small></div>
+            <div class="card"><b>@Model.ActiveRides</b><small>Open ride shares</small></div>
+        </div>
+    }
+
+    <p>Health check: <code>GET /health</code> · Sign in: <code>POST /auth/login</code></p>
+</main>
+</body>
+</html>
