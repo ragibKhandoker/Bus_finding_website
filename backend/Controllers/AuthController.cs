@@ -148,6 +148,9 @@ public class AuthController(
 
     private Guid? CurrentSessionId => Guid.TryParse(User.FindFirstValue("jti"), out var id) ? id : null;
 
+    // Blank optional profile text is stored as null rather than an empty string.
+    private static string? OptionalText(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
     // Records a new sign-in and clears out this user's sessions that can no longer be used.
     private async Task<UserSession> StartSessionAsync(User user)
     {
@@ -186,13 +189,18 @@ public class AuthController(
             var email = request.Email.Trim().ToLowerInvariant();
             if (email != user.Email && await db.Users.AnyAsync(u => u.Email == email))
             {
-                return BadRequestError("That email is already used by another account.");
+                return Error(StatusCodes.Status409Conflict, "That email is already used by another account.");
             }
             user.Email = email;
         }
-        if (!string.IsNullOrWhiteSpace(request.Name))
+        if (request.Name is not null)
         {
-            user.Name = request.Name.Trim();
+            var name = request.Name.Trim();
+            if (name.Length < 2)
+            {
+                return BadRequestError("Name must be between 2 and 100 characters.");
+            }
+            user.Name = name;
         }
         if (!string.IsNullOrWhiteSpace(request.Gender))
         {
@@ -202,10 +210,36 @@ public class AuthController(
             }
             user.Gender = gender;
         }
+        if (request.Phone is not null)
+        {
+            user.Phone = OptionalText(request.Phone);
+        }
+        if (request.Bio is not null)
+        {
+            user.Bio = OptionalText(request.Bio);
+        }
+        if (request.HomeArea is not null)
+        {
+            user.HomeArea = OptionalText(request.HomeArea);
+        }
+        if (request.WorkArea is not null)
+        {
+            user.WorkArea = OptionalText(request.WorkArea);
+        }
         user.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync();
+        notifications.Notify(user.Id, "Profile updated", "Your profile has been updated.", NotificationTypes.Success);
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg
+                                           && pg.ConstraintName?.Contains("email") == true)
+        {
+            // Another account took the same email between the check above and the update.
+            return Error(StatusCodes.Status409Conflict, "That email is already used by another account.");
+        }
 
-        return Ok(new { success = true, message = "Profile updated.", user = UserViewModel.From(user) });
+        return Ok(new { success = true, message = "Your profile has been updated.", user = UserViewModel.From(user) });
     }
 
     [Authorize]

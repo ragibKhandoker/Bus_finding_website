@@ -14,6 +14,12 @@ public class UserViewModel : EntityViewModel
     public string Gender { get; init; } = "";
     public bool Pass { get; init; }
     public string FriendCode { get; init; } = "";
+    public string Phone { get; init; } = "";
+    public string Bio { get; init; } = "";
+    public string HomeArea { get; init; } = "";
+    public string WorkArea { get; init; } = "";
+    public DateTime CreatedAt { get; init; }
+    public DateTime UpdatedAt { get; init; }
 
     public static UserViewModel From(User u) => new()
     {
@@ -24,6 +30,34 @@ public class UserViewModel : EntityViewModel
         Gender = u.Gender,
         Pass = u.Pass,
         FriendCode = u.FriendCode,
+        Phone = u.Phone ?? "",
+        Bio = u.Bio ?? "",
+        HomeArea = u.HomeArea ?? "",
+        WorkArea = u.WorkArea ?? "",
+        CreatedAt = u.CreatedAt,
+        UpdatedAt = u.UpdatedAt,
+    };
+}
+
+// What the admin user list shows for each account.
+public class AdminUserViewModel : EntityViewModel
+{
+    [System.Text.Json.Serialization.JsonPropertyName("id")]
+    public string IdAlias => Id;
+    public string Name { get; init; } = "";
+    public string Email { get; init; } = "";
+    public string Role { get; init; } = "";
+    public DateTime CreatedAt { get; init; }
+    public DateTime? LastLoginAt { get; init; }
+
+    public static AdminUserViewModel From(User u) => new()
+    {
+        Id = u.Id.ToString(),
+        Name = u.Name,
+        Email = u.Email,
+        Role = u.Role,
+        CreatedAt = u.CreatedAt,
+        LastLoginAt = u.LastLoginAt,
     };
 }
 
@@ -82,16 +116,33 @@ public class LoginRequest
     public string Password { get; set; } = "";
 }
 
+// A field left out (null) is not changed. For the optional details an empty string clears the value.
 public class UpdateProfileRequest
 {
-    [StringLength(100, MinimumLength = 1)]
+    [StringLength(100, MinimumLength = 2, ErrorMessage = "Name must be between 2 and 100 characters.")]
     public string? Name { get; set; }
 
-    [EmailAddress, StringLength(255)]
+    [StringLength(255, ErrorMessage = "Email must be at most 255 characters.")]
+    [EmailAddress(ErrorMessage = "Please enter a valid email address.")]
+    [RegularExpression(@"^\s*[^@\s]+@[^@\s]+\.[^@\s]+\s*$", ErrorMessage = "Please enter a valid email address.")]
     public string? Email { get; set; }
 
     [StringLength(30)]
     public string? Gender { get; set; }
+
+    // Digits with an optional leading + and common separators, e.g. "+880 1712-345678".
+    [StringLength(20, ErrorMessage = "Phone number must be at most 20 characters.")]
+    [RegularExpression(@"^\s*(\+?[0-9][0-9 \-]{5,18})?\s*$", ErrorMessage = "Please enter a valid phone number.")]
+    public string? Phone { get; set; }
+
+    [StringLength(200, ErrorMessage = "Bio must be at most 200 characters.")]
+    public string? Bio { get; set; }
+
+    [StringLength(100, ErrorMessage = "Home area must be at most 100 characters.")]
+    public string? HomeArea { get; set; }
+
+    [StringLength(100, ErrorMessage = "Work or study area must be at most 100 characters.")]
+    public string? WorkArea { get; set; }
 }
 
 public class UpdatePasswordRequest

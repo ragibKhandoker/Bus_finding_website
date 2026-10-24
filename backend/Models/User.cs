@@ -41,6 +41,20 @@ public class User
     [MaxLength(30)]
     public string Gender { get; set; } = UserGenders.Unspecified;
 
+    // Optional details the user fills in from their profile page.
+    [MaxLength(20)]
+    public string? Phone { get; set; }
+
+    [MaxLength(200)]
+    public string? Bio { get; set; }
+
+    // Where the user usually starts and ends their commute, e.g. "Uttara" and "Motijheel".
+    [MaxLength(100)]
+    public string? HomeArea { get; set; }
+
+    [MaxLength(100)]
+    public string? WorkArea { get; set; }
+
     [MaxLength(20)]
     public string Role { get; set; } = UserRoles.Commuter;
 
