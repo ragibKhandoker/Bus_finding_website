@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: cse471-project-server
+    runtime: docker
+    rootDir: server
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: PORT
+        value: 3000
+      # Set these in the Render dashboard (never commit them):
+      - key: ConnectionStrings__DefaultConnection
+        sync: false # Neon connection string
+      - key: Jwt__Secret
+        sync: false # at least 32 random characters
+      - key: Cors__AllowedOrigins__0
+        sync: false # URL of the deployed web client
+      - key: Admin__Email
+        sync: false
+      - key: Admin__Password
+        sync: false
