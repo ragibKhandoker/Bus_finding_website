@@ -60,7 +60,8 @@
 .pf-details>div{min-width:0}
 .pf-details dt{font-size:13px;font-weight:600;color:var(--fg-6f8178)}
 .pf-details dd{margin:5px 0 0;font-size:15px;font-weight:600;color:var(--fg-13281f);overflow-wrap:anywhere;line-height:1.5}
-.pf-details dd.empty{color:var(--fg-a3b2aa);font-weight:500;font-style:italic}
+.pf-empty{display:inline-flex;align-items:center;gap:5px;padding:3px 11px 3px 8px;border:1.5px dashed var(--bd-b9cbc0);border-radius:999px;background:transparent;color:var(--fg-7b8d84);font-size:13px;font-weight:500;line-height:1.4;transition:border-color .15s,color .15s,background .15s}
+.pf-empty:hover{border-color:var(--bd-19865e);color:var(--fg-14805a);background:var(--bg-eef7f1)}
 
 @media(max-width:900px){
   .pf-layout{grid-template-columns:minmax(0,1fr)}

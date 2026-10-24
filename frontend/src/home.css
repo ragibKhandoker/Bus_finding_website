@@ -290,3 +290,9 @@ html[data-theme="dark"] .auth-tabs,html[data-theme="night"] .auth-tabs{backgroun
 html[data-theme="dark"] .auth-tabs button,html[data-theme="night"] .auth-tabs button{color:var(--dialog-muted)}
 html[data-theme="dark"] .auth-tabs button.selected,html[data-theme="night"] .auth-tabs button.selected{background:var(--dialog-tab);color:var(--dialog-text);box-shadow:0 1px 3px rgba(0,0,0,.4)}
 html[data-theme="dark"] .auth-modal .modal-close,html[data-theme="night"] .auth-modal .modal-close{color:var(--dialog-muted)}
+
+/* Native dropdown lists: a <select> with a transparent background gets a white list from the browser while
+   the options keep the light text colour, so they could not be read. Give the options the theme's colours. */
+html[data-theme="dark"]{--option-bg:#1b211e;--option-text:#eef6f1}
+html[data-theme="night"]{--option-bg:#111830;--option-text:#f5ecdb}
+html[data-theme="dark"] :is(select option,select optgroup),html[data-theme="night"] :is(select option,select optgroup){background-color:var(--option-bg);color:var(--option-text)}

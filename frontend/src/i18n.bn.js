@@ -58,6 +58,7 @@ export default {
   'Find': 'খুঁজুন',
   'Optional': 'ঐচ্ছিক',
   'Not added': 'যোগ করা হয়নি',
+  'Click to add': 'যোগ করতে ক্লিক করুন',
   'Never': 'কখনও না',
 
   // ---- Places ----

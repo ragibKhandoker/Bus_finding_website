@@ -660,6 +660,8 @@ function ProfilePage({ user, token, signedIn, updateUser, signOut, openAuth, not
     ['Full name', user.name], ['Email address', user.email], ['Phone number', user.phone], ['Gender', user.gender && t(user.gender)],
     ['Home area', user.homeArea && t(user.homeArea)], ['Work or study area', user.workArea && t(user.workArea)],
   ]
+  // An empty detail is a dashed "+ Not added" chip, so it never reads like a real value; it opens the edit form.
+  const notAdded = <button type="button" className="pf-empty" title={t('Click to add')} onClick={() => { setSaved(false); setEditing(true) }}><Plus size={13} /> {t('Not added')}</button>
 
   return <div className="page inner-page profile-page">
     <PageHeading eyebrow={t('YOUR ACCOUNT, YOUR WAY')} title={t('Your profile.')} description={t('Keep your details up to date so riders and friends know who they are travelling with.')} icon={Users} />
@@ -707,8 +709,8 @@ function ProfilePage({ user, token, signedIn, updateUser, signOut, openAuth, not
               <button type="submit" className="button button-green" disabled={saving || !changed}>{saving ? t('Saving…') : <><Check size={15} /> {t('Save changes')}</>}</button>
             </div>
           </form> : <dl className="pf-details">
-            {details.map(([label, value]) => <div key={label}><dt>{t(label)}</dt><dd className={value ? '' : 'empty'}>{value || t('Not added')}</dd></div>)}
-            <div className="pf-wide"><dt>{t('Bio')}</dt><dd className={user.bio ? '' : 'empty'}>{user.bio || t('Not added')}</dd></div>
+            {details.map(([label, value]) => <div key={label}><dt>{t(label)}</dt><dd>{value || notAdded}</dd></div>)}
+            <div className="pf-wide"><dt>{t('Bio')}</dt><dd>{user.bio || notAdded}</dd></div>
           </dl>}
         </section>
         <PasswordPanel token={token} notify={notify} />
