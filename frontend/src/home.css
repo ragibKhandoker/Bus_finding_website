@@ -559,3 +559,51 @@ input{line-height:1.6}
 /* Inputs have a built-in minimum width; without these the boxes overflowed narrow screens. */
 .bus-search-form .field>span,.bus-search-form .field input{min-width:0}
 .bus-search-form{min-width:0}
+
+/* ---- Bus search loading: spinner on the button, and a bus driving past stops in the results ---- */
+.button-spinner{width:16px;height:16px;flex:none;border-radius:50%;border:2.5px solid var(--bd-ffffff59);border-top-color:var(--bd-ffffff);animation:spin .7s linear infinite}
+.button.is-loading{cursor:progress;opacity:.92}
+.button.is-loading:hover{transform:none}
+.bus-loader{display:flex;flex-direction:column;align-items:center;gap:8px;padding:34px 16px 30px;text-align:center}
+.bus-loader b{font:750 17px var(--font-head);color:var(--fg-13281f)}
+.bus-loader-step{font-size:14px;color:var(--fg-4b5d54);animation:loader-fade .35s ease-out}
+.bus-loader-scene{position:relative;width:min(320px,100%);height:64px;margin-bottom:6px}
+.bus-loader-road{position:absolute;left:0;right:0;bottom:12px;height:6px;border-radius:3px;background:var(--bg-e2e9e4);overflow:hidden}
+.bus-loader-road:after{content:"";position:absolute;inset:2px -40px;background:repeating-linear-gradient(90deg,var(--bg-ffffff) 0 14px,transparent 14px 28px);animation:loader-road .6s linear infinite}
+.bus-loader-stop{position:absolute;bottom:9px;width:12px;height:12px;margin-left:-6px;border-radius:50%;border:2.5px solid var(--bd-c9d9cf);background:var(--bg-ffffff);animation:loader-stop 2.4s ease-in-out infinite}
+.bus-loader-stop:nth-of-type(2){left:12%}
+.bus-loader-stop:nth-of-type(3){left:38%;animation-delay:.6s}
+.bus-loader-stop:nth-of-type(4){left:64%;animation-delay:1.2s}
+.bus-loader-stop:nth-of-type(5){left:90%;animation-delay:1.8s}
+.bus-loader-bus{position:absolute;bottom:20px;left:0;display:grid;place-items:center;width:44px;height:38px;margin-left:-22px;border-radius:11px;background:var(--bg-19865e);color:var(--fg-ffffff);box-shadow:0 8px 18px -8px #19865ecc;animation:loader-drive 2.4s cubic-bezier(.45,0,.55,1) infinite}
+.bus-loader-bus svg{animation:loader-bounce .32s ease-in-out infinite alternate}
+@keyframes loader-drive{0%{left:6%}100%{left:94%}}
+@keyframes loader-bounce{from{transform:translateY(0)}to{transform:translateY(-2px)}}
+@keyframes loader-road{to{transform:translateX(-28px)}}
+@keyframes loader-stop{0%,15%{border-color:var(--bd-c9d9cf);background:var(--bg-ffffff);transform:scale(1)}25%{border-color:var(--bd-19865e);background:var(--bg-19865e);transform:scale(1.25)}45%,100%{border-color:var(--bd-19865e);background:var(--bg-e8f4eb);transform:scale(1)}}
+@keyframes loader-fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){
+  .bus-loader-bus{left:50%;animation:none}
+  .bus-loader-bus svg,.bus-loader-road:after,.bus-loader-stop,.bus-loader-step,.button-spinner{animation:none}
+}
+.button-spinner.dark{border-color:var(--bd-19865e40);border-top-color:var(--bd-19865e)}
+.hp-hero-actions .button.is-loading{opacity:1}
+
+/* Five menu items plus the Bangla labels no longer fit at laptop widths: labels wrapped onto two lines and the
+   menu ran into the logo. Keep labels on one line and tighten the spacing before the mobile menu takes over. */
+.nav-link{white-space:nowrap}
+.brand{flex:none;margin-right:16px}
+@media(max-width:1240px){.nav-links{gap:20px;margin-right:24px}}
+@media(max-width:1020px) and (min-width:701px){.nav-links{gap:14px;margin-right:14px}.nav-link{font-size:13px}.lang-full{display:none}}
+@media(max-width:1020px) and (min-width:701px){.top-actions>.icon-button{display:none}.profile-chip>span:nth-child(2){display:none}.profile-chip{gap:6px;padding-right:8px}.nav-links{gap:12px;margin-right:12px}}
+/* Up to 860px the menu items do not fit beside the logo and buttons, so they move into the menu button, as on phones. */
+@media(max-width:860px) and (min-width:701px){
+  .mobile-menu{display:grid;place-items:center;margin-left:auto;padding:8px}
+  .top-actions{margin-left:9px}
+  .nav-links{display:none;position:absolute;top:100%;left:0;right:0;height:auto;background:var(--bg-fbfcfa);padding:8px 34px 15px;border-bottom:1px solid var(--line);margin:0;flex-direction:column;align-items:stretch;gap:0;box-shadow:0 10px 18px #203a2b11}
+  .nav-links.open{display:flex}
+  .nav-link{height:44px;text-align:left;font-size:14px}
+  .nav-link.active:after{bottom:6px;top:6px;left:-16px;right:auto;width:3px;height:auto;border-radius:0 4px 4px 0}
+  .top-actions>.icon-button{display:inline-grid}
+  .profile-chip>span:nth-child(2){display:inline}
+}

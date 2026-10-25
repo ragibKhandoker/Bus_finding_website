@@ -481,6 +481,14 @@ function BusDetailPage({ routeNumber, user, signedIn, notify, navigate }) {
 
 function HomePage({ user, token, signedIn, navigate, openAuth }) {
   const [routes, loadRoutes] = useBusRoutes()
+  // The hero buttons show a brief loading state, then open their page.
+  const [opening, setOpening] = useState('')
+  const openTimer = useRef(0)
+  useEffect(() => () => window.clearTimeout(openTimer.current), [])
+  const openPage = (target) => {
+    setOpening(target)
+    openTimer.current = window.setTimeout(() => navigate(target), 600)
+  }
   const busStats = routes.status === 'ready'
     ? { status: 'ready', routes: routes.buses.length, stops: new Set(routes.buses.flatMap((bus) => (bus.stops || []).map((stop) => stop.name))).size }
     : { status: routes.status }
@@ -498,8 +506,8 @@ function HomePage({ user, token, signedIn, navigate, openAuth }) {
             <p>{t('Find the right bus across Dhaka, share a ride with people going your way, and keep your fares and trips in one place.')}</p>
 
             <div className="hp-hero-actions">
-              <button type="button" className="button button-green hp-hero-cta" onClick={() => navigate('Find a bus')}><Search size={18} /> {t('Find your bus')}</button>
-              <button type="button" className="button button-outline hp-hero-secondary" onClick={() => navigate('Bus routes')}><Route size={17} /> {t('Browse all routes')}</button>
+              <button type="button" className={`button button-green hp-hero-cta${opening === 'Find a bus' ? ' is-loading' : ''}`} disabled={Boolean(opening)} aria-busy={opening === 'Find a bus'} onClick={() => openPage('Find a bus')}>{opening === 'Find a bus' ? <><span className="button-spinner" aria-hidden="true" /> {t('Opening…')}</> : <><Search size={18} /> {t('Find your bus')}</>}</button>
+              <button type="button" className={`button button-outline hp-hero-secondary${opening === 'Bus routes' ? ' is-loading' : ''}`} disabled={Boolean(opening)} aria-busy={opening === 'Bus routes'} onClick={() => openPage('Bus routes')}>{opening === 'Bus routes' ? <><span className="button-spinner dark" aria-hidden="true" /> {t('Opening…')}</> : <><Route size={17} /> {t('Browse all routes')}</>}</button>
             </div>
 
             <div className="hp-hero-stats">
@@ -769,6 +777,7 @@ function BusPage({ token, signedIn, user, notify, navigate, openAuth }) {
     if (mode === 'route' && !end) { setError(t('Enter your destination.')); return }
     if (mode === 'name' && !busName) { setError(t('Enter a bus name to search.')); return }
     setLoading(true); setError(''); setSearched({ mode, from: start, to: end, name: busName }); setSelectedId(null); setTrip(null)
+    const shownUntil = Date.now() + MIN_LOADER_MS
     if (mode === 'route') loadEstimate(start, end); else setEstimate({ status: 'idle' })
     try {
       const result = await request(mode === 'route'
@@ -779,7 +788,10 @@ function BusPage({ token, signedIn, user, notify, navigate, openAuth }) {
       if (result.start && result.end) setTrip({ start: result.start, end: result.end })
     } catch (e) {
       setBuses([]); setError(errorText(e)); setEstimate({ status: 'idle' })
-    } finally { setLoading(false) }
+    } finally {
+      await new Promise((resolve) => window.setTimeout(resolve, Math.max(0, shownUntil - Date.now())))
+      setLoading(false)
+    }
   }
   // Run a search handed over from another page, once signed in.
   const autoSearched = useRef(false)
@@ -828,7 +840,7 @@ function BusPage({ token, signedIn, user, notify, navigate, openAuth }) {
           <button type="button" className="swap-button" onClick={() => { setFrom(to); setTo(from) }} aria-label={t('Swap locations')}><ArrowDownUp size={15} /></button>
           <label className="field"><small>{t('DESTINATION')}</small><span><MapPin size={16} /><input value={to} onChange={(e) => setTo(e.target.value)} placeholder={t('e.g. Motijheel')} list="stop-suggestions" /></span></label>
         </> : <label className="field wide"><small>{t('BUS NAME')}</small><span><Search size={16} /><input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('e.g. BRTC, Raida')} /></span></label>}
-        <button className="button button-green" type="submit" disabled={loading}>{loading ? t('Searching…') : <><Search size={16} /> {t('Search buses')}</>}</button>
+        <button className={`button button-green${loading ? ' is-loading' : ''}`} type="submit" disabled={loading} aria-busy={loading}>{loading ? <><span className="button-spinner" aria-hidden="true" /> {t('Searching…')}</> : <><Search size={16} /> {t('Search buses')}</>}</button>
       </form>
       {error && <div className="inline-error" role="alert">{error}</div>}
       {!signedIn && <div className="signin-hint"><ShieldCheck size={15} /> {t('Bus search requires an account.')} <button onClick={openAuth}>{t('Sign in')}</button> {t('to find routes.')}</div>}
@@ -837,7 +849,7 @@ function BusPage({ token, signedIn, user, notify, navigate, openAuth }) {
     {searched && <section className={`results-area${showMap ? ' results-with-map' : ''}`}>
       <div className="results-list">
         <div className="results-heading"><div><div className="eyebrow">{searched.mode === 'route' ? t('YOUR ROUTE') : t('BUS SEARCH')}</div><h2>{searched.mode === 'route' ? t('{from} to {to}', { from: t(trip?.start.name || searched.from), to: t(trip?.end.name || searched.to) }) : t('Buses matching “{name}”', { name: searched.name })}</h2></div>{!loading && !error && <span className="result-count">{buses.length === 1 ? t('{count} bus found', { count: 1 }) : t('{count} buses found', { count: buses.length })}</span>}</div>
-        {loading ? <div className="empty-state"><span className="spinner" /> {t('Finding your buses…')}</div>
+        {loading ? <BusSearchLoader mode={searched.mode} />
           : error ? <div className="empty-state"><span className="empty-icon"><CircleAlert size={23} /></span><b>{t('Search could not be completed')}</b><span>{error}</span></div>
           : buses.length ? <div className="bus-list">{buses.map((bus) => <BusCard key={bus._id} bus={bus} user={user} signedIn={signedIn} selected={bus._id === selectedId} onSelect={() => setSelectedId(bus._id)} favorite={favorites.includes(bus._id)} onFavorite={() => toggleFavorite(bus)} onAddTrip={() => saveTrip(bus)} onDetails={bus.routeNumber ? () => navigate('Bus details', { route: bus.routeNumber }) : null} notify={notify} />)}</div>
           : <div className="empty-state"><span className="empty-icon"><BusFront size={23} /></span><b>{t('No buses found just yet')}</b><span>{searched.mode === 'route' ? t('No bus in the database stops at both places. Try a nearby stop.') : t('Try another bus name or route number.')}</span></div>}
@@ -854,6 +866,35 @@ function BusPage({ token, signedIn, user, notify, navigate, openAuth }) {
       </aside>}
     </section>}
     {!searched && <section className="suggestion"><span className="suggestion-icon"><Compass size={19} /></span><div><b>{t('Start with a familiar landmark')}</b><p>{t('Try popular Dhaka stops like Farmgate, Mohakhali, Gulistan, or Uttara.')}</p></div><span className="suggestion-pills"><button onClick={() => { setMode('route'); setFrom('Farmgate'); setTo('Uttara') }}>{t('Farmgate')}</button><button onClick={() => { setMode('route'); setFrom('Gulistan'); setTo('Uttara') }}>{t('Gulistan')}</button></span></section>}
+  </div>
+}
+
+// Shown while a search runs: a bus driving past stops that light up in turn, with a line saying what is
+// being checked. Purely visual; the steps are not tied to real progress.
+// Results usually come back from the server's memory in a few milliseconds; without a minimum the loader only
+// flickers, so it stays up at least this long.
+const MIN_LOADER_MS = 1200
+
+const LOADER_STEPS = {
+  route: ['Checking every bus route…', 'Matching your stops in order…', 'Working out distance and time…'],
+  name: ['Checking every bus route…', 'Matching the bus name…', 'Getting the stops ready…'],
+}
+
+function BusSearchLoader({ mode }) {
+  const steps = LOADER_STEPS[mode] || LOADER_STEPS.route
+  const [step, setStep] = useState(0)
+  useEffect(() => {
+    const timer = window.setInterval(() => setStep((current) => (current + 1) % steps.length), 1100)
+    return () => window.clearInterval(timer)
+  }, [steps.length])
+  return <div className="bus-loader" role="status" aria-live="polite">
+    <div className="bus-loader-scene" aria-hidden="true">
+      <span className="bus-loader-road" />
+      <span className="bus-loader-stop" /><span className="bus-loader-stop" /><span className="bus-loader-stop" /><span className="bus-loader-stop" />
+      <span className="bus-loader-bus"><BusFront size={26} strokeWidth={2.2} /></span>
+    </div>
+    <b>{t('Finding your buses…')}</b>
+    <span className="bus-loader-step" key={step}>{t(steps[step])}</span>
   </div>
 }
 
