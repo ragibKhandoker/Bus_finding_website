@@ -25,6 +25,10 @@ public class Bus
     public decimal BaseFare { get; set; }
     public decimal PerKmFare { get; set; }
 
+    // Whether the bus also runs the stops in reverse order (the return trip). Dhaka city routes do; set it to
+    // false for a one-way service so route search only matches stops in the stored order.
+    public bool RunsBothWays { get; set; } = true;
+
     public List<BusStop> Stops { get; set; } = [];
     public List<IndividualBus> IndividualBuses { get; set; } = [];
 }

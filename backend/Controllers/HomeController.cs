@@ -28,6 +28,19 @@ public class HomeController(AppDbContext db, ILogger<HomeController> logger) : C
             logger.LogWarning(ex, "Status page could not reach the database");
             model.DatabaseConnected = false;
         }
+
+        // Scripts and tools that ask for JSON get the same status as data; browsers get the page.
+        if (Request.GetTypedHeaders().Accept.Any(a => a.MediaType.Value == "application/json"))
+        {
+            return Ok(new
+            {
+                success = true,
+                database = model.DatabaseConnected ? "connected" : "unavailable",
+                model.DatabaseConnected,
+                model.Buses,
+                model.Stops,
+            });
+        }
         return View(model);
     }
 

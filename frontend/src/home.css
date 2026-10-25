@@ -1,3 +1,6 @@
+/* Bangla digits from Noto Sans Bengali: Hind Siliguri draws "১" as a small hook that reads poorly ("মিরপুর ১১").
+   The file holds only the ten digits (০-৯), so every other character still uses the fonts after it in the stack. */
+@font-face{font-family:"Bangla Digits";src:url("/fonts/noto-sans-bengali-digits.woff") format("woff");font-weight:100 900;font-display:swap;unicode-range:U+09E6-09EF}
 /* ---- Home page ---- */
 .home-page{padding-bottom:96px;--hp-ink:var(--fg-13281f);--hp-text:var(--fg-4b5d54);--hp-muted:var(--fg-6f8178);--hp-border:var(--bd-e2e9e4)}
 .hp-hero{position:relative;overflow:hidden;padding:64px 0 80px;background:radial-gradient(900px 520px at 85% 20%,var(--bg-dff1e6) 0,transparent 60%),radial-gradient(700px 400px at 0% 100%,var(--bg-eef6f0) 0,transparent 60%),var(--bg-f8faf7);border-bottom:1px solid var(--bd-e7ede8)}
@@ -10,24 +13,16 @@
 .hp-hero h1 span{background:linear-gradient(90deg,var(--bg-14805a),var(--bg-1fa877));-webkit-background-clip:text;background-clip:text;color:transparent}
 .hp-hero-copy>p{font-size:17px;line-height:1.65;color:var(--hp-text);max-width:530px;margin:0}
 
-.hp-search-card{margin-top:32px;background:var(--bg-ffffff);border:1px solid var(--hp-border);border-radius:18px;padding:8px;box-shadow:0 24px 60px -28px #13402c4d,0 2px 6px #13281f0a}
-.hp-search{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto;align-items:center;gap:4px}
-.hp-search-field{display:grid;gap:4px;padding:10px 14px;border-radius:12px;min-width:0;cursor:text;transition:background .15s}
-.hp-search-field:hover{background:var(--bg-f4f8f5)}
-.hp-search-field:focus-within{background:var(--bg-eef6f1)}
-.hp-search-field small{font-size:12px;font-weight:600;color:var(--hp-muted)}
-.hp-search-field>span{display:flex;align-items:center;gap:9px;color:var(--fg-7d8e85)}
-.hp-search-field input{width:100%;min-width:0;border:0;outline:0;background:transparent;font-size:15px;font-weight:500;color:var(--hp-ink);padding:2px 0}
-.hp-search-field input::placeholder{color:var(--fg-9eaba4);font-weight:400}
-.hp-search-field input:focus-visible{outline:0}
-.hp-dot-start{width:10px;height:10px;flex:none;border-radius:50%;border:3px solid var(--bd-19865e);margin:0 3px}
-.hp-swap{width:36px;height:36px;border-radius:50%;border:1px solid var(--hp-border);background:var(--bg-ffffff);color:var(--fg-5c6f65);display:grid;place-items:center;transition:background .15s,color .15s,transform .2s}
-.hp-swap:hover{background:var(--bg-eef6f1);color:var(--fg-19865e);transform:rotate(180deg)}
-.hp-search-submit{height:54px;padding:0 22px;border-radius:12px;font-size:15px;white-space:nowrap;margin-left:4px;box-shadow:0 8px 18px -8px #19865eb3}
-.hp-popular{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:6px 6px 4px;padding:10px 8px 4px;border-top:1px solid var(--bd-eef2ef);font-size:13px;color:var(--hp-muted)}
-.hp-popular button{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--bd-e3eae5);background:var(--bg-f8faf9);color:var(--fg-355446);border-radius:999px;padding:5px 11px;font-size:13px;font-weight:500;transition:border-color .15s,background .15s}
-.hp-popular button:hover{border-color:var(--bd-a9d3bc);background:var(--bg-eef7f1);color:var(--fg-14805a)}
 
+.hp-hero-actions{display:flex;flex-wrap:wrap;gap:12px;margin-top:32px}
+.hp-hero-cta{height:56px;padding:0 28px;border-radius:14px;font-size:16px;box-shadow:0 12px 26px -12px #19865ecc}
+.hp-hero-secondary{height:56px;padding:0 24px;border-radius:14px;font-size:15px;background:var(--bg-ffffff)}
+.hp-hero-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:28px;max-width:560px;border:1px solid var(--bd-e2e9e4);border-radius:16px;background:var(--bg-ffffff);box-shadow:0 18px 40px -30px #13402c4d}
+.hp-hero-stats span{display:grid;gap:3px;padding:16px 18px;min-width:0}
+.hp-hero-stats span+span{border-left:1px solid var(--bd-eef2ef)}
+.hp-hero-stats b{display:flex;align-items:center;gap:6px;font:800 22px var(--font-head);color:var(--fg-13281f);letter-spacing:-.5px}
+.hp-hero-stats b svg{color:var(--fg-19865e);flex:none}
+.hp-hero-stats small{font-size:12.5px;color:var(--fg-6f8178)}
 .hp-trust{list-style:none;padding:0;margin:26px 0 0;display:flex;flex-wrap:wrap;gap:10px 24px}
 .hp-trust li{display:flex;align-items:center;gap:7px;font-size:14px;color:var(--hp-text);font-weight:500}
 .hp-trust svg{color:var(--fg-19865e)}
@@ -150,14 +145,11 @@
   .hp-hero-inner{width:calc(100% - 32px);gap:32px}
   .hp-hero h1{font-size:36px;margin:16px 0 14px}
   .hp-hero-copy>p{font-size:16px}
-  .hp-search-card{margin-top:24px;padding:6px}
-  .hp-search{position:relative;grid-template-columns:minmax(0,1fr);gap:2px}
-  .hp-search-field{padding:10px 52px 10px 12px}
-  .hp-search-field input{font-size:16px}
-  .hp-swap{position:absolute;right:12px;top:52px;z-index:1}
-  .hp-search-submit{margin:6px 0 0;width:100%}
-  .hp-popular{margin:6px 4px 2px;padding:10px 4px 4px}
   .hp-trust{flex-direction:column;gap:10px}
+  .hp-hero-actions>.button{flex:1 1 100%}
+  .hp-hero-stats span{padding:13px 12px}
+  .hp-hero-stats b{font-size:18px}
+  .hp-hero-stats small{font-size:11.5px}
   .hp-preview{height:340px}
   .hp-map{border-radius:20px}
   .hp-float-trip{left:12px;right:12px;bottom:12px;width:auto;padding:13px}
@@ -191,7 +183,7 @@
 }
 
 /* ---- Language switch (header) ---- */
-.lang-toggle{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 13px;border:1px solid var(--bd-d5e2da);border-radius:999px;background:var(--bg-ffffff);color:var(--fg-14603f);font:700 13.5px "DM Sans","Hind Siliguri",sans-serif;transition:background .15s,border-color .15s}
+.lang-toggle{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 13px;border:1px solid var(--bd-d5e2da);border-radius:999px;background:var(--bg-ffffff);color:var(--fg-14603f);font:700 13.5px "DM Sans","Bangla Digits","Hind Siliguri",sans-serif;transition:background .15s,border-color .15s}
 .lang-toggle:hover{background:var(--bg-eef7f1);border-color:var(--bd-a9d3bc)}
 .lang-toggle svg{flex:none}
 .lang-short{display:none}
@@ -296,3 +288,274 @@ html[data-theme="dark"] .auth-modal .modal-close,html[data-theme="night"] .auth-
 html[data-theme="dark"]{--option-bg:#1b211e;--option-text:#eef6f1}
 html[data-theme="night"]{--option-bg:#111830;--option-text:#f5ecdb}
 html[data-theme="dark"] :is(select option,select optgroup),html[data-theme="night"] :is(select option,select optgroup){background-color:var(--option-bg);color:var(--option-text)}
+
+/* ---- Route database totals (home, next to "Core services") ---- */
+.hp-services-head>div:first-child{max-width:640px}
+.hp-stats{display:grid;grid-template-columns:repeat(2,auto);gap:12px 28px;flex:none;padding:16px 20px;border:1px solid var(--bd-e2e9e4);border-radius:16px;background:var(--bg-ffffff)}
+.hp-stat{display:flex;align-items:center;gap:11px}
+.hp-stat-icon{display:grid;place-items:center;width:38px;height:38px;flex:none;border-radius:11px;background:var(--bg-e2f4e9);color:var(--fg-14805a)}
+.hp-stat b{display:block;min-height:30px;font:800 24px/1.25 var(--font-head);color:var(--fg-13281f)}
+.hp-stat small{display:block;font-size:13px;color:var(--fg-6f8178)}
+.hp-stats-source{grid-column:1/-1;padding-top:10px;border-top:1px solid var(--bd-eef2ef);font-size:12px;color:var(--fg-8a9a91)}
+.hp-stat-skeleton{display:block;width:44px;height:22px;margin:4px 0;border-radius:6px;background:linear-gradient(90deg,var(--bg-e8eee9) 25%,var(--bg-f4f7f5) 50%,var(--bg-e8eee9) 75%);background-size:200% 100%;animation:hp-shimmer 1.2s linear infinite}
+@keyframes hp-shimmer{to{background-position:-200% 0}}
+.hp-stats.is-error{display:flex;align-items:center;gap:12px;max-width:380px;border-color:var(--bd-f1d5ce);background:var(--bg-fff7f5);color:var(--fg-b5432f)}
+.hp-stats.is-error svg{flex:none}
+.hp-stats.is-error b{display:block;font-size:14px;color:var(--fg-8f3524)}
+.hp-stats.is-error small{display:block;font-size:12.5px;color:var(--fg-9c5a4c)}
+.hp-stats.is-error button{flex:none;margin-left:auto;padding:7px 12px;border:1px solid var(--bd-e3b5aa);border-radius:9px;background:var(--bg-ffffff);color:var(--fg-8f3524);font-size:13px;font-weight:700}
+.hp-stats.is-error button:hover{background:var(--bg-ffefeb)}
+@media(max-width:700px){
+  .hp-stats{margin-top:18px;gap:12px 20px;padding:14px 16px}
+  .hp-stats.is-error{max-width:none}
+}
+.hp-stats-link{display:flex;align-items:center;gap:5px;width:100%;border-left:0;border-right:0;border-bottom:0;background:none;text-align:left;color:var(--fg-14805a);font-weight:700;cursor:pointer}
+.hp-stats-link:hover{color:var(--fg-0f6446)}
+
+/* ---- Route lists (home preview and the Bus routes page) ---- */
+.hp-route-search{display:flex;align-items:center;gap:9px;flex:none;width:300px;height:44px;padding:0 13px;border:1.5px solid var(--bd-d9e2dc);border-radius:12px;background:var(--bg-ffffff);color:var(--fg-7d8e85);transition:border-color .15s,box-shadow .15s}
+.hp-route-search:focus-within{border-color:var(--bd-19865e);box-shadow:0 0 0 3px #19865e1f}
+.hp-route-search input{flex:1;min-width:0;border:0;outline:0;background:transparent;font-size:14.5px;color:var(--fg-13281f)}
+.hp-route-search input:focus-visible{outline:0}
+.hp-routes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;align-items:start}
+.hp-routes-3{grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch}
+.hp-route{background:var(--bg-ffffff);border:1px solid var(--bd-e2e9e4);border-radius:18px;padding:18px 20px;transition:border-color .2s,box-shadow .2s,transform .2s}
+.hp-route:hover{border-color:var(--bd-bfdcca);box-shadow:0 18px 40px -26px #13402c4d}
+.hp-route-tile{display:flex;flex-direction:column;width:100%;text-align:left;color:inherit;font:inherit;cursor:pointer}
+.hp-route-tile:hover{transform:translateY(-2px)}
+.hp-route-head{display:flex;align-items:center;gap:12px}
+.hp-route-head>span:last-child{min-width:0}
+.hp-route-head b{display:block;font:750 17px var(--font-head);color:var(--fg-13281f)}
+.hp-route-head small{display:block;font-size:13px;color:var(--fg-6f8178);margin-top:2px}
+.hp-route-no{flex:none;min-width:52px;padding:7px 9px;border-radius:10px;background:var(--bg-19865e);color:var(--fg-ffffff);font:800 13px var(--font-head);text-align:center;letter-spacing:.02em}
+.hp-route-ends{display:flex;align-items:center;flex-wrap:wrap;gap:8px;margin-top:14px;font-size:14px;font-weight:600;color:var(--fg-2a3d33)}
+.hp-route-ends>svg{color:var(--fg-9aaaa1);flex:none}
+.hp-route-ends span{display:inline-flex;align-items:center;gap:7px}
+.hp-route-ends i{width:9px;height:9px;border-radius:50%}
+.hp-route-ends i.start{background:var(--bg-19865e)}
+.hp-route-ends i.end{background:var(--bg-e5533d)}
+.hp-route-foot{display:flex;align-items:center;gap:6px;margin-top:auto;padding-top:12px;border-top:1px solid var(--bd-eef2ef);font-size:13px;color:var(--fg-6f8178)}
+.hp-route-ends+.hp-route-foot{margin-top:14px}
+.hp-route-foot>span{display:inline-flex;align-items:center;gap:5px;margin-left:auto;color:var(--fg-14805a);font-weight:700}
+.hp-route-stops{list-style:none;margin:12px 0 0;padding:0;position:relative}
+.hp-route-stops:before{content:"";position:absolute;left:13px;top:14px;bottom:14px;border-left:2px dashed var(--bd-cfe0d5)}
+.hp-route-stops li{position:relative;display:flex;align-items:center;gap:12px;padding:6px 0}
+.hp-stop-no{position:relative;display:grid;place-items:center;width:28px;height:28px;flex:none;border-radius:50%;border:2px solid var(--bd-19865e);background:var(--bg-ffffff);color:var(--fg-14805a);font-size:12px;font-weight:800}
+.hp-route-stops li:first-child .hp-stop-no{background:var(--bg-19865e);color:var(--fg-ffffff)}
+.hp-route-stops li:last-child .hp-stop-no{border-color:var(--bd-e5533d);background:var(--bg-e5533d);color:var(--fg-ffffff)}
+.hp-stop-name{flex:1;min-width:0;font-size:14.5px;font-weight:600;color:var(--fg-13281f)}
+.hp-route-stops a{display:inline-flex;align-items:center;gap:4px;flex:none;padding:3px 8px;border-radius:7px;background:var(--bg-f2f6f3);color:var(--fg-4b5d54);font-size:12px;font-variant-numeric:tabular-nums;text-decoration:none;transition:background .15s,color .15s}
+.hp-route-stops a:hover{background:var(--bg-e2f4e9);color:var(--fg-14805a)}
+@media(max-width:980px){
+  .hp-routes-3{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:900px){
+  .hp-routes{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:700px){
+  .hp-route-search{width:100%;margin-top:16px}
+  .hp-route{padding:16px}
+  .hp-route-stops a{font-size:11.5px;padding:3px 6px}
+}
+
+/* ---- Bus routes page ---- */
+.routes-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px 16px}
+.routes-filter{border-bottom:0;padding-bottom:0;flex-wrap:wrap}
+.routes-filter button{font-size:12.5px;padding:9px 13px}
+.routes-more{display:flex;justify-content:center;margin-top:24px}
+
+/* ---- One route's page ---- */
+.route-back{display:inline-flex;align-items:center;gap:7px;margin-bottom:18px;padding:0;border:0;background:none;color:var(--fg-14805a);font-size:13.5px;font-weight:700}
+.route-back:hover{color:var(--fg-0f6446)}
+.route-hero{padding:24px 26px;border-radius:18px}
+.route-hero-head{display:flex;align-items:center;gap:16px}
+.route-hero-head h1{font:800 30px/1.2 var(--font-head);letter-spacing:-1px;margin:0;color:var(--fg-13281f)}
+.route-hero-head p{margin:4px 0 0;font-size:14px;color:var(--fg-6f8178)}
+.route-hero-no{min-width:72px;padding:11px 12px;font-size:16px;border-radius:12px}
+.route-hero-ends{font-size:15.5px;margin-top:18px}
+.route-facts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:20px}
+.route-facts span{display:grid;gap:4px;padding:13px 15px;border-radius:12px;background:var(--bg-f2f6f3)}
+.route-facts small{font-size:12px;color:var(--fg-6f8178)}
+.route-facts b{font:750 19px var(--font-head);color:var(--fg-13281f)}
+.route-hero-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+.route-hero-actions a{text-decoration:none}
+.route-stops-panel{margin-top:18px;padding:22px 26px;border-radius:18px}
+.route-stops-panel .hp-route-stops{margin-top:6px}
+.route-note{margin:16px 0 0;font-size:12.5px;color:var(--fg-7d8e85)}
+.route-reviews{margin-top:18px;padding:16px 22px;border-radius:18px}
+.bus-details-link{display:inline-flex;align-items:center;gap:3px;margin-left:10px;padding:0;border:0;background:none;color:var(--fg-14805a);font-size:inherit;font-weight:700}
+@media(max-width:700px){
+  .routes-toolbar{flex-direction:column;align-items:stretch}
+  .routes-toolbar .hp-route-search{margin-top:0}
+  .route-hero,.route-stops-panel{padding:18px 16px}
+  .route-hero-head{align-items:flex-start;gap:12px}
+  .route-hero-head h1{font-size:23px}
+  .route-hero-no{min-width:58px;padding:9px;font-size:14px}
+  .route-facts{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .route-hero-actions>*{flex:1}
+}
+
+/* ---- Home page motion ---- */
+/* The hero eases in on load; sections below rise into view as they are scrolled to (hp-motion and is-in are set in useScrollMotion). */
+@keyframes hp-rise{from{opacity:0;transform:translateY(26px)}to{opacity:1;transform:none}}
+.hp-hero-copy>*,.hp-preview{animation:hp-rise .9s cubic-bezier(.16,1,.3,1) backwards}
+.hp-hero-copy>:nth-child(2){animation-delay:.07s}
+.hp-hero-copy>:nth-child(3){animation-delay:.14s}
+.hp-hero-copy>:nth-child(4){animation-delay:.21s}
+.hp-hero-copy>:nth-child(5){animation-delay:.28s}
+.hp-preview{animation-delay:.18s}
+/* Parallax: the map and the two floating cards move at different speeds while the hero scrolls away. */
+.hp-motion .hp-map{translate:0 calc(var(--hp-y,0px)*.05)}
+.hp-motion .hp-float-trip{translate:0 calc(var(--hp-y,0px)*-.12)}
+.hp-motion .hp-float-ride{translate:0 calc(var(--hp-y,0px)*-.22)}
+/* "backwards" fill only holds the start frame, so card hover lifts still work once the rise has played. */
+.hp-motion :is(.hp-section,.hp-cta):not(.is-in) :is(.hp-section-head,.hp-services>*,.hp-steps>*,.hp-tools>*,.hp-routes),
+.hp-motion .hp-cta:not(.is-in){opacity:0}
+.hp-motion .is-in :is(.hp-section-head,.hp-services>*,.hp-steps>*,.hp-tools>*,.hp-routes),
+.hp-motion .hp-cta.is-in{animation:hp-rise .85s cubic-bezier(.16,1,.3,1) backwards}
+.hp-motion .is-in :is(.hp-services,.hp-steps,.hp-tools)>*,.hp-motion .is-in .hp-routes{animation-delay:.12s}
+.hp-motion .is-in :is(.hp-services,.hp-steps,.hp-tools)>:nth-child(2){animation-delay:.2s}
+.hp-motion .is-in :is(.hp-services,.hp-steps,.hp-tools)>:nth-child(3){animation-delay:.28s}
+.hp-motion .is-in .hp-tools>:nth-child(4){animation-delay:.36s}
+.hp-motion .is-in .hp-tools>:nth-child(5){animation-delay:.44s}
+.hp-motion .is-in .hp-tools>:nth-child(n+6){animation-delay:.52s}
+
+
+/* ---- Bus search: trip summary, results with the map ---- */
+.trip-summary{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:18px;margin-top:18px;padding:18px 20px;border-radius:14px}
+.trip-places{display:flex;align-items:center;gap:14px;min-width:0}
+.trip-places>svg{color:var(--fg-9aaaa1);flex:none}
+.trip-places>span{display:grid;grid-template-columns:auto 1fr;column-gap:8px;align-items:center;min-width:0}
+.trip-places i{grid-row:span 2;width:10px;height:10px;border-radius:50%}
+.trip-places i.start{background:var(--bg-19865e)}
+.trip-places i.end{background:var(--bg-e5533d)}
+.trip-places small{font-size:11.5px;color:var(--fg-7d8e85)}
+.trip-places b{font:750 16px var(--font-head);color:var(--fg-13281f);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trip-figures{display:flex;align-items:center;flex-wrap:wrap;gap:12px}
+.trip-figure{display:grid;gap:2px;min-width:130px;padding:10px 14px;border-radius:12px;background:var(--bg-f2f6f3)}
+.trip-figure small{font-size:11.5px;color:var(--fg-6f8178)}
+.trip-figure b{font:800 19px var(--font-head);color:var(--fg-13281f)}
+.trip-figure em{font-style:normal;font-size:11.5px;color:var(--fg-7d8e85)}
+.trip-unavailable{background:var(--bg-fff0ed)}
+.trip-unavailable b{font-size:15px;color:var(--fg-a95548)}
+.trip-unavailable em{max-width:320px}
+.trip-unavailable button{border:0;background:none;padding:0;color:var(--fg-14805a);font-weight:700;font-size:inherit}
+.trip-gmaps{text-decoration:none}
+.results-with-map{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
+.results-map{position:sticky;top:88px}
+.bus-result.selected{border-color:var(--bd-7fc7a3);box-shadow:0 0 0 3px #19865e1a}
+.return-badge{background:var(--bg-fff3e6);color:var(--fg-b4692e)}
+.bus-card-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:10px}
+.bus-map-toggle{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--bd-d9e2dc);border-radius:999px;padding:5px 10px;background:var(--bg-ffffff);color:var(--fg-4b5d54);font-size:11px;font-weight:600}
+.bus-map-toggle:hover{border-color:var(--bd-a9d3bc);color:var(--fg-14805a)}
+.bus-map-toggle.active{border-color:var(--bd-19865e);background:var(--bg-e8f4eb);color:var(--fg-19734f)}
+.bus-card-actions .bus-details-link{margin-left:0;font-size:11px}
+
+/* ---- Google map ---- */
+.gmap{position:relative;height:460px;border-radius:14px;overflow:hidden;border:1px solid var(--bd-e2e9e4);background:var(--bg-eef2ef)}
+.gmap-canvas{position:absolute;inset:0}
+.gmap-embed{width:100%;height:100%;border:0}
+.gmap-note{margin:10px 2px 0;font-size:12px;line-height:1.5;color:var(--fg-6f8178)}
+.gmap-overlay{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;text-align:center;font-size:13px;color:var(--fg-6f8178);background:var(--bg-eef2ef)}
+.gmap-problem svg{color:var(--fg-a95548)}
+.gmap-problem span{max-width:320px;font-weight:600;color:var(--fg-3c5045)}
+.gmap-problem small{font-size:12px;color:var(--fg-7d8e85)}
+.gmap-pin{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;border:3px solid var(--bd-ffffff);box-shadow:0 3px 8px #13281f59;font:800 12px var(--font-head);color:var(--fg-ffffff)}
+.gmap-pin.gmap-start{background:var(--bg-19865e)}
+.gmap-pin.gmap-end{background:var(--bg-e5533d)}
+.gmap-pin.gmap-ride{width:20px;height:20px;border-width:2px;background:var(--bg-19865e);font-size:10px}
+.gmap-pin.gmap-stop{width:10px;height:10px;border-width:2px;background:var(--bg-7fc7a3);box-shadow:none}
+.gmap-legend{display:flex;flex-wrap:wrap;gap:6px 16px;list-style:none;margin:10px 2px 0;padding:0;font-size:12px;color:var(--fg-6f8178)}
+.gmap-legend li{display:inline-flex;align-items:center;gap:7px}
+.gmap-legend i{width:22px;height:4px;border-radius:2px}
+.legend-road{background:var(--bg-2f6fde)}
+.legend-ride{background:var(--bg-19865e);height:6px!important}
+.legend-bus{background:var(--bg-a8d8bf)}
+@media(max-width:980px){
+  .results-with-map{grid-template-columns:minmax(0,1fr)}
+  .results-map{position:static;order:-1}
+  .gmap{height:340px}
+}
+@media(max-width:700px){
+  .trip-summary{padding:14px}
+  .trip-places{width:100%}
+  .trip-places b{font-size:14.5px}
+  .trip-figures{width:100%}
+  .trip-figure{flex:1;min-width:0}
+  .trip-gmaps{width:100%}
+  .gmap{height:300px}
+}
+
+/* ---- Find a bus: larger, darker text so the search and results read clearly (the base sizes are 8-12px) ---- */
+.bus-page .page-heading .eyebrow{font-size:11.5px;color:var(--fg-4b6b5c)}
+.bus-page .page-heading p{font-size:15px;color:var(--fg-4b5d54)}
+.bus-page .segmented button{font-size:14px;padding:10px 14px;color:var(--fg-4b5d54)}
+.bus-page .segmented button.selected{color:var(--fg-14684a);font-weight:700}
+.bus-page .bus-search-panel{padding:20px 22px 22px}
+.bus-page .bus-search-form .field{height:64px;padding:0 14px;border-color:var(--bd-d4ddd7)}
+.bus-page .bus-search-form .field:focus-within{border-color:var(--bd-19865e);box-shadow:0 0 0 3px #19865e1f}
+.bus-page .bus-search-form .field small{font-size:11.5px;letter-spacing:.8px;color:var(--fg-4b5d54)}
+.bus-page .bus-search-form .field input{font-size:16px;font-weight:500;color:var(--fg-13281f)}
+.bus-page .bus-search-form .field input::placeholder{color:var(--fg-7d8e85)}
+.bus-page .bus-search-form>.button{height:58px;padding:0 24px;font-size:15px}
+.bus-page .swap-button{width:38px;height:38px;color:var(--fg-4b5d54)}
+.bus-page .signin-hint{font-size:13.5px;color:var(--fg-4b5d54)}
+.bus-page .inline-error{font-size:14px}
+.bus-page .results-heading .eyebrow{font-size:11.5px;color:var(--fg-4b6b5c)}
+.bus-page .results-heading h2{font-size:22px;color:var(--fg-13281f)}
+.bus-page .result-count{font-size:13px;font-weight:600;color:var(--fg-3c5045);padding:7px 12px}
+.bus-page .bus-result{padding:20px}
+.bus-page .bus-title h3{font-size:17px;color:var(--fg-13281f)}
+.bus-page .route-badge{font-size:12px;font-weight:700;padding:4px 8px}
+.bus-page .bus-details{font-size:13.5px;color:var(--fg-4b5d54)}
+.bus-page .stop-line{font-size:14.5px;color:var(--fg-13281f);margin-top:14px}
+.bus-page .stop-count{font-size:13px;line-height:1.5;color:var(--fg-4b5d54)}
+.bus-page .bus-map-toggle,.bus-page .bus-card-actions .bus-details-link{font-size:13px}
+.bus-page .fare-label{font-size:11px;color:var(--fg-4b5d54)}
+.bus-page .bus-result-side>b{font-size:20px}
+.bus-page .bus-result-side>small{font-size:12px;color:var(--fg-4b5d54)}
+.bus-page .bus-result-side .button{font-size:13px}
+.bus-page .empty-state{font-size:14px;color:var(--fg-4b5d54)}
+.bus-page .empty-state b{font-size:16px}
+.bus-page .suggestion b{font-size:15px}
+.bus-page .suggestion p{font-size:13.5px;color:var(--fg-4b5d54)}
+.bus-page .suggestion-pills button{font-size:13px;padding:7px 12px;color:var(--fg-2a4a3b)}
+.bus-page .trip-places small,.bus-page .trip-figure small{font-size:12.5px;color:var(--fg-4b5d54)}
+.bus-page .trip-figure em,.bus-page .gmap-note{font-size:12.5px;color:var(--fg-4b5d54)}
+@media(max-width:700px){
+  .bus-page .page-heading p{font-size:14px;max-width:none}
+  .bus-page .segmented button{font-size:13px;padding:9px 10px}
+  .bus-page .bus-search-panel{padding:14px}
+  .bus-page .bus-search-form{grid-template-columns:1fr 38px 1fr}
+  .bus-page .bus-search-form .field{height:60px;padding:0 10px}
+  .bus-page .bus-search-form .field small{font-size:10.5px;letter-spacing:.4px}
+  .bus-page .bus-search-form .field input{font-size:15px}
+  .bus-page .bus-search-form>.button{height:50px;font-size:15px}
+  .bus-page .signin-hint{font-size:12.5px}
+  .bus-page .results-heading h2{font-size:18px}
+  .bus-page .result-count{font-size:12px}
+  .bus-page .bus-result{padding:14px}
+  .bus-page .bus-title h3{font-size:15px}
+  .bus-page .bus-details,.bus-page .stop-count{font-size:12.5px}
+  .bus-page .stop-line{font-size:13px}
+  .bus-page .fare-label{font-size:10px}
+  .bus-page .bus-result-side>b{font-size:17px}
+  .bus-page .bus-result-side .button{font-size:12px;padding:8px}
+  .bus-page .suggestion b{font-size:14px}
+  .bus-page .suggestion p{font-size:12.5px}
+  .bus-page .suggestion-pills button{font-size:12px}
+}
+
+/* Bangla letters and digits (e.g. "মিরপুর ১১") are taller than Latin ones; with the inputs' tight line box their
+   tops and bottoms were cut off. Give every input room for them. */
+input{line-height:1.6}
+.bus-page .bus-search-form .field input{line-height:1.7;padding:4px 0;height:auto;overflow:visible}
+.trip-places b{line-height:1.5;padding:1px 0}
+/* .field is a grid and the base style centres it with justify-content, which pushed the label and the typed
+   text to the middle of the wide search boxes. Keep them at the left and centre them vertically instead. */
+.bus-search-form .field{justify-content:stretch;align-content:center}
+.bus-page .bus-search-form .field{gap:3px;padding-top:6px;padding-bottom:6px}
+.bus-page .bus-search-form .field input{line-height:1.55;padding:2px 0}
+/* Inputs have a built-in minimum width; without these the boxes overflowed narrow screens. */
+.bus-search-form .field>span,.bus-search-form .field input{min-width:0}
+.bus-search-form{min-width:0}

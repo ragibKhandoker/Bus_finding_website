@@ -67,6 +67,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         b.Entity<Bus>(e =>
         {
+            // The route number identifies a route, so the seeder can tell which starter routes already exist.
+            e.HasIndex(x => x.RouteNumber).IsUnique();
             e.HasMany(x => x.Stops).WithOne(x => x.Bus).HasForeignKey(x => x.BusId).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(x => x.IndividualBuses).WithOne(x => x.Bus).HasForeignKey(x => x.BusId).OnDelete(DeleteBehavior.Cascade);
         });

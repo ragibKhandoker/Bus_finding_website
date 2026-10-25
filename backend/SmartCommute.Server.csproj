@@ -18,4 +18,9 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- Bus routes the seeder adds to a fresh database (see Data/SeedData.cs). -->
+    <EmbeddedResource Include="Data\dhaka-bus-routes.json" LogicalName="SmartCommute.Server.Data.dhaka-bus-routes.json" />
+  </ItemGroup>
+
 </Project>

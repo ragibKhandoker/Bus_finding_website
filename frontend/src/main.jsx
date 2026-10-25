@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
   ArrowDownUp, ArrowLeft, ArrowRight, ArrowUpRight, BadgeCheck, BusFront, CalendarDays, Check, ChevronDown,
@@ -10,9 +10,10 @@ import './style.css'
 import './home.css'
 import './profile.css'
 import './admin.css'
+import GoogleMapView, { mapsConfigured } from './GoogleMapView'
 import { BusReviews, ChatPage, FriendsPage, GpayPage, MapPage, NotificationsPage, OffersPage, VerificationPage } from './MorePages'
 import { API_BASE, UNAUTHORIZED_EVENT, apiRequest as request, isTokenExpired, tokenExpiry } from './api'
-import { formatDate, formatNumber, getLang, setLang, t } from './i18n'
+import { formatDate, formatNumber, getLang, setLang, t, toEnglish } from './i18n'
 import { getTheme, setTheme, syncThemeColor } from './theme'
 
 const money = (value) => `৳${formatNumber(value)}`
@@ -22,11 +23,18 @@ const getStops = (bus) => Array.isArray(bus.stops) ? bus.stops.map((stop) => typ
 
 // Every page has its own URL so the browser's back and forward buttons move between pages.
 const PAGE_PATHS = {
-  'Home': '/', 'Find a bus': '/find-a-bus', 'Ride share': '/ride-share', 'My trips': '/my-trips', 'Wallet': '/wallet',
+  'Home': '/', 'Find a bus': '/find-a-bus', 'Bus routes': '/bus-routes', 'Ride share': '/ride-share', 'My trips': '/my-trips', 'Wallet': '/wallet',
   'Profile': '/profile', 'Friends': '/friends', 'Messages': '/messages', 'Notifications': '/notifications', 'Offers': '/offers',
   'Map': '/map', 'GPay': '/gpay', 'Verification': '/verification', 'Admin': '/admin',
 }
+// Each route also has its own page, e.g. /bus-routes/DBR-12.
+const busPath = (routeNumber) => `/bus-routes/${encodeURIComponent(routeNumber)}`
+const routeFromPath = (path) => {
+  const match = path.match(/^\/bus-routes\/([^/]+)\/?$/i)
+  return match ? decodeURIComponent(match[1]) : null
+}
 const pageFromPath = (path) => {
+  if (routeFromPath(path)) return 'Bus details'
   const clean = path.replace(/\/+$/, '').toLowerCase() || '/'
   return Object.keys(PAGE_PATHS).find((page) => PAGE_PATHS[page] === clean) || 'Home'
 }
@@ -40,6 +48,8 @@ function App() {
   })
   const [user, setUser] = useState(() => { try { return token ? JSON.parse(localStorage.getItem('sc_user') || 'null') : null } catch { return null } })
   const [page, setPage] = useState(() => pageFromPath(window.location.pathname))
+  // The route shown on the 'Bus details' page.
+  const [routeNumber, setRouteNumber] = useState(() => routeFromPath(window.location.pathname))
   const [mobileMenu, setMobileMenu] = useState(false)
   const [moreMenu, setMoreMenu] = useState(false)
   const [toast, setToast] = useState('')
@@ -56,15 +66,18 @@ function App() {
     window.setTimeout(() => setToast(''), 3600)
   }, [])
   // Shows a page and records it in the browser history; replace swaps the current entry instead of adding one.
-  const showPage = useCallback((target, { replace = false } = {}) => {
-    const path = PAGE_PATHS[target] || '/'
+  // 'Bus details' also takes the route to show.
+  const showPage = useCallback((target, { replace = false, route = null } = {}) => {
+    const path = target === 'Bus details' && route ? busPath(route) : PAGE_PATHS[target] || '/'
     if (window.location.pathname !== path) window.history[replace ? 'replaceState' : 'pushState']({ page: target }, '', path)
     setPage(target)
+    setRouteNumber(route)
     setMobileMenu(false)
     setMoreMenu(false)
   }, [])
   // An unknown address shows the home page, so put the matching URL in the address bar.
   useEffect(() => {
+    if (routeFromPath(window.location.pathname)) return
     const path = PAGE_PATHS[pageFromPath(window.location.pathname)]
     if (window.location.pathname !== path) window.history.replaceState({ page: 'Home' }, '', path)
   }, [])
@@ -72,6 +85,7 @@ function App() {
   useEffect(() => {
     const onPop = () => {
       setPage(pageFromPath(window.location.pathname))
+      setRouteNumber(routeFromPath(window.location.pathname))
       setMobileMenu(false)
       setMoreMenu(false)
       setAuthMode('')
@@ -127,8 +141,8 @@ function App() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const signedIn = Boolean(token && user)
   const isAdmin = signedIn && user.role?.toLowerCase() === 'admin'
-  const navigate = (target) => {
-    showPage(target)
+  const navigate = (target, options) => {
+    showPage(target, options)
     window.scrollTo(0, 0)
   }
 
@@ -143,8 +157,8 @@ function App() {
           {mobileMenu ? <X /> : <Menu />}
         </button>
         <nav className={mobileMenu ? 'nav-links open' : 'nav-links'}>
-          {['Home', 'Find a bus', 'Ride share', 'My trips'].map((item) => (
-            <button key={item} className={page === item ? 'nav-link active' : 'nav-link'} onClick={() => navigate(item)}>{t(item)}</button>
+          {['Home', 'Find a bus', 'Bus routes', 'Ride share', 'My trips'].map((item) => (
+            <button key={item} className={page === item || (item === 'Bus routes' && page === 'Bus details') ? 'nav-link active' : 'nav-link'} onClick={() => navigate(item)}>{t(item)}</button>
           ))}
           <div className="more-nav-wrap">
             <button className={['Friends', 'Messages', 'Notifications', 'Offers', 'Map', 'GPay', 'Verification', 'Admin'].includes(page) ? 'nav-link active' : 'nav-link'} aria-expanded={moreMenu} onClick={() => setMoreMenu(!moreMenu)}>{t('More')} <ChevronDown size={13} /></button>
@@ -170,7 +184,9 @@ function App() {
 
       <main>
         {page === 'Home' && <HomePage user={user} token={token} signedIn={signedIn} navigate={navigate} openAuth={() => setAuthMode('login')} />}
-        {page === 'Find a bus' && <BusPage token={token} signedIn={signedIn} user={user} notify={notify} openAuth={() => setAuthMode('login')} />}
+        {page === 'Find a bus' && <BusPage token={token} signedIn={signedIn} user={user} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
+        {page === 'Bus routes' && <BusRoutesPage navigate={navigate} />}
+        {page === 'Bus details' && <BusDetailPage key={routeNumber} routeNumber={routeNumber} user={user} signedIn={signedIn} notify={notify} navigate={navigate} />}
         {page === 'Ride share' && <RidePage token={token} user={user} signedIn={signedIn} notify={notify} openAuth={() => setAuthMode('login')} />}
         {page === 'My trips' && <TripsPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} />}
         {page === 'Wallet' && <WalletPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} />}
@@ -247,7 +263,6 @@ function ThemeMenu({ theme, onChange }) {
 }
 
 // Shortcuts shown under the home search; each one runs the same search as typing the stops in.
-const POPULAR_ROUTES = [['Farmgate', 'Uttara'], ['Gulistan', 'Mirpur 10'], ['Mohakhali', 'Motijheel']]
 
 // Secondary tools listed on the home page; each opens its own page, which handles sign-in itself.
 const HOME_TOOLS = [
@@ -259,16 +274,222 @@ const HOME_TOOLS = [
   { target: 'Messages', icon: MessageCircle, title: 'Messages', text: 'Coordinate pickups with your ride crew.' },
 ]
 
+// Route and stop totals stored in the database. Shown to every visitor, signed in or not.
+function BusStatsCard({ stats, onRetry, onSeeAll }) {
+  if (stats.status === 'error') {
+    return <div className="hp-stats is-error" role="status">
+      <CircleAlert size={18} />
+      <span><b>{t('Route count unavailable')}</b><small>{t('Could not reach the bus database.')}</small></span>
+      <button type="button" onClick={onRetry}>{t('Try again')}</button>
+    </div>
+  }
+  const loading = stats.status === 'loading'
+  const value = (number) => loading ? <i className="hp-stat-skeleton" aria-hidden="true" /> : formatNumber(number)
+  return <div className="hp-stats" aria-busy={loading} aria-live="polite">
+    <div className="hp-stat"><span className="hp-stat-icon"><BusFront size={18} /></span><span><b>{value(stats.routes)}</b><small>{t('Bus routes')}</small></span></div>
+    <div className="hp-stat"><span className="hp-stat-icon"><MapPin size={18} /></span><span><b>{value(stats.stops)}</b><small>{t('Bus stops')}</small></span></div>
+    {loading
+      ? <small className="hp-stats-source">{t('Loading…')}</small>
+      : <button type="button" className="hp-stats-source hp-stats-link" onClick={onSeeAll}>{t('See all routes and stops')} <ArrowRight size={14} /></button>}
+  </div>
+}
+
+const coordinate = (value) => formatNumber(value, { minimumFractionDigits: 4, maximumFractionDigits: 4, useGrouping: false })
+
+const sortedStops = (bus) => [...(bus?.stops || [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+
+// Length along the stops in km, stop to stop in straight lines, so it is an estimate of the road distance.
+const routeLengthKm = (stops) => stops.slice(1).reduce((sum, stop, i) => {
+  const prev = stops[i], rad = Math.PI / 180
+  const a = Math.sin((stop.lat - prev.lat) * rad / 2) ** 2 + Math.cos(prev.lat * rad) * Math.cos(stop.lat * rad) * Math.sin((stop.lng - prev.lng) * rad / 2) ** 2
+  return sum + 12742 * Math.asin(Math.sqrt(a))
+}, 0)
+
+const BUS_TYPES = ['general', 'semi-seating', 'seating']
+
+// The route list is fetched once per visit and shared by every page. A copy is kept in localStorage so a
+// returning visitor sees the routes at once while the fresh list loads in the background.
+const ROUTES_STORAGE_KEY = 'sc_bus_routes'
+let routesCache = (() => {
+  try { const saved = JSON.parse(localStorage.getItem(ROUTES_STORAGE_KEY) || 'null'); return Array.isArray(saved) ? saved : null } catch { return null }
+})()
+let routesRequest = null
+let routesFresh = false
+const fetchBusRoutes = () => {
+  routesRequest ??= request('/bus/all').then((data) => {
+    routesCache = Array.isArray(data.data) ? data.data : []
+    routesFresh = true
+    try { localStorage.setItem(ROUTES_STORAGE_KEY, JSON.stringify(routesCache)) } catch { /* just not kept for next time */ }
+    return routesCache
+  }).finally(() => { routesRequest = null })
+  return routesRequest
+}
+const findCachedRoute = (routeNumber) => routesCache?.find((bus) => bus.routeNumber?.toLowerCase() === routeNumber?.toLowerCase())
+
+// Every route with its stops, from the database. status: 'loading', 'ready' or 'error'.
+function useBusRoutes() {
+  const [routes, setRoutes] = useState(() => routesCache ? { status: 'ready', buses: routesCache } : { status: 'loading' })
+  const load = useCallback(() => {
+    if (routesFresh) { setRoutes({ status: 'ready', buses: routesCache }); return }
+    if (!routesCache) setRoutes({ status: 'loading' })
+    fetchBusRoutes()
+      .then((buses) => setRoutes({ status: 'ready', buses }))
+      .catch(() => { if (!routesCache) setRoutes({ status: 'error' }) })
+  }, [])
+  useEffect(() => { load() }, [load])
+  return [routes, load]
+}
+
+// Loading, error and empty states shared by the route lists; null once there are routes to show.
+function RoutesStatus({ state, onRetry }) {
+  if (state.status === 'loading') return <div className="empty-state"><span className="spinner" /> {t('Loading bus routes…')}</div>
+  if (state.status === 'error') return <div className="empty-state panel"><span className="empty-icon"><BusFront size={22} /></span><b>{t('Bus routes could not be loaded')}</b><span>{t('Could not reach the bus database.')}</span><button className="button button-outline button-small" onClick={onRetry}>{t('Try again')}</button></div>
+  if (!state.buses.length) return <div className="empty-state panel"><span className="empty-icon"><BusFront size={22} /></span><b>{t('No bus routes yet')}</b></div>
+  return null
+}
+
+// A route in a list: where it runs and how many stops. Opens the route's own page.
+function RouteTile({ bus, onOpen }) {
+  const stops = sortedStops(bus)
+  const first = stops[0]?.name, last = stops[stops.length - 1]?.name
+  return <button type="button" className="hp-route hp-route-tile" onClick={() => onOpen(bus)}>
+    <span className="hp-route-head">
+      {bus.routeNumber && <span className="hp-route-no">{bus.routeNumber}</span>}
+      <span><b>{t(bus.busName)}</b><small>{[bus.operator, bus.busType].filter(Boolean).map((text) => t(text)).join(' · ')}</small></span>
+    </span>
+    {first && <span className="hp-route-ends"><span><i className="start" />{t(first)}</span><ArrowRight size={14} /><span><i className="end" />{t(last)}</span></span>}
+    <span className="hp-route-foot">{t('{count} stops', { count: stops.length })}<span>{t('View details')} <ArrowRight size={14} /></span></span>
+  </button>
+}
+
+// Well-known routes shown on the home page; the full list has its own page.
+const FEATURED_ROUTES = ['Raida', 'Turag', 'Victor Classic', 'Projapati', 'Bihanga', 'Akash']
+const FEATURED_COUNT = 6
+
+function RoutePreview({ state, onRetry, navigate }) {
+  const buses = state.status === 'ready' ? state.buses.filter((bus) => bus.routeNumber) : []
+  const featured = FEATURED_ROUTES.map((name) => buses.find((bus) => bus.busName === name)).filter(Boolean)
+  const shown = [...new Set([...featured, ...buses])].slice(0, FEATURED_COUNT)
+  return <section className="hp-section">
+    <div className="hp-section-head hp-head-row">
+      <div>
+        <span className="hp-kicker">{t('Route database')}</span>
+        <h2>{t('Popular bus routes')}</h2>
+        <p>{t('A few well-known routes. Open one to see every stop, the fare and where it runs.')}</p>
+      </div>
+      {state.status === 'ready' && <button className="button button-outline button-small" onClick={() => navigate('Bus routes')}>{t('See all {count} routes', { count: buses.length })} <ArrowRight size={14} /></button>}
+    </div>
+    {RoutesStatus({ state, onRetry }) || <div className="hp-routes hp-routes-3">{shown.map((bus) => <RouteTile key={bus._id} bus={bus} onOpen={() => navigate('Bus details', { route: bus.routeNumber })} />)}</div>}
+  </section>
+}
+
+const ROUTES_PAGE_SIZE = 24
+
+// Every route stored in the database, searchable by bus, route number or stop and filterable by bus type.
+function BusRoutesPage({ navigate }) {
+  const [state, load] = useBusRoutes()
+  const [query, setQuery] = useState('')
+  const [type, setType] = useState('all')
+  const [limit, setLimit] = useState(ROUTES_PAGE_SIZE)
+  const term = query.trim().toLowerCase()
+  // Matches the English names stored in the database and their Bangla, so either language can be typed.
+  const buses = state.status === 'ready' ? state.buses.filter((bus) => bus.routeNumber && (type === 'all' || bus.busType === type) &&
+    (!term || [bus.busName, bus.operator, bus.routeNumber, ...(bus.stops || []).map((s) => s.name)]
+      .some((text) => text && (text.toLowerCase().includes(term) || t(text).toLowerCase().includes(term))))) : []
+  const filter = (next) => { setType(next); setLimit(ROUTES_PAGE_SIZE) }
+  return <div className="page inner-page">
+    <PageHeading eyebrow={t('ROUTE DATABASE')} title={t('Bus routes in Dhaka')} description={t('Every route in the database. Open a route to see its stops in order, the fare and where each stop is.')} icon={Route} />
+    <section className="panel routes-toolbar">
+      <label className="hp-route-search"><Search size={16} /><input value={query} onChange={(e) => { setQuery(e.target.value); setLimit(ROUTES_PAGE_SIZE) }} placeholder={t('Search a bus or a stop')} /></label>
+      <div className="segmented routes-filter">{['all', ...BUS_TYPES].map((option) => <button key={option} className={type === option ? 'selected' : ''} onClick={() => filter(option)}>{option === 'all' ? t('All buses') : t(option)}</button>)}</div>
+    </section>
+    <section className="results-area">
+      {RoutesStatus({ state, onRetry: load }) || <>
+        <div className="results-heading"><div><div className="eyebrow">{t('ALL ROUTES')}</div><h2>{term ? t('Routes matching “{query}”', { query: query.trim() }) : t('Bus routes')}</h2></div><span className="result-count">{t('{count} routes', { count: buses.length })}</span></div>
+        {buses.length
+          ? <div className="hp-routes hp-routes-3">{buses.slice(0, limit).map((bus) => <RouteTile key={bus._id} bus={bus} onOpen={() => navigate('Bus details', { route: bus.routeNumber })} />)}</div>
+          : <div className="empty-state panel"><b>{t('No route matches “{query}”', { query: query.trim() })}</b><span>{t('Try another bus name or stop.')}</span></div>}
+        {buses.length > limit && <div className="routes-more"><button className="button button-outline" onClick={() => setLimit(limit + ROUTES_PAGE_SIZE)}>{t('Show more routes ({count} left)', { count: buses.length - limit })} <ChevronDown size={15} /></button></div>}
+      </>}
+    </section>
+  </div>
+}
+
+// One route's own page: what it is, the fare, and every stop in order with its location.
+function BusDetailPage({ routeNumber, user, signedIn, notify, navigate }) {
+  // A route already in the shared list shows at once; otherwise only this route is fetched.
+  const [state, setState] = useState(() => findCachedRoute(routeNumber) ? { status: 'ready', bus: findCachedRoute(routeNumber) } : { status: 'loading' })
+  const load = useCallback(() => {
+    if (routesFresh && findCachedRoute(routeNumber)) return
+    if (!findCachedRoute(routeNumber)) setState({ status: 'loading' })
+    request(`/bus/route/${encodeURIComponent(routeNumber)}`)
+      .then((data) => setState({ status: 'ready', bus: data.data }))
+      .catch((error) => { if (!findCachedRoute(routeNumber)) setState({ status: 'error', message: errorText(error) }) })
+  }, [routeNumber])
+  useEffect(() => { load() }, [load])
+  const back = <button className="route-back" onClick={() => navigate('Bus routes')}><ArrowLeft size={15} /> {t('All bus routes')}</button>
+  if (state.status !== 'ready') {
+    return <div className="page inner-page">{back}
+      {state.status === 'loading'
+        ? <div className="empty-state"><span className="spinner" /> {t('Loading bus routes…')}</div>
+        : <div className="empty-state panel"><span className="empty-icon"><BusFront size={22} /></span><b>{t('Bus route could not be loaded')}</b><span>{state.message}</span><button className="button button-outline button-small" onClick={load}>{t('Try again')}</button></div>}
+    </div>
+  }
+  const { bus } = state
+  const stops = sortedStops(bus)
+  const first = stops[0], last = stops[stops.length - 1]
+  const km = routeLengthKm(stops)
+  const planTrip = () => { sessionStorage.setItem('bus_query', JSON.stringify({ mode: 'route', from: first.name, to: last.name, auto: true })); navigate('Find a bus') }
+  return <div className="page inner-page route-detail">
+    {back}
+    <section className="panel route-hero">
+      <div className="route-hero-head">
+        <span className="hp-route-no route-hero-no">{bus.routeNumber}</span>
+        <div>
+          <h1>{t(bus.busName)}</h1>
+          <p>{[bus.operator, bus.busType, bus.frequency].filter(Boolean).map((text) => t(text)).join(' · ')}</p>
+        </div>
+      </div>
+      {first && <div className="hp-route-ends route-hero-ends"><span><i className="start" />{t(first.name)}</span><ArrowRight size={16} /><span><i className="end" />{t(last.name)}</span></div>}
+      <div className="route-facts">
+        <span><small>{t('Stops')}</small><b>{formatNumber(stops.length)}</b></span>
+        <span><small>{t('Route length')}</small><b>{t('~{km} km', { km: Math.round(km) })}</b></span>
+        <span><small>{t('Fare from')}</small><b>{money(bus.base_fare)}</b></span>
+        <span><small>{t('Per km')}</small><b>{money(bus.per_km_fare)}</b></span>
+      </div>
+      {first && <div className="route-hero-actions">
+        <button className="button button-green button-small" onClick={planTrip}><Search size={14} /> {t('Search buses on this route')}</button>
+        <a className="button button-outline button-small" href={`https://www.openstreetmap.org/?mlat=${first.lat}&mlon=${first.lng}#map=13/${first.lat}/${first.lng}`} target="_blank" rel="noreferrer"><MapIcon size={14} /> {t('Open on the map')}</a>
+      </div>}
+    </section>
+    <section className="panel route-stops-panel">
+      <div className="results-heading"><div><div className="eyebrow">{t('STOPS IN ORDER')}</div><h2>{t('Where this bus stops')}</h2></div><span className="result-count">{t('{count} stops', { count: stops.length })}</span></div>
+      <ol className="hp-route-stops">
+        {stops.map((stop) => <li key={`${stop.order}-${stop.name}`}>
+          <span className="hp-stop-no">{formatNumber((stop.order ?? 0) + 1)}</span>
+          <span className="hp-stop-name">{t(stop.name)}</span>
+          <a href={`https://www.openstreetmap.org/?mlat=${stop.lat}&mlon=${stop.lng}#map=17/${stop.lat}/${stop.lng}`} target="_blank" rel="noreferrer" title={t('Open on the map')}>
+            <MapPin size={12} /> {coordinate(stop.lat)}, {coordinate(stop.lng)}
+          </a>
+        </li>)}
+      </ol>
+      <p className="route-note">{t('Stop lists come from public listings and the locations are approximate.')}</p>
+    </section>
+    <section className="panel route-reviews"><BusReviews bus={bus} user={user} signedIn={signedIn} notify={notify} /></section>
+  </div>
+}
+
 function HomePage({ user, token, signedIn, navigate, openAuth }) {
-  const [busCount, setBusCount] = useState(null)
-  useEffect(() => {
-    if (!token) return
-    request('/bus/all', { token }).then((data) => setBusCount(Array.isArray(data.data) ? data.data.length : 0)).catch(() => {})
-  }, [token])
-  const searchBuses = (from, to) => { sessionStorage.setItem('bus_query', JSON.stringify({ from, to })); navigate('Find a bus') }
+  const [routes, loadRoutes] = useBusRoutes()
+  const busStats = routes.status === 'ready'
+    ? { status: 'ready', routes: routes.buses.length, stops: new Set(routes.buses.flatMap((bus) => (bus.stops || []).map((stop) => stop.name))).size }
+    : { status: routes.status }
+  const busCount = busStats.status === 'ready' ? busStats.routes : null
   const firstName = user?.name?.split(' ')[0]
+  const pageRef = useRef(null)
+  useScrollMotion(pageRef)
   return (
-    <div className="home-page">
+    <div className="home-page" ref={pageRef}>
       <section className="hp-hero">
         <div className="hp-hero-inner">
           <div className="hp-hero-copy">
@@ -276,17 +497,20 @@ function HomePage({ user, token, signedIn, navigate, openAuth }) {
             <h1>{signedIn ? <>{t('Where are you')} <span>{t('heading today?')}</span></> : <>{t('Your daily commute,')} <span>{t('sorted.')}</span></>}</h1>
             <p>{t('Find the right bus across Dhaka, share a ride with people going your way, and keep your fares and trips in one place.')}</p>
 
-            <div className="hp-search-card">
-              <QuickSearch onSearch={searchBuses} />
-              <div className="hp-popular">
-                <span>{t('Popular:')}</span>
-                {POPULAR_ROUTES.map(([from, to]) => <button key={`${from}-${to}`} type="button" onClick={() => searchBuses(from, to)}>{t(from)} <ArrowRight size={11} /> {t(to)}</button>)}
-              </div>
+            <div className="hp-hero-actions">
+              <button type="button" className="button button-green hp-hero-cta" onClick={() => navigate('Find a bus')}><Search size={18} /> {t('Find your bus')}</button>
+              <button type="button" className="button button-outline hp-hero-secondary" onClick={() => navigate('Bus routes')}><Route size={17} /> {t('Browse all routes')}</button>
+            </div>
+
+            <div className="hp-hero-stats">
+              <span><b>{busStats.status === 'ready' ? formatNumber(busStats.routes) : '—'}</b><small>{t('Bus routes')}</small></span>
+              <span><b>{busStats.status === 'ready' ? formatNumber(busStats.stops) : '—'}</b><small>{t('Bus stops')}</small></span>
+              <span><b><MapIcon size={18} /> {t('Live map')}</b><small>{t('Distance & travel time')}</small></span>
             </div>
 
             <ul className="hp-trust">
               <li><ShieldCheck size={15} /> {t('Secure account sign-in')}</li>
-              <li><Route size={15} /> {busCount === null ? t('City-wide bus routes') : t('{count} buses listed', { count: busCount })}</li>
+              <li><Route size={15} /> {busCount === null ? t('City-wide bus routes') : t('{count} bus routes', { count: busCount })}</li>
               <li><Users size={15} /> {t('Community ride sharing')}</li>
             </ul>
           </div>
@@ -313,10 +537,13 @@ function HomePage({ user, token, signedIn, navigate, openAuth }) {
 
       <div className="page">
         <section className="hp-section">
-          <div className="hp-section-head">
-            <span className="hp-kicker">{t('Core services')}</span>
-            <h2>{t('Everything your commute needs')}</h2>
-            <p>{t('Three tools that cover the everyday trip, from finding a route to paying for it.')}</p>
+          <div className="hp-section-head hp-head-row hp-services-head">
+            <div>
+              <span className="hp-kicker">{t('Core services')}</span>
+              <h2>{t('Everything your commute needs')}</h2>
+              <p>{t('Three tools that cover the everyday trip, from finding a route to paying for it.')}</p>
+            </div>
+            <BusStatsCard stats={busStats} onRetry={loadRoutes} onSeeAll={() => navigate('Bus routes')} />
           </div>
           <div className="hp-services">
             <button className="hp-service" onClick={() => navigate('Find a bus')}>
@@ -339,6 +566,8 @@ function HomePage({ user, token, signedIn, navigate, openAuth }) {
             </button>
           </div>
         </section>
+
+        <RoutePreview state={routes} onRetry={loadRoutes} navigate={navigate} />
 
         <section className="hp-section hp-steps-section">
           <div className="hp-section-head">
@@ -378,6 +607,43 @@ function HomePage({ user, token, signedIn, navigate, openAuth }) {
   )
 }
 
+// Home page scroll motion: each section rises into view the first time it is scrolled to, and the hero
+// preview drifts at its own pace while the hero is on screen. Skipped when the device asks for reduced motion.
+function useScrollMotion(pageRef) {
+  // Runs before the first paint so sections below the fold never flash in and then hide again.
+  useLayoutEffect(() => {
+    const page = pageRef.current
+    if (!page || !('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    page.classList.add('hp-motion')
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return
+        entry.target.classList.add('is-in')
+        observer.unobserve(entry.target)
+      })
+    }, { rootMargin: '0px 0px -12% 0px' })
+    page.querySelectorAll('.hp-section, .hp-cta').forEach((section) => observer.observe(section))
+
+    const hero = page.querySelector('.hp-hero')
+    const preview = page.querySelector('.hp-preview')
+    let frame = 0
+    const onScroll = () => {
+      if (frame) return
+      frame = requestAnimationFrame(() => {
+        frame = 0
+        if (hero && preview) preview.style.setProperty('--hp-y', `${Math.min(window.scrollY, hero.offsetHeight)}px`)
+      })
+    }
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('scroll', onScroll)
+      cancelAnimationFrame(frame)
+      page.classList.remove('hp-motion')
+    }
+  }, [pageRef])
+}
+
 // Stylised street map behind the home page route preview. Purely decorative.
 function RouteMap() {
   const route = 'M92 372 L92 300 Q92 282 110 278 L214 256 Q232 252 236 234 L250 168 Q254 150 272 146 L384 126 Q402 122 408 104 L428 48'
@@ -406,34 +672,79 @@ function RouteMap() {
   </svg>
 }
 
-function QuickSearch({ onSearch }) {
-  const [from, setFrom] = useState('')
-  const [to, setTo] = useState('')
-  return <form className="hp-search" onSubmit={(event) => { event.preventDefault(); onSearch(from, to) }}>
-    <label className="hp-search-field"><small>{t('From')}</small><span><span className="hp-dot-start" /><input value={from} onChange={(e) => setFrom(e.target.value)} placeholder={t('Starting point')} /></span></label>
-    <button type="button" className="hp-swap" onClick={() => { setFrom(to); setTo(from) }} aria-label={t('Swap locations')}><ArrowDownUp size={15} /></button>
-    <label className="hp-search-field"><small>{t('To')}</small><span><MapPin size={16} /><input value={to} onChange={(e) => setTo(e.target.value)} placeholder={t('Destination')} /></span></label>
-    <button type="submit" className="button button-green hp-search-submit"><Search size={17} /> {t('Find buses')}</button>
-  </form>
+// Every stop name in the database, offered as suggestions in the place inputs (input list="stop-suggestions").
+// Stop names must match the database for route search, so picking one avoids spelling misses.
+function StopSuggestions() {
+  const [routes] = useBusRoutes()
+  const names = useMemo(() => routes.status === 'ready'
+    ? [...new Set(routes.buses.flatMap((bus) => (bus.stops || []).map((stop) => stop.name)))].sort((a, b) => a.localeCompare(b))
+    : [], [routes])
+  return <datalist id="stop-suggestions">{names.map((name) => <option key={name} value={t(name)} />)}</datalist>
 }
 
 function PageHeading({ eyebrow, title, description, icon: Icon }) {
   return <div className="page-heading"><span className="heading-icon">{Icon && <Icon size={21} />}</span><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1><p>{description}</p></div></div>
 }
 
-function BusPage({ token, signedIn, user, notify, openAuth }) {
+// "1 hr 5 min" / "25 min", in the current language.
+const formatDuration = (minutes) => {
+  const total = Math.max(1, Math.round(minutes))
+  const hours = Math.floor(total / 60), mins = total % 60
+  return hours ? (mins ? t('{h} hr {m} min', { h: hours, m: mins }) : t('{h} hr', { h: hours })) : t('{m} min', { m: mins })
+}
+
+// Google Maps directions between two places, opened in a new tab (or the Google Maps app on phones).
+const googleMapsDirections = (from, to) => `https://www.google.com/maps/dir/?${new URLSearchParams({
+  api: '1', origin: `${from}, Dhaka, Bangladesh`, destination: `${to}, Dhaka, Bangladesh`, travelmode: 'driving',
+})}`
+
+// Where the distance came from (route-estimate "source").
+const ESTIMATE_SOURCES = {
+  'google-routes': 'By road, from Google Maps',
+  openstreetmap: 'By road, from OpenStreetMap',
+  approximate: 'Approximate: road service unavailable',
+}
+
+// The searched trip: both places, Google's road distance and travel time, and a link to Google Maps.
+// The distance is for the road between the two places, which is not the same as the bus's path or its stops.
+function TripSummary({ trip, estimate, onRetry }) {
+  return <section className="panel trip-summary">
+    <div className="trip-places">
+      <span><i className="start" /><small>{t('Start')}</small><b>{t(trip.start.name)}</b></span>
+      <ArrowRight size={16} />
+      <span><i className="end" /><small>{t('Destination')}</small><b>{t(trip.end.name)}</b></span>
+    </div>
+    <div className="trip-figures">
+      {estimate.status === 'loading' && <span className="trip-figure"><small>{t('Estimated distance')}</small><b><i className="hp-stat-skeleton" aria-hidden="true" /></b></span>}
+      {estimate.status === 'ready' && <>
+        <span className="trip-figure"><small>{t('Estimated distance')}</small><b>{t('{km} km', { km: formatNumber(estimate.data.distanceKm, { maximumFractionDigits: 1 }) })}</b><em>{t(ESTIMATE_SOURCES[estimate.data.source] || ESTIMATE_SOURCES['google-routes'])}</em></span>
+        {estimate.data.durationMinutes > 0 && <span className="trip-figure"><small>{t('Estimated travel time')}</small><b>{formatDuration(estimate.data.durationMinutes)}</b><em>{estimate.data.source === 'google-routes'
+          ? (estimate.data.durationWithoutTrafficMinutes ? t('{time} without traffic', { time: formatDuration(estimate.data.durationWithoutTrafficMinutes) }) : t('Driving, with current traffic'))
+          : estimate.data.source === 'approximate' ? t('Rough estimate') : t('Driving, without traffic')}</em></span>}
+      </>}
+      {estimate.status === 'error' && <span className="trip-figure trip-unavailable"><small>{t('Estimated distance')}</small><b>{t('Temporarily unavailable')}</b><em>{estimate.message} <button type="button" onClick={onRetry}>{t('Try again')}</button></em></span>}
+      <a className="button button-outline button-small trip-gmaps" href={googleMapsDirections(trip.start.name, trip.end.name)} target="_blank" rel="noreferrer"><MapIcon size={14} /> {t('Open in Google Maps')} <ArrowUpRight size={13} /></a>
+    </div>
+  </section>
+}
+
+function BusPage({ token, signedIn, user, notify, navigate, openAuth }) {
+  // A search started from another page (home or a route page); it runs once when the page opens.
   const savedQuery = useMemo(() => {
-    try { return JSON.parse(sessionStorage.getItem('bus_query') || '{}') } catch { return {} }
+    try { const saved = JSON.parse(sessionStorage.getItem('bus_query') || '{}'); sessionStorage.removeItem('bus_query'); return saved } catch { return {} }
   }, [])
   const [from, setFrom] = useState(savedQuery.from || '')
   const [to, setTo] = useState(savedQuery.to || '')
-  const [name, setName] = useState('')
-  const [mode, setMode] = useState('route')
+  const [name, setName] = useState(savedQuery.name || '')
+  const [mode, setMode] = useState(savedQuery.mode === 'name' ? 'name' : 'route')
   const [buses, setBuses] = useState([])
   const [loading, setLoading] = useState(false)
-  const [searched, setSearched] = useState(false)
+  const [searched, setSearched] = useState(null) // the search shown: { mode, from, to, name }
   const [error, setError] = useState('')
   const [favorites, setFavorites] = useState([])
+  const [trip, setTrip] = useState(null) // { start, end }: the stops the searched places resolved to
+  const [estimate, setEstimate] = useState({ status: 'idle' })
+  const [selectedId, setSelectedId] = useState(null)
 
   useEffect(() => {
     if (!signedIn || !user?.id) return
@@ -442,21 +753,47 @@ function BusPage({ token, signedIn, user, notify, openAuth }) {
       .catch(() => {})
   }, [signedIn, token, user?.id])
 
+  // Road distance and time from Google, through the backend, which holds the server key.
+  const loadEstimate = useCallback((start, end) => {
+    setEstimate({ status: 'loading' })
+    request(`/bus/route-estimate?${new URLSearchParams({ startLocation: start, endLocation: end })}`, { token })
+      .then((data) => setEstimate({ status: 'ready', data: data.data }))
+      .catch((e) => setEstimate({ status: 'error', message: errorText(e) }))
+  }, [token])
+
   const search = async (event) => {
     event?.preventDefault()
     if (!signedIn) return openAuth()
-    const query = mode === 'route' ? (from && to ? `/bus/search-by-route?${new URLSearchParams({ startLocation: from, endLocation: to })}` : '') : (name ? `/bus/search-by-name?${new URLSearchParams({ busName: name })}` : '')
-    if (!query) { setError(mode === 'route' ? t('Enter both your starting point and destination.') : t('Enter a bus name to search.')); return }
-    setLoading(true); setError(''); setSearched(true)
+    const start = toEnglish(from.trim()), end = toEnglish(to.trim()), busName = toEnglish(name.trim())
+    if (mode === 'route' && !start) { setError(t('Enter your starting point.')); return }
+    if (mode === 'route' && !end) { setError(t('Enter your destination.')); return }
+    if (mode === 'name' && !busName) { setError(t('Enter a bus name to search.')); return }
+    setLoading(true); setError(''); setSearched({ mode, from: start, to: end, name: busName }); setSelectedId(null); setTrip(null)
+    if (mode === 'route') loadEstimate(start, end); else setEstimate({ status: 'idle' })
     try {
-      const result = await request(query, { token })
+      const result = await request(mode === 'route'
+        ? `/bus/search-by-route?${new URLSearchParams({ startLocation: start, endLocation: end })}`
+        : `/bus/search-by-name?${new URLSearchParams({ busName })}`, { token })
       setBuses(result.data || [])
-    } catch (e) { setBuses([]); setError(errorText(e)) } finally { setLoading(false) }
+      setSelectedId(result.data?.[0]?._id || null)
+      if (result.start && result.end) setTrip({ start: result.start, end: result.end })
+    } catch (e) {
+      setBuses([]); setError(errorText(e)); setEstimate({ status: 'idle' })
+    } finally { setLoading(false) }
   }
+  // Run a search handed over from another page, once signed in.
+  const autoSearched = useRef(false)
+  useEffect(() => {
+    if (autoSearched.current || !savedQuery.auto || !signedIn) return
+    autoSearched.current = true
+    search()
+  }, [signedIn]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const saveTrip = async (bus) => {
     if (!signedIn) return openAuth()
+    const distance = estimate.status === 'ready' ? estimate.data.distanceKm : 0
     try {
-      await request('/trip/add', { token, method: 'POST', body: JSON.stringify({ busId: bus._id, busName: bus.busName, distance: 0, fare: Number(bus.base_fare || 0), source: from, destination: to }) })
+      await request('/trip/add', { token, method: 'POST', body: JSON.stringify({ busId: bus._id, busName: bus.busName, distance, fare: Number(bus.base_fare || 0), source: bus.match?.boarding.name || from, destination: bus.match?.alighting.name || to }) })
       notify(t('Trip added to your history.'))
     } catch (e) { notify(errorText(e)) }
   }
@@ -469,37 +806,74 @@ function BusPage({ token, signedIn, user, notify, openAuth }) {
       notify(isSaved ? t('Removed from saved buses.') : t('Bus saved to favorites.'))
     } catch (e) { notify(errorText(e)) }
   }
-  return <div className="page inner-page">
+
+  // The selected bus on the map: its whole route in travel direction, and the stops ridden.
+  const selected = buses.find((bus) => bus._id === selectedId)
+  const mapStops = useMemo(() => {
+    const stops = sortedStops(selected)
+    return selected?.match?.direction === 'return' ? stops.reverse() : stops
+  }, [selected])
+  const mapSegment = useMemo(() => selected?.match?.segment || [], [selected])
+  // The map stays mounted across searches: Google bills each new map load.
+  const showMap = Boolean(searched && !error && (searched.mode === 'route' || loading || buses.length))
+
+  return <div className="page inner-page bus-page">
     <PageHeading eyebrow={t('GET THERE WITH EASE')} title={t('Find your bus.')} description={t('Search Dhaka bus routes by the places you are going—or by bus name.')} icon={BusFront} />
     <section className="panel bus-search-panel">
       <div className="segmented"><button className={mode === 'route' ? 'selected' : ''} onClick={() => { setMode('route'); setError('') }}><MapPin size={15} /> {t('Search by route')}</button><button className={mode === 'name' ? 'selected' : ''} onClick={() => { setMode('name'); setError('') }}><Search size={15} /> {t('Search by bus')}</button></div>
+      <StopSuggestions />
       <form className="bus-search-form" onSubmit={search}>
         {mode === 'route' ? <>
-          <label className="field"><small>{t('STARTING POINT')}</small><span><span className="input-dot" /><input value={from} onChange={(e) => setFrom(e.target.value)} placeholder={t('e.g. Uttara')} /></span></label>
+          <label className="field"><small>{t('STARTING POINT')}</small><span><span className="input-dot" /><input value={from} onChange={(e) => setFrom(e.target.value)} placeholder={t('e.g. Uttara')} list="stop-suggestions" /></span></label>
           <button type="button" className="swap-button" onClick={() => { setFrom(to); setTo(from) }} aria-label={t('Swap locations')}><ArrowDownUp size={15} /></button>
-          <label className="field"><small>{t('DESTINATION')}</small><span><MapPin size={16} /><input value={to} onChange={(e) => setTo(e.target.value)} placeholder={t('e.g. Motijheel')} /></span></label>
-        </> : <label className="field wide"><small>{t('BUS NAME')}</small><span><Search size={16} /><input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('e.g. BRTC, Green Line')} /></span></label>}
+          <label className="field"><small>{t('DESTINATION')}</small><span><MapPin size={16} /><input value={to} onChange={(e) => setTo(e.target.value)} placeholder={t('e.g. Motijheel')} list="stop-suggestions" /></span></label>
+        </> : <label className="field wide"><small>{t('BUS NAME')}</small><span><Search size={16} /><input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('e.g. BRTC, Raida')} /></span></label>}
         <button className="button button-green" type="submit" disabled={loading}>{loading ? t('Searching…') : <><Search size={16} /> {t('Search buses')}</>}</button>
       </form>
-      {error && <div className="inline-error">{error}</div>}
+      {error && <div className="inline-error" role="alert">{error}</div>}
       {!signedIn && <div className="signin-hint"><ShieldCheck size={15} /> {t('Bus search requires an account.')} <button onClick={openAuth}>{t('Sign in')}</button> {t('to find routes.')}</div>}
     </section>
-    {searched && <section className="results-area">
-      <div className="results-heading"><div><div className="eyebrow">{t('YOUR ROUTE')}</div><h2>{mode === 'route' ? t('{from} to {to}', { from: from || t('Start'), to: to || t('Destination') }) : t('Buses matching “{name}”', { name })}</h2></div>{!loading && <span className="result-count">{buses.length === 1 ? t('{count} bus found', { count: 1 }) : t('{count} buses found', { count: buses.length })}</span>}</div>
-      {loading ? <div className="empty-state"><span className="spinner" /> {t('Finding your buses…')}</div> : buses.length ? <div className="bus-list">{buses.map((bus) => <BusCard key={bus._id} bus={bus} from={from} to={to} user={user} signedIn={signedIn} favorite={favorites.includes(bus._id)} onFavorite={() => toggleFavorite(bus)} onAddTrip={() => saveTrip(bus)} notify={notify} />)}</div> : <div className="empty-state"><span className="empty-icon"><BusFront size={23} /></span><b>{t('No buses found just yet')}</b><span>{error || t('Try another nearby stop or check the spelling.')}</span></div>}
+    {searched?.mode === 'route' && trip && <TripSummary trip={trip} estimate={estimate} onRetry={() => loadEstimate(searched.from, searched.to)} />}
+    {searched && <section className={`results-area${showMap ? ' results-with-map' : ''}`}>
+      <div className="results-list">
+        <div className="results-heading"><div><div className="eyebrow">{searched.mode === 'route' ? t('YOUR ROUTE') : t('BUS SEARCH')}</div><h2>{searched.mode === 'route' ? t('{from} to {to}', { from: t(trip?.start.name || searched.from), to: t(trip?.end.name || searched.to) }) : t('Buses matching “{name}”', { name: searched.name })}</h2></div>{!loading && !error && <span className="result-count">{buses.length === 1 ? t('{count} bus found', { count: 1 }) : t('{count} buses found', { count: buses.length })}</span>}</div>
+        {loading ? <div className="empty-state"><span className="spinner" /> {t('Finding your buses…')}</div>
+          : error ? <div className="empty-state"><span className="empty-icon"><CircleAlert size={23} /></span><b>{t('Search could not be completed')}</b><span>{error}</span></div>
+          : buses.length ? <div className="bus-list">{buses.map((bus) => <BusCard key={bus._id} bus={bus} user={user} signedIn={signedIn} selected={bus._id === selectedId} onSelect={() => setSelectedId(bus._id)} favorite={favorites.includes(bus._id)} onFavorite={() => toggleFavorite(bus)} onAddTrip={() => saveTrip(bus)} onDetails={bus.routeNumber ? () => navigate('Bus details', { route: bus.routeNumber }) : null} notify={notify} />)}</div>
+          : <div className="empty-state"><span className="empty-icon"><BusFront size={23} /></span><b>{t('No buses found just yet')}</b><span>{searched.mode === 'route' ? t('No bus in the database stops at both places. Try a nearby stop.') : t('Try another bus name or route number.')}</span></div>}
+      </div>
+      {showMap && <aside className="results-map">
+        <GoogleMapView start={trip?.start} end={trip?.end} roadPath={estimate.status === 'ready' ? estimate.data.polyline : null} busStops={mapStops} segment={mapSegment} />
+        {mapsConfigured
+          ? <ul className="gmap-legend">
+            {trip && <li><i className="legend-road" /> {t('Google driving route (estimate)')}</li>}
+            {selected && <li><i className="legend-ride" /> {t('{bus}: stops you ride', { bus: t(selected.busName) })}</li>}
+            {selected && <li><i className="legend-bus" /> {t('Rest of the bus route')}</li>}
+          </ul>
+          : <p className="gmap-note">{trip ? t('Google Maps driving route between your places. A bus may take other roads; its stops are listed on each card.') : t('Google Maps route between the first and last stop of the selected bus.')}</p>}
+      </aside>}
     </section>}
-    {!searched && <section className="suggestion"><span className="suggestion-icon"><Compass size={19} /></span><div><b>{t('Start with a familiar landmark')}</b><p>{t('Try popular Dhaka stops like Farmgate, Mohakhali, Gulistan, or Uttara.')}</p></div><span className="suggestion-pills"><button onClick={() => { setFrom('Farmgate'); setTo('Uttara') }}>{t('Farmgate')}</button><button onClick={() => { setFrom('Gulistan'); setTo('Uttara') }}>{t('Gulistan')}</button></span></section>}
+    {!searched && <section className="suggestion"><span className="suggestion-icon"><Compass size={19} /></span><div><b>{t('Start with a familiar landmark')}</b><p>{t('Try popular Dhaka stops like Farmgate, Mohakhali, Gulistan, or Uttara.')}</p></div><span className="suggestion-pills"><button onClick={() => { setMode('route'); setFrom('Farmgate'); setTo('Uttara') }}>{t('Farmgate')}</button><button onClick={() => { setMode('route'); setFrom('Gulistan'); setTo('Uttara') }}>{t('Gulistan')}</button></span></section>}
   </div>
 }
 
-function BusCard({ bus, from, to, user, signedIn, favorite, onFavorite, onAddTrip, notify }) {
+// One search result: name, route number and stops, and for a route search where to board and get off.
+function BusCard({ bus, user, signedIn, selected, onSelect, favorite, onFavorite, onAddTrip, onDetails, notify }) {
   const stops = getStops(bus)
-  return <article className="bus-result panel">
+  const match = bus.match
+  return <article className={`bus-result panel${selected ? ' selected' : ''}`}>
     <span className="bus-result-icon"><BusFront size={20} /></span><div className="bus-result-main">
-      <div className="bus-title"><h3>{bus.busName || t('City bus')}</h3>{bus.routeNumber && <span className="route-badge">{bus.routeNumber}</span>}</div>
-      <div className="bus-details"><span>{bus.operator || t('Dhaka transit')}</span>{bus.busType && <><i /> <span>{bus.busType}</span></>}{bus.frequency && <><i /> <span>{bus.frequency}</span></>}</div>
-      {stops.length > 0 && <div className="stop-line"><span>{from || stops[0]}</span><span className="stop-track" /><span>{to || stops[stops.length - 1]}</span></div>}
-      {stops.length > 0 && <div className="stop-count">{t('{count} stops on this route', { count: stops.length })}</div>}
+      <div className="bus-title"><h3>{bus.busName ? t(bus.busName) : t('City bus')}</h3>{bus.routeNumber && <span className="route-badge">{bus.routeNumber}</span>}{match?.direction === 'return' && <span className="route-badge return-badge">{t('Return trip')}</span>}</div>
+      <div className="bus-details"><span>{bus.operator ? t(bus.operator) : t('Dhaka transit')}</span>{bus.busType && <><i /> <span>{t(bus.busType)}</span></>}{bus.frequency && <><i /> <span>{t(bus.frequency)}</span></>}</div>
+      {match
+        ? <><div className="stop-line"><span>{t(match.boarding.name)}</span><span className="stop-track" /><span>{t(match.alighting.name)}</span></div>
+          <div className="stop-count">{t('Board at {from}, get off at {to}', { from: t(match.boarding.name), to: t(match.alighting.name) })} · {match.stopsToRide === 1 ? t('1 stop to ride') : t('{count} stops to ride', { count: match.stopsToRide })} · {t('{count} stops on this route', { count: stops.length })}</div></>
+        : <>{stops.length > 0 && <div className="stop-line"><span>{t(stops[0])}</span><span className="stop-track" /><span>{t(stops[stops.length - 1])}</span></div>}
+          <div className="stop-count">{t('{count} stops on this route', { count: stops.length })}</div></>}
+      <div className="bus-card-actions">
+        <button className={selected ? 'bus-map-toggle active' : 'bus-map-toggle'} onClick={onSelect} aria-pressed={selected}><MapIcon size={13} /> {selected ? t('Shown on map') : t('Show on map')}</button>
+        {onDetails && <button className="bus-details-link" onClick={onDetails}>{t('View details')} <ArrowRight size={12} /></button>}
+      </div>
     </div><div className="bus-result-side"><button className={favorite ? 'favorite saved' : 'favorite'} onClick={onFavorite} title={t('Save bus')}><Heart size={17} fill={favorite ? 'currentColor' : 'none'} /></button><span className="fare-label">{t('STARTS FROM')}</span><b>{money(bus.base_fare)}</b><small>{t('per ride')}</small><button className="button button-dark button-small" onClick={onAddTrip}>{t('Log trip')} <ArrowRight size={14} /></button></div><BusReviews bus={bus} user={user} signedIn={signedIn} notify={notify} />
   </article>
 }
@@ -564,7 +938,7 @@ function RideCard({ ride, token, user, signedIn, onRequest, notify, onRefresh })
       onRefresh()
     } catch (e) { setRequestError(errorText(e)) }
   }
-  return <><article className="ride-card panel"><div className="ride-card-top"><span className="ride-pulse"><span /></span><span>{ride.status ? t(ride.status) : t('Open ride')}</span><span className="ride-seats"><Users size={13} /> {t('Up to {count}', { count: ride.maxParticipants || 4 })}</span></div><div className="ride-route"><div><span className="route-origin" /><b>{ride.source}</b></div><span className="route-connector" /><div><span className="route-destination" /><b>{ride.destination}</b></div></div><div className="ride-card-footer"><span className="host-avatar">{ride.userName?.[0]?.toUpperCase() || 'R'}</span><span className="host-info"><b>{ride.userName || t('Dhaka commuter')}</b><small>{ride.gender ? `${t(ride.gender)} · ` : ''}{t('Ride host')}</small></span>{isMine ? <button className="button button-outline button-small" onClick={async () => { try { await request(`/api/rideshare/${ride._id}`, { method: 'DELETE' }); notify(t('Ride post removed.')); onRefresh() } catch (e) { notify(errorText(e)) } }}>{t('Your post')}</button> : <button className="button button-dark button-small" disabled={requestSent} onClick={async () => { const sent = await onRequest(); if (sent) setRequestSent(true) }}>{requestSent ? <><Check size={14} /> {t('Requested')}</> : <>{t('Join ride')} <ArrowRight size={14} /></>}</button>}</div></article>
+  return <><article className="ride-card panel"><div className="ride-card-top"><span className="ride-pulse"><span /></span><span>{ride.status ? t(ride.status) : t('Open ride')}</span><span className="ride-seats"><Users size={13} /> {t('Up to {count}', { count: ride.maxParticipants || 4 })}</span></div><div className="ride-route"><div><span className="route-origin" /><b>{t(ride.source)}</b></div><span className="route-connector" /><div><span className="route-destination" /><b>{t(ride.destination)}</b></div></div><div className="ride-card-footer"><span className="host-avatar">{ride.userName?.[0]?.toUpperCase() || 'R'}</span><span className="host-info"><b>{ride.userName || t('Dhaka commuter')}</b><small>{ride.gender ? `${t(ride.gender)} · ` : ''}{t('Ride host')}</small></span>{isMine ? <button className="button button-outline button-small" onClick={async () => { try { await request(`/api/rideshare/${ride._id}`, { method: 'DELETE' }); notify(t('Ride post removed.')); onRefresh() } catch (e) { notify(errorText(e)) } }}>{t('Your post')}</button> : <button className="button button-dark button-small" disabled={requestSent} onClick={async () => { const sent = await onRequest(); if (sent) setRequestSent(true) }}>{requestSent ? <><Check size={14} /> {t('Requested')}</> : <>{t('Join ride')} <ArrowRight size={14} /></>}</button>}</div></article>
     {isMine && <div className="ride-owner-actions"><button className="button button-outline button-small" onClick={viewRequests}>{showRequests ? t('Hide requests') : t('View ride requests')} <ArrowRight size={13} /></button>{showRequests && <div className="ride-request-list">{requestError && <small className="ride-request-error">{requestError}</small>}{requests.length ? requests.map((item) => <div className="ride-request-row" key={item._id}><span><b>{item.requesterName || t('Commuter')}</b><small>{item.requesterGender ? t(item.requesterGender) : ''} · {t(item.status || 'pending')}</small></span>{item.status === 'pending' && <><button className="button button-green button-small" onClick={() => resolveRequest(item, true)}>{t('Accept')}</button><button className="button button-outline button-small" onClick={() => resolveRequest(item, false)}>{t('Decline')}</button></>}</div>) : !requestError && <small className="ride-request-error">{t('No requests yet.')}</small>}</div>}</div>}
   </>
 }
@@ -581,7 +955,7 @@ function TripsPage({ token, signedIn, openAuth }) {
   useEffect(() => { load() }, [load])
   return <div className="page inner-page">
     <PageHeading eyebrow={t('YOUR JOURNEY, ALL IN ONE PLACE')} title={t('Trip history.')} description={t('A little record of all the places you have been.')} icon={History} />
-    {!signedIn ? <SignInPrompt openAuth={openAuth} message={t('Sign in to see your recent journeys.')} /> : loading ? <div className="empty-state"><span className="spinner" /> {t('Loading your trips…')}</div> : trips.length ? <div className="trip-list panel">{trips.map((trip, index) => <article className="trip-row" key={trip._id || index}><span className="trip-icon"><BusFront size={18} /></span><div className="trip-route-info"><b>{trip.source || t('Trip')} <ArrowRight size={13} /> {trip.destination || t('Destination')}</b><small>{trip.busName || t('Public transit')} · {trip.createdAt ? formatDate(trip.createdAt) : t('Recent trip')}</small></div><span className="trip-fare">{money(trip.fare)}</span></article>)}</div> : <div className="empty-state panel"><span className="empty-icon"><History size={22} /></span><b>{error ? t('Trip history unavailable') : t('Your next trip starts here')}</b><span>{error || t('Log a trip when you find a bus and it will show up here.')}</span>{error && <button className="button button-outline button-small" onClick={load}>{t('Try again')}</button>}</div>}
+    {!signedIn ? <SignInPrompt openAuth={openAuth} message={t('Sign in to see your recent journeys.')} /> : loading ? <div className="empty-state"><span className="spinner" /> {t('Loading your trips…')}</div> : trips.length ? <div className="trip-list panel">{trips.map((trip, index) => <article className="trip-row" key={trip._id || index}><span className="trip-icon"><BusFront size={18} /></span><div className="trip-route-info"><b>{t(trip.source || 'Trip')} <ArrowRight size={13} /> {t(trip.destination || 'Destination')}</b><small>{t(trip.busName || 'Public transit')} · {trip.createdAt ? formatDate(trip.createdAt) : t('Recent trip')}</small></div><span className="trip-fare">{money(trip.fare)}</span></article>)}</div> : <div className="empty-state panel"><span className="empty-icon"><History size={22} /></span><b>{error ? t('Trip history unavailable') : t('Your next trip starts here')}</b><span>{error || t('Log a trip when you find a bus and it will show up here.')}</span>{error && <button className="button button-outline button-small" onClick={load}>{t('Try again')}</button>}</div>}
   </div>
 }
 

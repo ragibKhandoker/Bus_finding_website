@@ -10,7 +10,10 @@ public class BusStopViewModel
     public double Lat { get; init; }
     public double Lng { get; init; }
 
-    public static BusStopViewModel From(BusStop s) => new() { Name = s.Name, Lat = s.Lat, Lng = s.Lng };
+    // Position along the route, starting at 0.
+    public int Order { get; init; }
+
+    public static BusStopViewModel From(BusStop s) => new() { Name = s.Name, Lat = s.Lat, Lng = s.Lng, Order = s.Order };
 }
 
 public class BusViewModel : EntityViewModel
@@ -27,7 +30,21 @@ public class BusViewModel : EntityViewModel
     [JsonPropertyName("per_km_fare")]
     public decimal PerKmFare { get; init; }
 
+    public bool RunsBothWays { get; init; }
+
     public List<BusStopViewModel> Stops { get; init; } = [];
+
+    // Set only on route search results: how this bus serves the searched trip.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public RouteMatchViewModel? Match { get; init; }
+
+    // A copy carrying a route search match; cached routes are shared, so they are never changed in place.
+    public BusViewModel WithMatch(RouteMatchViewModel match) => new()
+    {
+        Id = Id, BusName = BusName, RouteNumber = RouteNumber, Operator = Operator, Frequency = Frequency,
+        BusType = BusType, BaseFare = BaseFare, PerKmFare = PerKmFare, RunsBothWays = RunsBothWays, Stops = Stops,
+        Match = match,
+    };
 
     public static BusViewModel From(Bus b) => new()
     {
@@ -39,8 +56,24 @@ public class BusViewModel : EntityViewModel
         BusType = b.BusType,
         BaseFare = b.BaseFare,
         PerKmFare = b.PerKmFare,
+        RunsBothWays = b.RunsBothWays,
         Stops = b.Stops.OrderBy(s => s.Order).Select(BusStopViewModel.From).ToList(),
     };
+}
+
+// How a bus serves a searched trip: where to board and get off, and the stops ridden in travel order.
+public class RouteMatchViewModel
+{
+    // "forward" follows the stored stop order; "return" is the same route run in reverse.
+    public string Direction { get; init; } = "forward";
+    public BusStopViewModel Boarding { get; init; } = new();
+    public BusStopViewModel Alighting { get; init; } = new();
+
+    // Stops from boarding to getting off, both included, in the order the bus reaches them.
+    public List<BusStopViewModel> Segment { get; init; } = [];
+
+    // Stops after boarding up to and including the one where the rider gets off.
+    public int StopsToRide => Segment.Count - 1;
 }
 
 public class IndividualBusViewModel : EntityViewModel

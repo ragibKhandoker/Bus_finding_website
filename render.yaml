@@ -19,3 +19,5 @@ services:
         sync: false
       - key: Admin__Password
         sync: false
+      - key: GoogleMaps__ServerApiKey
+        sync: false # Google Maps server key (Routes API only)

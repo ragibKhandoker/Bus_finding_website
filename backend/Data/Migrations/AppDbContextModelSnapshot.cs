@@ -66,8 +66,16 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("route_number");
 
+                    b.Property<bool>("RunsBothWays")
+                        .HasColumnType("boolean")
+                        .HasColumnName("runs_both_ways");
+
                     b.HasKey("Id")
                         .HasName("pk_buses");
+
+                    b.HasIndex("RouteNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_buses_route_number");
 
                     b.ToTable("buses", (string)null);
                 });

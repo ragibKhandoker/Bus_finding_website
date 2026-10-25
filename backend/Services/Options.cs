@@ -26,3 +26,11 @@ public class GeoOptions
     public string OsrmBaseUrl { get; set; } = "https://router.project-osrm.org";
     public string UserAgent { get; set; } = "SmartCommuteDhaka/1.0";
 }
+
+// Google Maps settings for the server. ServerApiKey is secret: set it in appsettings.Local.json or the
+// GoogleMaps__ServerApiKey environment variable, never in the frontend.
+public class GoogleMapsOptions
+{
+    public string ServerApiKey { get; set; } = "";
+    public string RoutesBaseUrl { get; set; } = "https://routes.googleapis.com";
+}
