@@ -11,6 +11,7 @@ import './home.css'
 import './profile.css'
 import './admin.css'
 import GoogleMapView, { mapsConfigured } from './GoogleMapView'
+import { ActiveTripPanel, TripRow, useActiveTrip, useBoardControls, useTripChanges } from './Trips'
 import { BusReviews, ChatPage, FriendsPage, GpayPage, MapPage, NotificationsPage, OffersPage, VerificationPage } from './MorePages'
 import { API_BASE, UNAUTHORIZED_EVENT, apiRequest as request, isTokenExpired, tokenExpiry } from './api'
 import { formatDate, formatNumber, getLang, setLang, t, toEnglish } from './i18n'
@@ -188,7 +189,7 @@ function App() {
         {page === 'Bus routes' && <BusRoutesPage navigate={navigate} />}
         {page === 'Bus details' && <BusDetailPage key={routeNumber} routeNumber={routeNumber} user={user} signedIn={signedIn} notify={notify} navigate={navigate} />}
         {page === 'Ride share' && <RidePage token={token} user={user} signedIn={signedIn} notify={notify} openAuth={() => setAuthMode('login')} />}
-        {page === 'My trips' && <TripsPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} />}
+        {page === 'My trips' && <TripsPage token={token} signedIn={signedIn} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
         {page === 'Wallet' && <WalletPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} />}
         {page === 'Profile' && <ProfilePage user={user} token={token} signedIn={signedIn} updateUser={setUser} signOut={signOut} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Friends' && <FriendsPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} onChat={(friend) => { sessionStorage.setItem('chat_contact_id', friend.id || friend._id); navigate('Messages') }} notify={notify} />}
@@ -739,8 +740,10 @@ function TripSummary({ trip, estimate, onRetry }) {
 function BusPage({ token, signedIn, user, notify, navigate, openAuth }) {
   // A search started from another page (home or a route page); it runs once when the page opens.
   const savedQuery = useMemo(() => {
-    try { const saved = JSON.parse(sessionStorage.getItem('bus_query') || '{}'); sessionStorage.removeItem('bus_query'); return saved } catch { return {} }
+    try { return JSON.parse(sessionStorage.getItem('bus_query') || '{}') } catch { return {} }
   }, [])
+  // Cleared after the first render, not while reading it: React's development mode runs that read twice.
+  useEffect(() => { sessionStorage.removeItem('bus_query') }, [])
   const [from, setFrom] = useState(savedQuery.from || '')
   const [to, setTo] = useState(savedQuery.to || '')
   const [name, setName] = useState(savedQuery.name || '')
@@ -753,6 +756,7 @@ function BusPage({ token, signedIn, user, notify, navigate, openAuth }) {
   const [trip, setTrip] = useState(null) // { start, end }: the stops the searched places resolved to
   const [estimate, setEstimate] = useState({ status: 'idle' })
   const [selectedId, setSelectedId] = useState(null)
+  const activeTrip = useActiveTrip(token, signedIn).trip
 
   useEffect(() => {
     if (!signedIn || !user?.id) return
@@ -845,13 +849,14 @@ function BusPage({ token, signedIn, user, notify, navigate, openAuth }) {
       {error && <div className="inline-error" role="alert">{error}</div>}
       {!signedIn && <div className="signin-hint"><ShieldCheck size={15} /> {t('Bus search requires an account.')} <button onClick={openAuth}>{t('Sign in')}</button> {t('to find routes.')}</div>}
     </section>
+    <ActiveTripPanel token={token} signedIn={signedIn} notify={notify} />
     {searched?.mode === 'route' && trip && <TripSummary trip={trip} estimate={estimate} onRetry={() => loadEstimate(searched.from, searched.to)} />}
     {searched && <section className={`results-area${showMap ? ' results-with-map' : ''}`}>
       <div className="results-list">
         <div className="results-heading"><div><div className="eyebrow">{searched.mode === 'route' ? t('YOUR ROUTE') : t('BUS SEARCH')}</div><h2>{searched.mode === 'route' ? t('{from} to {to}', { from: t(trip?.start.name || searched.from), to: t(trip?.end.name || searched.to) }) : t('Buses matching “{name}”', { name: searched.name })}</h2></div>{!loading && !error && <span className="result-count">{buses.length === 1 ? t('{count} bus found', { count: 1 }) : t('{count} buses found', { count: buses.length })}</span>}</div>
         {loading ? <BusSearchLoader mode={searched.mode} />
           : error ? <div className="empty-state"><span className="empty-icon"><CircleAlert size={23} /></span><b>{t('Search could not be completed')}</b><span>{error}</span></div>
-          : buses.length ? <div className="bus-list">{buses.map((bus) => <BusCard key={bus._id} bus={bus} user={user} signedIn={signedIn} selected={bus._id === selectedId} onSelect={() => setSelectedId(bus._id)} favorite={favorites.includes(bus._id)} onFavorite={() => toggleFavorite(bus)} onAddTrip={() => saveTrip(bus)} onDetails={bus.routeNumber ? () => navigate('Bus details', { route: bus.routeNumber }) : null} notify={notify} />)}</div>
+          : buses.length ? <div className="bus-list">{buses.map((bus) => <BusCard key={bus._id} bus={bus} user={user} signedIn={signedIn} selected={bus._id === selectedId} onSelect={() => setSelectedId(bus._id)} favorite={favorites.includes(bus._id)} onFavorite={() => toggleFavorite(bus)} onAddTrip={() => saveTrip(bus)} boarding={{ token, signedIn, openAuth, notify, activeTrip }} onDetails={bus.routeNumber ? () => navigate('Bus details', { route: bus.routeNumber }) : null} notify={notify} />)}</div>
           : <div className="empty-state"><span className="empty-icon"><BusFront size={23} /></span><b>{t('No buses found just yet')}</b><span>{searched.mode === 'route' ? t('No bus in the database stops at both places. Try a nearby stop.') : t('Try another bus name or route number.')}</span></div>}
       </div>
       {showMap && <aside className="results-map">
@@ -899,7 +904,8 @@ function BusSearchLoader({ mode }) {
 }
 
 // One search result: name, route number and stops, and for a route search where to board and get off.
-function BusCard({ bus, user, signedIn, selected, onSelect, favorite, onFavorite, onAddTrip, onDetails, notify }) {
+function BusCard({ bus, user, signedIn, selected, onSelect, favorite, onFavorite, onAddTrip, boarding, onDetails, notify }) {
+  const board = useBoardControls({ bus, ...boarding })
   const stops = getStops(bus)
   const match = bus.match
   return <article className={`bus-result panel${selected ? ' selected' : ''}`}>
@@ -915,7 +921,7 @@ function BusCard({ bus, user, signedIn, selected, onSelect, favorite, onFavorite
         <button className={selected ? 'bus-map-toggle active' : 'bus-map-toggle'} onClick={onSelect} aria-pressed={selected}><MapIcon size={13} /> {selected ? t('Shown on map') : t('Show on map')}</button>
         {onDetails && <button className="bus-details-link" onClick={onDetails}>{t('View details')} <ArrowRight size={12} /></button>}
       </div>
-    </div><div className="bus-result-side"><button className={favorite ? 'favorite saved' : 'favorite'} onClick={onFavorite} title={t('Save bus')}><Heart size={17} fill={favorite ? 'currentColor' : 'none'} /></button><span className="fare-label">{t('STARTS FROM')}</span><b>{money(bus.base_fare)}</b><small>{t('per ride')}</small><button className="button button-dark button-small" onClick={onAddTrip}>{t('Log trip')} <ArrowRight size={14} /></button></div><BusReviews bus={bus} user={user} signedIn={signedIn} notify={notify} />
+    </div><div className="bus-result-side"><button className={favorite ? 'favorite saved' : 'favorite'} onClick={onFavorite} title={t('Save bus')}><Heart size={17} fill={favorite ? 'currentColor' : 'none'} /></button><span className="fare-label">{t('STARTS FROM')}</span><b>{money(bus.base_fare)}</b><small>{t('per ride')}</small>{board.button}<button className="button button-outline button-small" onClick={onAddTrip} title={t('Add a trip you already took to your history')}>{t('Log trip')}</button></div>{board.form}<BusReviews bus={bus} user={user} signedIn={signedIn} notify={notify} />
   </article>
 }
 
@@ -984,19 +990,38 @@ function RideCard({ ride, token, user, signedIn, onRequest, notify, onRefresh })
   </>
 }
 
-function TripsPage({ token, signedIn, openAuth }) {
+function TripsPage({ token, signedIn, openAuth, notify, navigate }) {
   const [trips, setTrips] = useState([])
   const [loading, setLoading] = useState(signedIn)
   const [error, setError] = useState('')
+  // Reloads on open and whenever a trip is boarded or ended, so a finished trip shows up straight away.
   const load = useCallback(() => {
     if (!signedIn) return
-    setLoading(true)
-    request('/trip/user', { token }).then((data) => setTrips(data.trips || data.data || data || [])).catch((e) => setError(errorText(e))).finally(() => setLoading(false))
-  }, [token, signedIn])
-  useEffect(() => { load() }, [load])
-  return <div className="page inner-page">
+    setLoading((current) => current || !trips.length)
+    request('/trip/user', { token })
+      .then((data) => { setTrips(data.data || []); setError('') })
+      .catch((e) => setError(errorText(e)))
+      .finally(() => setLoading(false))
+  }, [token, signedIn]) // eslint-disable-line react-hooks/exhaustive-deps
+  useTripChanges(load)
+  const completed = trips.filter((trip) => trip.status !== 'active')
+  const totals = { trips: completed.length, fare: completed.reduce((sum, trip) => sum + Number(trip.fare || 0), 0), gems: trips.reduce((sum, trip) => sum + Number(trip.gemsEarned || 0), 0) }
+  return <div className="page inner-page trips-page">
     <PageHeading eyebrow={t('YOUR JOURNEY, ALL IN ONE PLACE')} title={t('Trip history.')} description={t('A little record of all the places you have been.')} icon={History} />
-    {!signedIn ? <SignInPrompt openAuth={openAuth} message={t('Sign in to see your recent journeys.')} /> : loading ? <div className="empty-state"><span className="spinner" /> {t('Loading your trips…')}</div> : trips.length ? <div className="trip-list panel">{trips.map((trip, index) => <article className="trip-row" key={trip._id || index}><span className="trip-icon"><BusFront size={18} /></span><div className="trip-route-info"><b>{t(trip.source || 'Trip')} <ArrowRight size={13} /> {t(trip.destination || 'Destination')}</b><small>{t(trip.busName || 'Public transit')} · {trip.createdAt ? formatDate(trip.createdAt) : t('Recent trip')}</small></div><span className="trip-fare">{money(trip.fare)}</span></article>)}</div> : <div className="empty-state panel"><span className="empty-icon"><History size={22} /></span><b>{error ? t('Trip history unavailable') : t('Your next trip starts here')}</b><span>{error || t('Log a trip when you find a bus and it will show up here.')}</span>{error && <button className="button button-outline button-small" onClick={load}>{t('Try again')}</button>}</div>}
+    {!signedIn ? <SignInPrompt openAuth={openAuth} message={t('Sign in to see your recent journeys.')} /> : <>
+      <ActiveTripPanel token={token} signedIn={signedIn} notify={notify} />
+      {loading ? <div className="empty-state"><span className="spinner" /> {t('Loading your trips…')}</div>
+        : error ? <div className="empty-state panel"><span className="empty-icon"><History size={22} /></span><b>{t('Trip history unavailable')}</b><span>{error}</span><button className="button button-outline button-small" onClick={load}>{t('Try again')}</button></div>
+        : trips.length ? <>
+          <div className="trip-totals">
+            <span><small>{t('Completed trips')}</small><b>{formatNumber(totals.trips)}</b></span>
+            <span><small>{t('Spent on fares')}</small><b>{money(totals.fare)}</b></span>
+            <span><small>{t('Gems earned')}</small><b>{formatNumber(totals.gems)}</b></span>
+          </div>
+          <div className="trip-list panel">{trips.map((trip) => <TripRow key={trip._id} trip={trip} />)}</div>
+        </>
+        : <div className="empty-state panel"><span className="empty-icon"><History size={22} /></span><b>{t('Your next trip starts here')}</b><span>{t('Board a bus from the search results and your trips will show up here.')}</span><button className="button button-green button-small" onClick={() => navigate('Find a bus')}><Search size={14} /> {t('Find a bus')}</button></div>}
+    </>}
   </div>
 }
 
@@ -1009,10 +1034,10 @@ function WalletPage({ token, signedIn, openAuth }) {
     setLoading(true)
     request('/wallet/balance', { token }).then((data) => setWallet(data.wallet || data.data || data)).catch((e) => setError(errorText(e))).finally(() => setLoading(false))
   }, [signedIn, token])
-  useEffect(() => { load() }, [load])
+  useTripChanges(load)
   const balance = wallet?.balance ?? wallet?.wallet?.balance ?? 0
   return <div className="page inner-page"><PageHeading eyebrow={t('YOUR COMMUTE COMPANION')} title={t('Travel wallet.')} description={t('Keep your travel balance and recent journeys close at hand.')} icon={Wallet} />
-    {!signedIn ? <SignInPrompt openAuth={openAuth} message={t('Sign in to check your SmartCommute wallet.')} /> : loading ? <div className="empty-state"><span className="spinner" /> {t('Checking your balance…')}</div> : error ? <div className="empty-state panel"><span className="empty-icon"><Wallet size={22} /></span><b>{t('Wallet unavailable')}</b><span>{error}</span><button className="button button-outline button-small" onClick={load}>{t('Try again')}</button></div> : <><section className="wallet-overview"><div className="wallet-card-large"><div className="wallet-card-head"><span className="wallet-mark"><BusFront size={18} /></span><span>{t('SMARTCOMMUTE WALLET')}</span><CreditCard size={20} /></div><div className="balance-caption">{t('AVAILABLE BALANCE')}</div><div className="balance-amount">{money(balance)}</div><div className="wallet-card-foot"><span>{t('BDT · Bangladeshi Taka')}</span><span>•••• {String(wallet?._id || '4829').slice(-4)}</span></div><div className="wallet-card-orb" /></div><div className="wallet-note panel"><span className="service-icon mint"><ShieldCheck size={19} /></span><b>{t('Your commute, in good hands.')}</b><p>{t('Your balance is connected to your SmartCommute account.')}</p></div></section><div className="wallet-hint"><Clock3 size={16} /><span><b>{t('Easy to keep track.')}</b> {t('Your trip history keeps a record of each commute you log.')}</span></div></>}
+    {!signedIn ? <SignInPrompt openAuth={openAuth} message={t('Sign in to check your SmartCommute wallet.')} /> : loading ? <div className="empty-state"><span className="spinner" /> {t('Checking your balance…')}</div> : error ? <div className="empty-state panel"><span className="empty-icon"><Wallet size={22} /></span><b>{t('Wallet unavailable')}</b><span>{error}</span><button className="button button-outline button-small" onClick={load}>{t('Try again')}</button></div> : <><section className="wallet-overview"><div className="wallet-card-large"><div className="wallet-card-head"><span className="wallet-mark"><BusFront size={18} /></span><span>{t('SMARTCOMMUTE WALLET')}</span><CreditCard size={20} /></div><div className="balance-caption">{t('AVAILABLE BALANCE')}</div><div className="balance-amount">{money(balance)}</div><div className="wallet-card-foot"><span>{t('BDT · Bangladeshi Taka')}</span><span>•••• {String(wallet?._id || '4829').slice(-4)}</span></div><div className="wallet-card-orb" /></div><div className="wallet-note panel wallet-gems"><span className="service-icon mint"><Sparkles size={19} /></span><small>{t('GEMS')}</small><b className="wallet-gems-count">{formatNumber(wallet?.gems ?? 0)}</b><p>{t('You earn gems for every trip you complete. End a trip at your stop to collect them.')}</p></div></section><div className="wallet-hint"><Clock3 size={16} /><span><b>{t('Easy to keep track.')}</b> {t('Your trip history keeps a record of each commute you log.')}</span></div></>}
   </div>
 }
 

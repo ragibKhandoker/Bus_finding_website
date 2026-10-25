@@ -172,6 +172,7 @@ builder.Services.AddHttpClient<GeoService>((services, client) =>
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<FriendCodeGenerator>();
 builder.Services.AddScoped<WalletService>();
+builder.Services.AddScoped<TripService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<ImageStorageService>();
 builder.Services.AddSingleton<BusRouteCache>();

@@ -49,6 +49,12 @@ public class BusRouteCache(IServiceScopeFactory scopes)
         }
     }
 
+    public async Task<BusViewModel?> ByIdAsync(Guid id, CancellationToken cancellationToken = default)
+    {
+        var key = id.ToString();
+        return (await AllAsync(cancellationToken)).FirstOrDefault(r => r.Id == key);
+    }
+
     public async Task<BusViewModel?> ByRouteNumberAsync(string routeNumber, CancellationToken cancellationToken = default)
     {
         await AllAsync(cancellationToken);

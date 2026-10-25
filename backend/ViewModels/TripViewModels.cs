@@ -14,6 +14,16 @@ public class TripViewModel : EntityViewModel
     public string Destination { get; init; } = "";
     public DateTime CreatedAt { get; init; }
 
+    // "active" (on the bus now) or "completed".
+    public string Status { get; init; } = "";
+    public DateTime StartedAt { get; init; }
+    public DateTime? EndedAt { get; init; }
+    public int GemsEarned { get; init; }
+
+    // The vehicle boarded and its code (e.g. "DBR-128-01"); null for trips logged by hand.
+    public string? IndividualBusId { get; init; }
+    public string? BusCode { get; init; }
+
     public static TripViewModel From(Trip t) => new()
     {
         Id = t.Id.ToString(),
@@ -25,7 +35,39 @@ public class TripViewModel : EntityViewModel
         Source = t.Source,
         Destination = t.Destination,
         CreatedAt = t.CreatedAt,
+        Status = t.Status,
+        StartedAt = t.CreatedAt,
+        EndedAt = t.EndedAt,
+        GemsEarned = t.GemsEarned,
+        IndividualBusId = t.IndividualBusId?.ToString(),
+        BusCode = t.IndividualBus?.BusCode,
     };
+}
+
+// Boarding a vehicle: where the rider gets on, and optionally where they plan to get off.
+// BusId is only read by the older route without the id in the path (POST /individual-bus/board).
+public class BoardRequest
+{
+    public Guid? BusId { get; set; }
+
+    [StringLength(100)]
+    public string? BoardingStop { get; set; }
+
+    [StringLength(100)]
+    public string? DestinationStop { get; set; }
+}
+
+// Ending a trip: the stop where the rider got off (defaults to the destination chosen when boarding).
+// Source is only needed for a trip started without a boarding stop.
+public class EndTripRequest
+{
+    public Guid? BusId { get; set; }
+
+    [StringLength(100)]
+    public string? Destination { get; set; }
+
+    [StringLength(100)]
+    public string? Source { get; set; }
 }
 
 public class AddTripRequest

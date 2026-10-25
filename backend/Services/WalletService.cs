@@ -60,11 +60,12 @@ public class WalletService(AppDbContext db, IOptions<RewardOptions> rewards)
         return true;
     }
 
-    public void AddGems(Wallet wallet, int gems, string description)
+    // tripId marks a trip reward; the ledger allows one per trip.
+    public void AddGems(Wallet wallet, int gems, string description, Guid? tripId = null)
     {
         wallet.Gems += gems;
         Touch(wallet);
-        Record(wallet, "gems-earned", 0, gems, description);
+        Record(wallet, "gems-earned", 0, gems, description, tripId);
     }
 
     // Converts as many whole blocks of GemsPerTaka as possible. Returns (gemsUsed, takaAdded).
@@ -89,7 +90,7 @@ public class WalletService(AppDbContext db, IOptions<RewardOptions> rewards)
         wallet.UpdatedAt = DateTime.UtcNow;
     }
 
-    private void Record(Wallet wallet, string type, decimal amount, int gems, string description)
+    private void Record(Wallet wallet, string type, decimal amount, int gems, string description, Guid? tripId = null)
     {
         db.WalletTransactions.Add(new WalletTransaction
         {
@@ -98,6 +99,7 @@ public class WalletService(AppDbContext db, IOptions<RewardOptions> rewards)
             Amount = amount,
             GemsChange = gems,
             Description = description.Length > 200 ? description[..200] : description,
+            TripId = tripId,
         });
     }
 }

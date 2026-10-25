@@ -231,55 +231,41 @@ public class IndividualBusController(AppDbContext db) : ApiControllerBase
             : Ok(new { success = true, data = IndividualBusViewModel.From(bus) });
     }
 
+    // Starts a trip on this vehicle for the signed-in rider (the user comes from the token, never the request).
+    [HttpPost("{id:guid}/board")]
+    public async Task<IActionResult> Board(Guid id, BoardRequest? request, [FromServices] TripService trips) =>
+        Answer(await trips.BoardAsync(CurrentUserId, id, request?.BoardingStop, request?.DestinationStop));
+
+    // Ends the rider's active trip on this vehicle: saves the fare and credits the gems, once.
+    [HttpPost("{id:guid}/end-trip")]
+    public async Task<IActionResult> EndTrip(Guid id, EndTripRequest? request, [FromServices] TripService trips) =>
+        Answer(await trips.EndAsync(CurrentUserId, id, request?.Destination, request?.Source));
+
+    // Older routes with the vehicle id in the body, kept for existing clients.
     [HttpPost("board")]
-    public async Task<IActionResult> Board(BusIdRequest request)
-    {
-        var bus = await db.IndividualBuses.FindAsync(request.BusId);
-        if (bus is null)
-        {
-            return NotFoundError("Bus not found.");
-        }
-
-        var userId = CurrentUserId;
-        var active = await db.BusBoardings.Include(x => x.IndividualBus)
-            .FirstOrDefaultAsync(x => x.UserId == userId && x.EndedAt == null);
-        if (active?.IndividualBusId == bus.Id)
-        {
-            return Ok(new { success = true, message = "You are already on this bus.", data = IndividualBusViewModel.From(bus) });
-        }
-        if (bus.CurrentPassengerCount >= bus.TotalPassengerCapacity)
-        {
-            return BadRequestError("This bus is full.");
-        }
-
-        // A rider can only be on one bus; leaving the previous one frees that seat.
-        if (active is not null)
-        {
-            active.EndedAt = DateTime.UtcNow;
-            active.IndividualBus!.CurrentPassengerCount = Math.Max(0, active.IndividualBus.CurrentPassengerCount - 1);
-        }
-
-        bus.CurrentPassengerCount++;
-        db.BusBoardings.Add(new BusBoarding { UserId = userId, IndividualBusId = bus.Id });
-        await db.SaveChangesAsync();
-        return Ok(new { success = true, message = "Boarded successfully.", data = IndividualBusViewModel.From(bus) });
-    }
+    public Task<IActionResult> BoardByBody(BoardRequest request, [FromServices] TripService trips) =>
+        request.BusId is { } id ? Board(id, request, trips) : Task.FromResult<IActionResult>(BadRequestError("busId is required."));
 
     [HttpPost("end-trip")]
-    public async Task<IActionResult> EndTrip(BusIdRequest request)
-    {
-        var userId = CurrentUserId;
-        var boarding = await db.BusBoardings.Include(x => x.IndividualBus)
-            .FirstOrDefaultAsync(x => x.UserId == userId && x.EndedAt == null && x.IndividualBusId == request.BusId);
-        if (boarding is null)
-        {
-            return BadRequestError("You are not currently on this bus.");
-        }
+    public Task<IActionResult> EndTripByBody(EndTripRequest request, [FromServices] TripService trips) =>
+        request.BusId is { } id ? EndTrip(id, request, trips) : Task.FromResult<IActionResult>(BadRequestError("busId is required."));
 
-        boarding.EndedAt = DateTime.UtcNow;
-        var bus = boarding.IndividualBus!;
-        bus.CurrentPassengerCount = Math.Max(0, bus.CurrentPassengerCount - 1);
-        await db.SaveChangesAsync();
-        return Ok(new { success = true, message = "Trip ended.", data = IndividualBusViewModel.From(bus) });
+    private IActionResult Answer(TripResult result)
+    {
+        if (!result.Ok)
+        {
+            return Error(result.Status, result.Message);
+        }
+        object body = result.Wallet is null
+            ? new { success = true, message = result.Message, data = TripViewModel.From(result.Trip!) }
+            : new
+            {
+                success = true,
+                message = result.Message,
+                data = TripViewModel.From(result.Trip!),
+                gemsEarned = result.Trip!.GemsEarned,
+                wallet = WalletViewModel.From(result.Wallet),
+            };
+        return StatusCode(result.Status, body);
     }
 }

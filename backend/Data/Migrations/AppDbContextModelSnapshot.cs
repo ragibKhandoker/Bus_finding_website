@@ -952,10 +952,22 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("double precision")
                         .HasColumnName("distance");
 
+                    b.Property<DateTime?>("EndedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ended_at");
+
                     b.Property<decimal>("Fare")
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)")
                         .HasColumnName("fare");
+
+                    b.Property<int>("GemsEarned")
+                        .HasColumnType("integer")
+                        .HasColumnName("gems_earned");
+
+                    b.Property<Guid?>("IndividualBusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("individual_bus_id");
 
                     b.Property<string>("Source")
                         .IsRequired()
@@ -963,12 +975,32 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("source");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
 
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
                     b.HasKey("Id")
                         .HasName("pk_trips");
+
+                    b.HasIndex("IndividualBusId")
+                        .HasDatabaseName("ix_trips_individual_bus_id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_trips_one_active_per_user")
+                        .HasFilter("status = 'active'");
 
                     b.HasIndex("UserId", "CreatedAt")
                         .HasDatabaseName("ix_trips_user_id_created_at");
@@ -1262,6 +1294,10 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("gems_change");
 
+                    b.Property<Guid?>("TripId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trip_id");
+
                     b.Property<string>("Type")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -1274,6 +1310,11 @@ namespace SmartCommute.Server.Data.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_wallet_transactions");
+
+                    b.HasIndex("TripId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_wallet_transactions_trip_id")
+                        .HasFilter("trip_id IS NOT NULL");
 
                     b.HasIndex("WalletId", "CreatedAt")
                         .HasDatabaseName("ix_wallet_transactions_wallet_id_created_at");
@@ -1605,12 +1646,20 @@ namespace SmartCommute.Server.Data.Migrations
 
             modelBuilder.Entity("SmartCommute.Server.Models.Trip", b =>
                 {
+                    b.HasOne("SmartCommute.Server.Models.IndividualBus", "IndividualBus")
+                        .WithMany()
+                        .HasForeignKey("IndividualBusId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_trips_individual_buses_individual_bus_id");
+
                     b.HasOne("SmartCommute.Server.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_trips_users_user_id");
+
+                    b.Navigation("IndividualBus");
 
                     b.Navigation("User");
                 });

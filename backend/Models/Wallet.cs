@@ -37,6 +37,9 @@ public class WalletTransaction
     [MaxLength(200)]
     public string Description { get; set; } = "";
 
+    // The trip a gems reward was for. Unique, so a trip can never be rewarded twice.
+    public Guid? TripId { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 

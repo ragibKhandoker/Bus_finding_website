@@ -97,7 +97,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.Version).IsRowVersion();
         });
 
-        b.Entity<WalletTransaction>(e => e.HasIndex(x => new { x.WalletId, x.CreatedAt }));
+        b.Entity<WalletTransaction>(e =>
+        {
+            e.HasIndex(x => new { x.WalletId, x.CreatedAt });
+            e.HasIndex(x => x.TripId).IsUnique().HasFilter("trip_id IS NOT NULL");
+        });
 
         b.Entity<Offer>(e => e.HasIndex(x => x.UserId).IsUnique());
 
@@ -107,7 +111,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.Version).IsRowVersion();
         });
 
-        b.Entity<Trip>(e => e.HasIndex(x => new { x.UserId, x.CreatedAt }));
+        b.Entity<Trip>(e =>
+        {
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            // A rider has at most one active trip; the database enforces it even under simultaneous requests.
+            e.HasIndex(x => x.UserId).IsUnique().HasFilter("status = 'active'").HasDatabaseName("ix_trips_one_active_per_user");
+            e.HasOne(x => x.IndividualBus).WithMany().HasForeignKey(x => x.IndividualBusId).OnDelete(DeleteBehavior.SetNull);
+            e.Property(x => x.Version).IsRowVersion();
+        });
 
         b.Entity<FareRecord>(e => e.HasIndex(x => new { x.Source, x.Destination }));
 

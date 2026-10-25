@@ -10,36 +10,28 @@ namespace SmartCommute.Server.Controllers;
 
 [Authorize]
 [Route("trip")]
-public class TripController(AppDbContext db, WalletService wallets) : ApiControllerBase
+public class TripController(AppDbContext db) : ApiControllerBase
 {
-    // Logs a trip in history only.
+    // Logs a finished trip straight into history (no boarding, no gems). Gems are only earned by boarding a bus and
+    // ending the trip, so a client cannot claim rewards for trips it made up.
     [HttpPost("add")]
-    public async Task<IActionResult> Add(AddTripRequest request)
-    {
-        var trip = NewTrip(request);
-        db.Trips.Add(trip);
-        await db.SaveChangesAsync();
-        return Created201(new { success = true, message = "Trip added.", data = TripViewModel.From(trip) });
-    }
+    public Task<IActionResult> Add(AddTripRequest request) => Log(request);
 
-    // Completes a bus trip: logs it and awards gems.
+    // Older route that used to award gems for any trip a client sent; it now logs like /trip/add.
     [HttpPost("")]
-    public async Task<IActionResult> Complete(AddTripRequest request)
-    {
-        var trip = NewTrip(request);
-        db.Trips.Add(trip);
-        var wallet = await wallets.GetOrCreateAsync(CurrentUserId);
-        wallets.AddGems(wallet, wallets.Rewards.GemsPerTrip, $"Trip on {trip.BusName}");
-        await db.SaveChangesAsync();
+    public Task<IActionResult> Complete(AddTripRequest request) => Log(request);
 
-        return Created201(new
+    // The rider's trip on the bus right now, with the route's stops so the client can offer where to get off.
+    [HttpGet("active")]
+    public async Task<IActionResult> Active([FromServices] TripService trips, [FromServices] BusRouteCache routes)
+    {
+        var trip = await trips.ActiveTripAsync(CurrentUserId);
+        if (trip is null)
         {
-            success = true,
-            message = $"Trip completed. You earned {wallets.Rewards.GemsPerTrip} gems.",
-            data = TripViewModel.From(trip),
-            gemsEarned = wallets.Rewards.GemsPerTrip,
-            wallet = WalletViewModel.From(wallet),
-        });
+            return Ok(new { success = true, data = (object?)null });
+        }
+        var route = Guid.TryParse(trip.BusId, out var routeId) ? await routes.ByIdAsync(routeId) : null;
+        return Ok(new { success = true, data = TripViewModel.From(trip), route });
     }
 
     [HttpGet("user")]
@@ -48,9 +40,11 @@ public class TripController(AppDbContext db, WalletService wallets) : ApiControl
     [HttpGet("")]
     public Task<IActionResult> List() => ListTrips();
 
+    // Only the signed-in rider's own trips, newest first; there is no user id to change in the request.
     private async Task<IActionResult> ListTrips()
     {
         var trips = await db.Trips
+            .Include(t => t.IndividualBus)
             .Where(t => t.UserId == CurrentUserId)
             .OrderByDescending(t => t.CreatedAt)
             .AsNoTracking()
@@ -58,14 +52,52 @@ public class TripController(AppDbContext db, WalletService wallets) : ApiControl
         return Ok(new { success = true, count = trips.Count, data = trips.Select(TripViewModel.From) });
     }
 
-    private Trip NewTrip(AddTripRequest request) => new()
+    private async Task<IActionResult> Log(AddTripRequest request)
     {
-        UserId = CurrentUserId,
-        BusId = request.BusId.Trim(),
-        BusName = string.IsNullOrWhiteSpace(request.BusName) ? "Bus" : request.BusName.Trim(),
-        Distance = request.Distance,
-        Fare = request.Fare,
-        Source = request.Source?.Trim() ?? "",
-        Destination = request.Destination?.Trim() ?? "",
-    };
+        var busId = request.BusId.Trim();
+        var source = request.Source?.Trim() ?? "";
+        var destination = request.Destination?.Trim() ?? "";
+        if (busId.Length == 0)
+        {
+            return BadRequestError("busId is required.");
+        }
+        if (source.Length == 0 || destination.Length == 0)
+        {
+            return BadRequestError("Enter where the trip started and ended.");
+        }
+        if (string.Equals(source, destination, StringComparison.OrdinalIgnoreCase))
+        {
+            return BadRequestError("The start and end of a trip cannot be the same place.");
+        }
+
+        var userId = CurrentUserId;
+        if (await db.Trips.AnyAsync(t => t.UserId == userId && t.Status == TripStatus.Active && t.BusId == busId))
+        {
+            return Error(StatusCodes.Status409Conflict, "You are on this bus right now. End the trip instead of logging it.");
+        }
+        // The same trip sent twice in a row (a double click or a retry) is saved once.
+        var since = DateTime.UtcNow.AddMinutes(-2);
+        var duplicate = await db.Trips.FirstOrDefaultAsync(t => t.UserId == userId && t.BusId == busId && t.Source == source &&
+                                                              t.Destination == destination && t.CreatedAt > since);
+        if (duplicate is not null)
+        {
+            return Ok(new { success = true, message = "Trip already added.", data = TripViewModel.From(duplicate) });
+        }
+
+        var trip = new Trip
+        {
+            UserId = userId,
+            BusId = busId,
+            BusName = string.IsNullOrWhiteSpace(request.BusName) ? "Bus" : request.BusName.Trim(),
+            Distance = request.Distance,
+            Fare = request.Fare,
+            Source = source,
+            Destination = destination,
+            Status = TripStatus.Completed,
+            EndedAt = DateTime.UtcNow,
+        };
+        db.Trips.Add(trip);
+        await db.SaveChangesAsync();
+        return Created201(new { success = true, message = "Trip added.", data = TripViewModel.From(trip) });
+    }
 }
