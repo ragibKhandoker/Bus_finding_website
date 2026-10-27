@@ -21,6 +21,23 @@ export const isTokenExpired = (token) => {
   return expiry === null || expiry <= Date.now()
 }
 
+// Fetches a private file (such as a verification document) with the sign-in token and returns it as a Blob.
+// An <img src> cannot send the token, so pages show the result through URL.createObjectURL.
+export async function apiBlob(path, { token } = {}) {
+  let response
+  try {
+    response = await fetch(`${API_BASE}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+  } catch {
+    throw new Error(`Cannot reach the SmartCommute server at ${API_BASE}. Make sure the backend is running.`)
+  }
+  if (response.status === 401 && token) window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}))
+    throw new Error(data.message || data.error || `Request failed (${response.status})`)
+  }
+  return response.blob()
+}
+
 // ignoreUnauthorized: do not fire UNAUTHORIZED_EVENT for this call (used when signing out).
 export async function apiRequest(path, { token, ignoreUnauthorized = false, ...options } = {}) {
   let response

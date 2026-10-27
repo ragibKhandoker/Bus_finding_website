@@ -98,7 +98,9 @@ public class Offer
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 
-// In-app stored-value "GPay" account. Not connected to any real payment provider.
+// In-app stored-value "GPay" account. Not connected to any real payment provider: it starts with
+// Rewards:GpayStartingBalance, can pay trip fares and move money into the commute wallet, and only an admin can
+// add money (a test top-up). Every change is recorded as a GpayTransaction.
 public class GpayAccount
 {
     public Guid Id { get; set; }
@@ -148,6 +150,50 @@ public class OfferTransaction
     public string? Reference { get; set; }
 
     // The admin who granted or adjusted it.
+    public Guid? CreatedById { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public static class GpayTransactionTypes
+{
+    public const string Opening = "opening";               // the starting balance (or the balance when the ledger began)
+    public const string WalletRecharge = "wallet-recharge"; // moved into the commute wallet
+    public const string TripPayment = "trip-payment";       // paid a completed trip's fare
+    public const string Payment = "payment";               // any other payment (the older /gpay/deduct)
+    public const string TopUp = "top-up";                  // added by an admin (testing; there is no payment provider)
+
+    public static readonly string[] All = [Opening, WalletRecharge, TripPayment, Payment, TopUp];
+}
+
+// The GPay ledger: + money in, - money out. A unique index allows one payment per trip, another makes a repeated
+// client reference a no-op.
+public class GpayTransaction
+{
+    public Guid Id { get; set; }
+    public Guid AccountId { get; set; }
+    public GpayAccount? Account { get; set; }
+    public Guid UserId { get; set; }
+
+    [MaxLength(20)]
+    public string Type { get; set; } = GpayTransactionTypes.Payment;
+
+    public decimal Amount { get; set; }
+    public decimal BalanceAfter { get; set; }
+
+    [MaxLength(200)]
+    public string Description { get; set; } = "";
+
+    public Guid? TripId { get; set; }
+    public Trip? Trip { get; set; }
+
+    public Guid? WalletTransactionId { get; set; }
+    public WalletTransaction? WalletTransaction { get; set; }
+
+    [MaxLength(100)]
+    public string? Reference { get; set; }
+
+    // The admin who made a top-up.
     public Guid? CreatedById { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

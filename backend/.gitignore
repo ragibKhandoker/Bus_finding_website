@@ -4,3 +4,4 @@ obj/
 *.user
 appsettings.Local.json
 wwwroot/uploads/
+App_Data/

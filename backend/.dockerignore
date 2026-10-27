@@ -3,3 +3,4 @@ obj/
 .vs/
 appsettings.Local.json
 wwwroot/uploads/
+App_Data/

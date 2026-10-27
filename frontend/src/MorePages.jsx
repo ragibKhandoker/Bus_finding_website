@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { ArrowRight, ArrowUpDown, BusFront, Calculator, Check, MapPin, Navigation, RefreshCw, Search, ShieldCheck, Wallet } from 'lucide-react'
+import { ArrowRight, ArrowUpDown, BusFront, Calculator, Check, MapPin, Navigation, RefreshCw, Search, ShieldCheck } from 'lucide-react'
 import './more.css'
 import { apiRequest } from './api'
 import { SosAlert } from './Notifications'
-import { formatDate, formatDateTime, formatNumber, getLang, t, toEnglish } from './i18n'
+import { formatDateTime, formatNumber, getLang, t, toEnglish } from './i18n'
 
 // Leaflet is only downloaded when the map page is opened.
 const FareMap = React.lazy(() => import('./FareMap'))
@@ -24,24 +24,6 @@ export function RequireSignIn({ openAuth }) { return <div className="extra-panel
 
 
 
-export function GpayPage({ token, signedIn, openAuth, notify }) {
-  const [account, setAccount] = useState(null)
-  const [pin, setPin] = useState('')
-  const [amount, setAmount] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const load = useCallback(async () => { if (!signedIn) return; setLoading(true); try { const data = await api('/gpay/balance', token); setAccount(data.data); setError('') } catch (e) { setAccount(null); setError(/not found/i.test(err(e)) ? '' : err(e)) } finally { setLoading(false) } }, [signedIn, token])
-  useEffect(() => { load() }, [load])
-  const call = async (path, body, success) => {
-    setError('')
-    try { const data = await api(path, token, { method: 'POST', ...(body ? { body: json(body) } : {}) }); if (data.data) setAccount(data.data); notify(success); if (path.endsWith('/recharge') || path.endsWith('/deduct')) load(); return data }
-    catch (e) { setError(err(e)); return null }
-  }
-  const recharge = async (e) => { e.preventDefault(); const data = await call('/gpay/recharge', { amount: Number(amount) }, t('Wallet recharged from GPay.')); if (data) setAmount('') }
-  const pay = async (e) => { e.preventDefault(); const data = await call('/gpay/deduct', { amount: Number(amount) }, t('GPay payment completed.')); if (data) setAmount('') }
-  if (!signedIn) return <section className="extra-page"><Heading icon={Wallet} eyebrow={t('YOUR DIGITAL WALLET')} title={t('GPay & recharge')} subtitle={t('Manage the in-app GPay balance and move funds to your commute wallet.')} /><RequireSignIn openAuth={openAuth} /></section>
-  return <section className="extra-page"><Heading icon={Wallet} eyebrow={t('YOUR DIGITAL WALLET')} title={t('GPay & recharge')} subtitle={t('Manage the in-app GPay balance and move funds to your commute wallet.')} /><Feedback error={error} />{loading ? <Loading /> : <div className="gpay-layout"><article className="extra-panel gpay-card"><small>{t('GPAY BALANCE')}</small><strong>৳{formatNumber(account?.balance)}</strong><span>{account ? t('GPay account active') : t('No GPay account connected')}</span>{!account && <div className="pin-row"><input aria-label={t('GPay PIN')} inputMode="numeric" maxLength={4} value={pin} onChange={(e) => setPin(e.target.value)} placeholder={t('4-digit PIN')} /><button className="extra-button" onClick={async () => { const result = await call('/gpay/register', null, t('GPay account created. Save your new PIN securely.')); if (result?.data) { setAccount(result.data); setPin(result.data.displayCode || '') } }}>{t('Create account')}</button><button className="extra-button secondary" disabled={!pin} onClick={() => call('/gpay/login', { code: pin }, t('GPay unlocked.'))}>{t('Unlock')}</button></div>}{account?.displayCode && <p className="gpay-notice">{t('This API returns a display PIN at registration. Keep it private; the web client does not save it.')}</p>}</article>{account && <article className="extra-panel gpay-actions"><h2>{t('Move funds')}</h2><p>{t('These are in-app stored-value operations. No external payment provider is connected.')}</p><form onSubmit={recharge}><label>{t('AMOUNT (BDT)')}<input required min="1" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={t('e.g. 500')} /></label><button className="extra-button">{t('Recharge commute wallet')} <ArrowRight size={14} /></button></form><button className="extra-button secondary" onClick={pay}>{t('Pay from GPay balance')}</button></article>}</div>}</section>
-}
 
 // One place field of the fare calculator. Typing suggests bus stops from our own database as you go; place
 // search on OpenStreetMap (Nominatim) only runs when asked (Enter or the button), as its usage policy requires.
@@ -229,24 +211,4 @@ export function MapPage({ token, user, signedIn, openAuth, notify }) {
   </div></section>
 }
 
-export function VerificationPage({ token, user, signedIn, openAuth, notify }) {
-  const [status, setStatus] = useState(null)
-  const [queue, setQueue] = useState([])
-  const [form, setForm] = useState({ institutionName: '', institutionId: '', gmail: '' })
-  const [image, setImage] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const admin = user?.role?.toLowerCase() === 'admin'
-  const load = useCallback(async () => {
-    if (!signedIn) return
-    setLoading(true)
-    try { const data = await api('/verify/my-status', token); setStatus(data.data || null); if (admin) { const all = await api('/verify/all', token); setQueue(all.data || []) } setError('') }
-    catch (e) { setError(err(e)) } finally { setLoading(false) }
-  }, [signedIn, token, admin])
-  useEffect(() => { load() }, [load])
-  const submit = async (e) => { e.preventDefault(); setError(''); try { let imageUrl; if (image) { const uploaded = await api('/verify/upload-image', token, { method: 'POST', body: json({ image }) }); imageUrl = uploaded.imageUrl } const result = await api('/verify/submit', token, { method: 'POST', body: json({ ...form, imageUrl }) }); setStatus(result.data); notify(t('Verification submitted for review.')) } catch (ex) { setError(err(ex)) } }
-  const review = async (id, approved) => { try { await api(`/verify/${approved ? 'approve' : 'reject'}`, token, { method: 'POST', body: json({ verificationId: id }) }); notify(approved ? t('Verification approved.') : t('Verification rejected.')); load() } catch (ex) { setError(err(ex)) } }
-  if (!signedIn) return <section className="extra-page"><Heading icon={ShieldCheck} eyebrow={t('ELIGIBILITY & PASSES')} title={t('Student verification')} subtitle={t('Submit an institution ID for review and check your verification status.')} /><RequireSignIn openAuth={openAuth} /></section>
-  return <section className="extra-page"><Heading icon={ShieldCheck} eyebrow={t('ELIGIBILITY & PASSES')} title={admin ? t('Verification review') : t('Student verification')} subtitle={admin ? t('Review student pass applications.') : t('Submit an institution ID for review and check your status.')} /><Feedback error={error} />{loading ? <Loading /> : admin ? <article className="extra-panel extra-list-panel"><div className="extra-panel-title"><div><small>{t('ADMIN REVIEW')}</small><h2>{t('Requests')} <span>{formatNumber(queue.length)}</span></h2></div><button className="extra-icon-button" onClick={load}><RefreshCw size={15} /></button></div>{queue.length ? queue.map((item) => <div className="verification-row" key={item._id}><div><b>{item.userName || item.userId?.name || t('Applicant')} · {item.institutionName}</b><small>{item.userEmail} · {t('ID')} {item.institutionId} · {item.gmail} · {t(item.status)}</small></div>{item.imageUrl && <a href={item.imageUrl} target="_blank" rel="noreferrer">{t('View ID')}</a>}{item.status === 'hold' && <><button className="extra-button" onClick={() => review(item._id, true)}>{t('Approve')}</button><button className="extra-button secondary" onClick={() => review(item._id, false)}>{t('Reject')}</button></>}</div>) : <p className="extra-empty-copy">{t('No verification requests found.')}</p>}</article> : <div className="verify-layout"><article className="extra-panel verify-status"><small>{t('YOUR STATUS')}</small><b className={`status-badge ${status?.status || 'none'}`}>{status?.status ? t(status.status) : t('Not submitted')}</b><p>{status?.status === 'approved' ? t('Your student status has been verified.') : status?.status === 'hold' ? t('Your request is waiting for review.') : status?.status === 'rejected' ? t('Your last request was rejected. You can submit a new one.') : t('Student pass verification helps confirm your eligibility.')}</p>{status?.institutionName && <small>{status.institutionName} · {status.institutionId}</small>}</article>{(!status || status.status === 'rejected') && <form className="extra-panel verify-form" onSubmit={submit}><h2>{t('Submit for review')}</h2><label>{t('Institution name')}<input required value={form.institutionName} onChange={(e) => setForm({ ...form, institutionName: e.target.value })} placeholder={t('University or institution')} /></label><label>{t('Institution ID')}<input required value={form.institutionId} onChange={(e) => setForm({ ...form, institutionId: e.target.value })} placeholder={t('Student ID number')} /></label><label>{t('Institution email')}<input required type="email" value={form.gmail} onChange={(e) => setForm({ ...form, gmail: e.target.value })} placeholder="you@institution.edu" /></label><label>{t('Upload ID image (optional)')}<input type="file" accept="image/png,image/jpeg" onChange={(e) => { const file = e.target.files?.[0]; if (file && file.size <= 3_000_000) { const reader = new FileReader(); reader.onload = () => setImage(String(reader.result)); reader.readAsDataURL(file) } else if (file) setError(t('Choose an image smaller than 3 MB.')) }} /></label>{image && <img className="verify-preview" src={image} alt={t('Verification ID preview')} />}<button className="extra-button">{t('Submit verification')} <ArrowRight size={14} /></button><small className="verify-note">{t('Image uploads require the backend’s Cloudinary configuration.')}</small></form>}</div>}</section>
-}
 

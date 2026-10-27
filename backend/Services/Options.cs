@@ -26,6 +26,15 @@ public class RideShareOptions
     public int MaxParticipants { get; set; } = 10;
 }
 
+public class VerificationOptions
+{
+    // Largest verification image accepted, in bytes.
+    public int MaxImageBytes { get; set; } = 5 * 1024 * 1024;
+
+    // Where uploaded documents are kept, relative to the app folder. It must not be inside wwwroot.
+    public string StoragePath { get; set; } = "App_Data/verification-images";
+}
+
 public class GeoOptions
 {
     public string NominatimBaseUrl { get; set; } = "https://nominatim.openstreetmap.org";

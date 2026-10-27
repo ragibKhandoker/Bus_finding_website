@@ -483,7 +483,96 @@ namespace SmartCommute.Server.Data.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_gpay_accounts_user_id");
 
-                    b.ToTable("gpay_accounts", (string)null);
+                    b.ToTable("gpay_accounts", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_gpay_accounts_balance_not_negative", "balance >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.GpayTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("AccountId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("account_id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<decimal>("BalanceAfter")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("balance_after");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("reference");
+
+                    b.Property<Guid?>("TripId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trip_id");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("type");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<Guid?>("WalletTransactionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("wallet_transaction_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_gpay_transactions");
+
+                    b.HasIndex("AccountId")
+                        .HasDatabaseName("ix_gpay_transactions_account_id");
+
+                    b.HasIndex("TripId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_gpay_transactions_one_per_trip")
+                        .HasFilter("trip_id IS NOT NULL");
+
+                    b.HasIndex("WalletTransactionId")
+                        .HasDatabaseName("ix_gpay_transactions_wallet_transaction_id");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_gpay_transactions_user_id_created_at");
+
+                    b.HasIndex("UserId", "Reference")
+                        .IsUnique()
+                        .HasDatabaseName("ix_gpay_transactions_one_per_reference")
+                        .HasFilter("reference IS NOT NULL");
+
+                    b.ToTable("gpay_transactions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_gpay_transactions_type", "type IN ('opening', 'wallet-recharge', 'trip-payment', 'payment', 'top-up')");
+                        });
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.IndividualBus", b =>
@@ -1257,6 +1346,10 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("home_area");
 
+                    b.Property<bool>("IdentityVerified")
+                        .HasColumnType("boolean")
+                        .HasColumnName("identity_verified");
+
                     b.Property<DateTime?>("LastLoginAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_login_at");
@@ -1368,11 +1461,21 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<string>("DocumentType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("document_type");
+
                     b.Property<string>("Gmail")
                         .IsRequired()
                         .HasMaxLength(255)
                         .HasColumnType("character varying(255)")
                         .HasColumnName("gmail");
+
+                    b.Property<Guid?>("ImageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("image_id");
 
                     b.Property<string>("ImageUrl")
                         .HasMaxLength(500)
@@ -1391,9 +1494,18 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("institution_name");
 
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("rejection_reason");
+
                     b.Property<DateTime?>("ReviewedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("reviewed_at");
+
+                    b.Property<Guid?>("ReviewedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewed_by_id");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -1420,10 +1532,72 @@ namespace SmartCommute.Server.Data.Migrations
                     b.HasKey("Id")
                         .HasName("pk_verifications");
 
+                    b.HasIndex("ImageId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_verifications_image_id")
+                        .HasFilter("image_id IS NOT NULL");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_verifications_one_pending_per_user")
+                        .HasFilter("status = 'hold'");
+
+                    b.HasIndex("Status", "CreatedAt")
+                        .HasDatabaseName("ix_verifications_status_created_at");
+
                     b.HasIndex("UserId", "CreatedAt")
                         .HasDatabaseName("ix_verifications_user_id_created_at");
 
-                    b.ToTable("verifications", (string)null);
+                    b.ToTable("verifications", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_verifications_document_type", "document_type IN ('student_pass', 'nid')");
+
+                            t.HasCheckConstraint("ck_verifications_status", "status IN ('hold', 'approved', 'rejected')");
+                        });
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.VerificationImage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("content_type");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size_bytes");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("storage_key");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_verification_images");
+
+                    b.HasIndex("StorageKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_verification_images_storage_key");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_verification_images_user_id_created_at");
+
+                    b.ToTable("verification_images", (string)null);
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.Wallet", b =>
@@ -1708,6 +1882,34 @@ namespace SmartCommute.Server.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.GpayTransaction", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.GpayAccount", "Account")
+                        .WithMany()
+                        .HasForeignKey("AccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_gpay_transactions_gpay_accounts_account_id");
+
+                    b.HasOne("SmartCommute.Server.Models.Trip", "Trip")
+                        .WithMany()
+                        .HasForeignKey("TripId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_gpay_transactions_trips_trip_id");
+
+                    b.HasOne("SmartCommute.Server.Models.WalletTransaction", "WalletTransaction")
+                        .WithMany()
+                        .HasForeignKey("WalletTransactionId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_gpay_transactions_wallet_transactions_wallet_transaction_id");
+
+                    b.Navigation("Account");
+
+                    b.Navigation("Trip");
+
+                    b.Navigation("WalletTransaction");
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.IndividualBus", b =>
                 {
                     b.HasOne("SmartCommute.Server.Models.Bus", "Bus")
@@ -1940,12 +2142,32 @@ namespace SmartCommute.Server.Data.Migrations
 
             modelBuilder.Entity("SmartCommute.Server.Models.Verification", b =>
                 {
+                    b.HasOne("SmartCommute.Server.Models.VerificationImage", "Image")
+                        .WithMany()
+                        .HasForeignKey("ImageId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_verifications_verification_images_image_id");
+
                     b.HasOne("SmartCommute.Server.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_verifications_users_user_id");
+
+                    b.Navigation("Image");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.VerificationImage", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_verification_images_users_user_id");
 
                     b.Navigation("User");
                 });

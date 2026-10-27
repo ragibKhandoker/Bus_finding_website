@@ -231,3 +231,97 @@ public class GpayLoginRequest
     [Required, RegularExpression(@"^\d{4}$", ErrorMessage = "PIN must be 4 digits.")]
     public string Code { get; set; } = "";
 }
+
+public class GpayTransactionViewModel : EntityViewModel
+{
+    public string Type { get; init; } = "";
+    // + money in, - money out.
+    public decimal Amount { get; init; }
+    public decimal BalanceAfter { get; init; }
+    public string Description { get; init; } = "";
+    public string? TripId { get; init; }
+    public string? Reference { get; init; }
+    // Every recorded entry is a completed one; failed attempts are never written.
+    public string Status => "completed";
+    public DateTime CreatedAt { get; init; }
+
+    public static GpayTransactionViewModel From(GpayTransaction x) => new()
+    {
+        Id = x.Id.ToString(),
+        Type = x.Type,
+        Amount = x.Amount,
+        BalanceAfter = x.BalanceAfter,
+        Description = x.Description,
+        TripId = x.TripId?.ToString(),
+        Reference = x.Reference,
+        CreatedAt = x.CreatedAt,
+    };
+}
+
+public class GpayTripViewModel
+{
+    public string TripId { get; init; } = "";
+    public string BusName { get; init; } = "";
+    public string Source { get; init; } = "";
+    public string Destination { get; init; } = "";
+    public DateTime? EndedAt { get; init; }
+    public decimal Fare { get; init; }
+    public bool Paid => PaidAt is not null;
+    public DateTime? PaidAt { get; init; }
+
+    public static GpayTripViewModel From(GpayTripView t) => new()
+    {
+        TripId = t.TripId.ToString(), BusName = t.BusName, Source = t.Source, Destination = t.Destination,
+        EndedAt = t.EndedAt, Fare = t.Fare, PaidAt = t.PaidAt,
+    };
+}
+
+// Moving money needs the GPay PIN. reference (optional, a new random id per button press) makes a repeated request
+// return the first result instead of moving the money again.
+public class GpayRechargeRequest
+{
+    [Range(0.01, 100_000, ErrorMessage = "Enter an amount from ৳0.01 to ৳100,000.")]
+    public decimal Amount { get; set; }
+
+    [Required(ErrorMessage = "Enter your GPay PIN."), RegularExpression(@"^\d{4}$", ErrorMessage = "PIN must be 4 digits.")]
+    public string Pin { get; set; } = "";
+
+    [StringLength(100)]
+    public string? Reference { get; set; }
+}
+
+public class GpayDeductRequest : GpayRechargeRequest
+{
+    [StringLength(200)]
+    public string? Description { get; set; }
+}
+
+public class GpayPayTripRequest
+{
+    [Required(ErrorMessage = "Choose the trip to pay for.")]
+    public Guid? TripId { get; set; }
+
+    [Required(ErrorMessage = "Enter your GPay PIN."), RegularExpression(@"^\d{4}$", ErrorMessage = "PIN must be 4 digits.")]
+    public string Pin { get; set; } = "";
+
+    [StringLength(100)]
+    public string? Reference { get; set; }
+}
+
+public class GpayResetPinRequest
+{
+    [Required(ErrorMessage = "Enter your account password.")]
+    public string Password { get; set; } = "";
+}
+
+public class GpayTopUpRequest
+{
+    [Required(ErrorMessage = "Choose a user.")]
+    public Guid? UserId { get; set; }
+
+    [Range(0.01, 100_000, ErrorMessage = "Enter an amount from ৳0.01 to ৳100,000.")]
+    public decimal Amount { get; set; }
+
+    [StringLength(100)]
+    public string? Reference { get; set; }
+}

@@ -113,58 +113,83 @@ public class SendMessageRequest
     public string? Text { get; set; }
 }
 
+// A verification request. Status is the stored value ("hold" while pending); State is "pending", "approved" or
+// "rejected". ImageUrl is an API path that needs the owner's or an admin's token, never a public file link.
 public class VerificationViewModel : EntityViewModel
 {
     public string UserId { get; init; } = "";
     public string UserName { get; init; } = "";
     public string UserEmail { get; init; } = "";
+    public string DocumentType { get; init; } = "";
     public string InstitutionName { get; init; } = "";
     public string InstitutionId { get; init; } = "";
     public string Gmail { get; init; } = "";
     public string? ImageUrl { get; init; }
+    public bool HasImage { get; init; }
     public string Status { get; init; } = "";
+    public string State { get; init; } = "";
+    public string? RejectionReason { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime? ReviewedAt { get; init; }
 
-    public static VerificationViewModel From(Verification v) => new()
+    public static VerificationViewModel From(Verification v)
     {
-        Id = v.Id.ToString(),
-        UserId = v.UserId.ToString(),
-        UserName = v.UserName,
-        UserEmail = v.UserEmail,
-        InstitutionName = v.InstitutionName,
-        InstitutionId = v.InstitutionId,
-        Gmail = v.Gmail,
-        ImageUrl = v.ImageUrl,
-        Status = v.Status,
-        CreatedAt = v.CreatedAt,
-        ReviewedAt = v.ReviewedAt,
-    };
+        var hasImage = v.ImageId is not null || !string.IsNullOrWhiteSpace(v.ImageUrl);
+        return new()
+        {
+            Id = v.Id.ToString(),
+            UserId = v.UserId.ToString(),
+            UserName = v.UserName,
+            UserEmail = v.UserEmail,
+            DocumentType = v.DocumentType,
+            InstitutionName = v.InstitutionName,
+            InstitutionId = v.InstitutionId,
+            Gmail = v.Gmail,
+            ImageUrl = hasImage ? $"/verify/{v.Id}/image" : null,
+            HasImage = hasImage,
+            Status = v.Status,
+            State = VerificationStatus.Label(v.Status),
+            RejectionReason = v.RejectionReason,
+            CreatedAt = v.CreatedAt,
+            ReviewedAt = v.ReviewedAt,
+        };
+    }
 }
 
 public class UploadImageRequest
 {
-    [Required]
+    [Required(ErrorMessage = "Choose a JPEG, PNG or WebP image.")]
     public string Image { get; set; } = "";
 }
 
+// documentType is "student_pass" (the default, needs institution name and ID) or "nid". imageId comes from
+// upload-image and must be the caller's own upload.
 public class SubmitVerificationRequest
 {
-    [Required, StringLength(200, MinimumLength = 1)]
-    public string InstitutionName { get; set; } = "";
+    [StringLength(20)]
+    public string? DocumentType { get; set; }
 
-    [Required, StringLength(100, MinimumLength = 1)]
-    public string InstitutionId { get; set; } = "";
+    [Required(ErrorMessage = "Upload a photo of your document first.")]
+    public Guid? ImageId { get; set; }
 
-    [Required, EmailAddress, StringLength(255)]
-    public string Gmail { get; set; } = "";
+    [StringLength(200)]
+    public string? InstitutionName { get; set; }
 
-    [StringLength(500)]
-    public string? ImageUrl { get; set; }
+    [StringLength(100)]
+    public string? InstitutionId { get; set; }
+
+    [EmailAddress(ErrorMessage = "Please enter a valid email address."), StringLength(255)]
+    public string? Gmail { get; set; }
 }
 
 public class VerificationIdRequest
 {
     [Required]
     public Guid? VerificationId { get; set; }
+}
+
+public class RejectVerificationRequest : VerificationIdRequest
+{
+    [StringLength(500, ErrorMessage = "The reason can be at most 500 characters.")]
+    public string? Reason { get; set; }
 }

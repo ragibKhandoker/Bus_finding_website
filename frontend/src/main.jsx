@@ -12,7 +12,9 @@ import './profile.css'
 import './admin.css'
 import GoogleMapView, { mapsConfigured } from './GoogleMapView'
 import { ActiveTripPanel, TripRow, useActiveTrip, useBoardControls, useTripChanges } from './Trips'
-import { GpayPage, MapPage, VerificationPage } from './MorePages'
+import { MapPage } from './MorePages'
+import { GpayPage } from './Gpay'
+import { VerificationPage } from './Verification'
 import { OffersPage } from './Offers'
 import { NotificationBell, NotificationsPage, useUnreadCount } from './Notifications'
 import { FriendsPage } from './Friends'
@@ -174,7 +176,7 @@ function App() {
           ))}
           <div className="more-nav-wrap">
             <button className={['Friends', 'Messages', 'Notifications', 'Offers', 'Map', 'Favourites', 'Wallet', 'GPay', 'Verification', 'Admin'].includes(page) ? 'nav-link active' : 'nav-link'} aria-expanded={moreMenu} onClick={() => setMoreMenu(!moreMenu)}>{t('More')} <ChevronDown size={13} /></button>
-            {moreMenu && <div className="more-nav-menu">{[['Friends','Friends'],['Messages','Messages'],['Notifications','Notifications'],['Offers','Offers & rewards'],['Map','Map & fare calculator'],['Favourites','Favourite buses'],['Wallet','My wallet'],['GPay','GPay & recharge'],['Verification','Student verification'], ...(isAdmin ? [['Admin', 'Admin · Users']] : [])].map(([target,label]) => <button key={target} className={page === target ? 'current' : ''} onClick={() => navigate(target)}>{t(label)}<ArrowRight size={13} /></button>)}</div>}
+            {moreMenu && <div className="more-nav-menu">{[['Friends','Friends'],['Messages','Messages'],['Notifications','Notifications'],['Offers','Offers & rewards'],['Map','Map & fare calculator'],['Favourites','Favourite buses'],['Wallet','My wallet'],['GPay','GPay & recharge'],['Verification','Account verification'], ...(isAdmin ? [['Admin', 'Admin · Users']] : [])].map(([target,label]) => <button key={target} className={page === target ? 'current' : ''} onClick={() => navigate(target)}>{t(label)}<ArrowRight size={13} /></button>)}</div>}
           </div>
         </nav>
         <div className="top-actions">
@@ -203,7 +205,7 @@ function App() {
         {page === 'Ride share' && <RidePage token={token} user={user} signedIn={signedIn} notify={notify} openAuth={() => setAuthMode('login')} />}
         {page === 'My trips' && <TripsPage token={token} signedIn={signedIn} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
         {page === 'Wallet' && <WalletPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
-        {page === 'Profile' && <ProfilePage user={user} token={token} signedIn={signedIn} updateUser={setUser} signOut={signOut} openAuth={() => setAuthMode('login')} notify={notify} />}
+        {page === 'Profile' && <ProfilePage user={user} token={token} signedIn={signedIn} navigate={navigate} updateUser={setUser} signOut={signOut} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Friends' && <FriendsPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} onChat={(friend) => { navigate('Messages'); window.history.replaceState({ page: 'Messages' }, '', `/messages?with=${encodeURIComponent(friend.id || friend._id)}`) }} notify={notify} />}
         {page === 'Messages' && <ChatPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} onFindFriends={() => navigate('Friends')} />}
         {page === 'Notifications' && <NotificationsPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
@@ -212,7 +214,7 @@ function App() {
         {page === 'Map' && <MapPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'GPay' && <GpayPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Verification' && <VerificationPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
-        {page === 'Admin' && <AdminPage token={token} signedIn={signedIn} isAdmin={isAdmin} openAuth={() => setAuthMode('admin')} notify={notify} />}
+        {page === 'Admin' && <AdminPage token={token} signedIn={signedIn} isAdmin={isAdmin} navigate={navigate} openAuth={() => setAuthMode('admin')} notify={notify} />}
       </main>
 
       <footer className="site-footer">
@@ -225,7 +227,7 @@ function App() {
           {[
             ['Commute', [['Find a bus', 'Find a bus'], ['Ride share', 'Ride share'], ['Map', 'Map & fare calculator'], ['Favourites', 'Favourite buses'], ['My trips', 'My trips']]],
             ['Payments', [['Wallet', 'Travel wallet'], ['GPay', 'GPay & recharge'], ['Offers', 'Offers & rewards']]],
-            ['Community', [['Friends', 'Friends'], ['Messages', 'Messages'], ['Notifications', 'Notifications'], ['Verification', 'Student verification']]],
+            ['Community', [['Friends', 'Friends'], ['Messages', 'Messages'], ['Notifications', 'Notifications'], ['Verification', 'Account verification']]],
           ].map(([heading, links]) => <nav key={heading} className="site-footer-col" aria-label={t(heading)}><b>{t(heading)}</b>{links.map(([target, label]) => <button key={target} onClick={() => navigate(target)}>{t(label)}</button>)}</nav>)}
         </div>
         <div className="site-footer-bottom"><span>© {formatNumber(new Date().getFullYear(), { useGrouping: false })} {t('SmartCommute Dhaka')}</span><span>{t('Making every trip a little simpler.')}</span></div>
@@ -283,7 +285,7 @@ const HOME_TOOLS = [
   { target: 'Map', icon: MapIcon, title: 'Map & fare calculator', text: 'Road distance and fare between any two places.' },
   { target: 'Offers', icon: Gift, title: 'Offers & rewards', text: 'Discounts and points on every ride.' },
   { target: 'GPay', icon: Smartphone, title: 'GPay & recharge', text: 'Top up your travel balance in seconds.' },
-  { target: 'Verification', icon: GraduationCap, title: 'Student verification', text: 'Unlock student fares with your ID.' },
+  { target: 'Verification', icon: GraduationCap, title: 'Account verification', text: 'Verify your NID or student pass.' },
   { target: 'Friends', icon: UserRound, title: 'Friends', text: 'Add commuters with a friend code.' },
   { target: 'Messages', icon: MessageCircle, title: 'Messages', text: 'Coordinate pickups with your ride crew.' },
 ]
@@ -1066,7 +1068,7 @@ function profileProblem({ name, email, phone, bio }) {
   return ''
 }
 
-function ProfilePage({ user, token, signedIn, updateUser, signOut, openAuth, notify }) {
+function ProfilePage({ user, token, signedIn, updateUser, signOut, openAuth, notify, navigate }) {
   const [editing, setEditing] = useState(false)
   const [form, setForm] = useState(() => profileFormOf(user))
   const [saving, setSaving] = useState(false)
@@ -1120,7 +1122,8 @@ function ProfilePage({ user, token, signedIn, updateUser, signOut, openAuth, not
         <span className="pf-avatar">{initials}</span>
         <b className="pf-name">{user.name}</b>
         <span className="pf-email">{user.email}</span>
-        <div className="pf-chips"><span className="pf-chip">{t(user.role || 'commuter')}</span>{user.pass && <span className="pf-chip verified"><BadgeCheck size={13} /> {t('Verified student')}</span>}</div>
+        <div className="pf-chips"><span className="pf-chip">{t(user.role || 'commuter')}</span>{user.pass && <span className="pf-chip verified"><BadgeCheck size={13} /> {t('Verified student')}</span>}{user.identityVerified && <span className="pf-chip verified"><ShieldCheck size={13} /> {t('NID verified')}</span>}</div>
+        {!(user.pass && user.identityVerified) && navigate && <button type="button" className="link-button pf-verify-link" onClick={() => navigate('Verification')}>{t('Verify your NID or student pass')}</button>}
         {user.bio && <p className="pf-bio">{user.bio}</p>}
         <ul className="pf-facts">
           {(user.homeArea || user.workArea) && <li><Route size={15} /><span>{user.homeArea ? t(user.homeArea) : '—'} <ArrowRight size={12} /> {user.workArea ? t(user.workArea) : '—'}</span></li>}
@@ -1200,7 +1203,19 @@ function PasswordPanel({ token, notify }) {
 
 const shortDate = (value) => formatDate(value) || '—'
 
-function AdminPage({ token, signedIn, isAdmin, openAuth, notify }) {
+// How many verification requests wait for review, with a link to the review queue on the Verification page.
+function AdminVerificationCard({ token, navigate }) {
+  const [pending, setPending] = useState(null)
+  useEffect(() => {
+    request('/verify/all?status=pending&pageSize=1', { token }).then((data) => setPending(data.pending ?? data.total ?? 0)).catch(() => setPending(null))
+  }, [token])
+  return <section className="pf-panel ad-verify-card">
+    <ShieldCheck size={20} aria-hidden="true" />
+    <div><b>{t('Account verification')}</b><span>{pending === null ? t('NID and student pass requests from users.') : t('{count} requests waiting for review', { count: pending })}</span></div>
+    <button type="button" className="button button-green button-small" onClick={() => navigate('Verification')}>{t('Review requests')}</button>
+  </section>
+}
+function AdminPage({ token, signedIn, isAdmin, openAuth, notify, navigate }) {
   const [search, setSearch] = useState('')
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(false)
@@ -1236,6 +1251,7 @@ function AdminPage({ token, signedIn, isAdmin, openAuth, notify }) {
 
   return <div className="page inner-page">
     {heading}
+    <AdminVerificationCard token={token} navigate={navigate} />
     <section className="pf-panel ad-panel">
       <header className="ad-toolbar">
         <div><h2>{t('All users')} <span className="ad-count">{formatNumber(users.length)}</span></h2><p>{t('Resetting a password signs the user out on every device.')}</p></div>

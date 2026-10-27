@@ -105,6 +105,22 @@ public sealed class TestServerFixture : IAsyncLifetime
         return (user, ClientFor(tokens.CreateToken(user, session)));
     }
 
+    // A signed-in admin, created like CreateUserAsync but with the admin role in its token.
+    public async Task<(User User, HttpClient Client)> CreateAdminAsync()
+    {
+        await using var scope = Scope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var tokens = scope.ServiceProvider.GetRequiredService<JwtTokenService>();
+        var id = Guid.NewGuid().ToString("N");
+        var user = new User { Name = "Test Admin", Email = $"{id}@test.local", FriendCode = id[..5].ToUpperInvariant(), PasswordHash = "x", Role = UserRoles.Admin };
+        db.Users.Add(user);
+        db.Wallets.Add(new Wallet { User = user });
+        var session = new UserSession { User = user, CreatedAt = DateTime.UtcNow, ExpiresAt = tokens.NewExpiry() };
+        db.UserSessions.Add(session);
+        await db.SaveChangesAsync();
+        return (user, ClientFor(tokens.CreateToken(user, session)));
+    }
+
     public HttpClient ClientFor(string? token)
     {
         var client = Factory!.CreateClient();

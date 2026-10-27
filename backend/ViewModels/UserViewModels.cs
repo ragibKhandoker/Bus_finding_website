@@ -13,6 +13,7 @@ public class UserViewModel : EntityViewModel
     public string Role { get; init; } = "";
     public string Gender { get; init; } = "";
     public bool Pass { get; init; }
+    public bool IdentityVerified { get; init; }
     public string FriendCode { get; init; } = "";
     public string Phone { get; init; } = "";
     public string Bio { get; init; } = "";
@@ -29,6 +30,7 @@ public class UserViewModel : EntityViewModel
         Role = u.Role,
         Gender = u.Gender,
         Pass = u.Pass,
+        IdentityVerified = u.IdentityVerified,
         FriendCode = u.FriendCode,
         Phone = u.Phone ?? "",
         Bio = u.Bio ?? "",

@@ -61,6 +61,9 @@ public class User
     // True once an admin approves the user's student verification.
     public bool Pass { get; set; }
 
+    // True once an admin approves the user's NID.
+    public bool IdentityVerified { get; set; }
+
     // 5-character code (A-Z, 0-9) used to find and add friends.
     [MaxLength(5)]
     public string FriendCode { get; set; } = "";

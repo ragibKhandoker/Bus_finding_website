@@ -18,6 +18,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Offer> Offers => Set<Offer>();
     public DbSet<OfferTransaction> OfferTransactions => Set<OfferTransaction>();
     public DbSet<GpayAccount> GpayAccounts => Set<GpayAccount>();
+    public DbSet<GpayTransaction> GpayTransactions => Set<GpayTransaction>();
     public DbSet<Trip> Trips => Set<Trip>();
     public DbSet<FareRecord> Fares => Set<FareRecord>();
     public DbSet<RidePost> RidePosts => Set<RidePost>();
@@ -31,6 +32,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Chat> Chats => Set<Chat>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<Verification> Verifications => Set<Verification>();
+    public DbSet<VerificationImage> VerificationImages => Set<VerificationImage>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -155,6 +157,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.HasIndex(x => x.UserId).IsUnique();
             e.Property(x => x.Version).IsRowVersion();
+            e.ToTable(t => t.HasCheckConstraint("ck_gpay_accounts_balance_not_negative", "balance >= 0"));
+        });
+
+        b.Entity<GpayTransaction>(e =>
+        {
+            e.HasOne(x => x.Account).WithMany().HasForeignKey(x => x.AccountId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Trip).WithMany().HasForeignKey(x => x.TripId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.WalletTransaction).WithMany().HasForeignKey(x => x.WalletTransactionId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            // A trip's fare is paid with GPay at most once.
+            e.HasIndex(x => x.TripId).IsUnique().HasFilter("trip_id IS NOT NULL").HasDatabaseName("ix_gpay_transactions_one_per_trip");
+            e.HasIndex(x => new { x.UserId, x.Reference }).IsUnique().HasFilter("reference IS NOT NULL")
+                .HasDatabaseName("ix_gpay_transactions_one_per_reference");
+            e.ToTable(t => t.HasCheckConstraint("ck_gpay_transactions_type",
+                "type IN ('opening', 'wallet-recharge', 'trip-payment', 'payment', 'top-up')"));
         });
 
         b.Entity<Trip>(e =>
@@ -250,6 +267,27 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.ToTable(t => t.HasCheckConstraint("ck_chat_messages_text_not_blank", @"text ~ '\S'"));
         });
 
-        b.Entity<Verification>(e => e.HasIndex(x => new { x.UserId, x.CreatedAt }));
+        b.Entity<Verification>(e =>
+        {
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            e.HasIndex(x => new { x.Status, x.CreatedAt });
+            // One submission waiting for review per user at a time.
+            e.HasIndex(x => x.UserId).IsUnique().HasFilter("status = 'hold'").HasDatabaseName("ix_verifications_one_pending_per_user");
+            // An uploaded image backs one submission only.
+            e.HasIndex(x => x.ImageId).IsUnique().HasFilter("image_id IS NOT NULL");
+            e.HasOne(x => x.Image).WithMany().HasForeignKey(x => x.ImageId).OnDelete(DeleteBehavior.SetNull);
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_verifications_status", "status IN ('hold', 'approved', 'rejected')");
+                t.HasCheckConstraint("ck_verifications_document_type", "document_type IN ('student_pass', 'nid')");
+            });
+        });
+
+        b.Entity<VerificationImage>(e =>
+        {
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            e.HasIndex(x => x.StorageKey).IsUnique();
+        });
     }
 }

@@ -53,6 +53,7 @@ builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<RewardOptions>(builder.Configuration.GetSection("Rewards"));
 builder.Services.Configure<GeoOptions>(builder.Configuration.GetSection("Geo"));
 builder.Services.Configure<RideShareOptions>(builder.Configuration.GetSection("RideShare"));
+builder.Services.Configure<VerificationOptions>(builder.Configuration.GetSection("Verification"));
 builder.Services.Configure<GoogleMapsOptions>(builder.Configuration.GetSection("GoogleMaps"));
 
 builder.Services
@@ -186,6 +187,7 @@ builder.Services.AddScoped<RideShareService>();
 builder.Services.AddScoped<RideRequestService>();
 builder.Services.AddScoped<ReviewService>();
 builder.Services.AddScoped<OfferService>();
+builder.Services.AddScoped<GpayService>();
 builder.Services.AddScoped<WalletService>();
 builder.Services.AddScoped<TripService>();
 builder.Services.AddScoped<FareService>();
@@ -233,15 +235,8 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
     await context.Response.WriteAsJsonAsync(new ErrorResponse(message));
 }));
 
-// Serve uploaded verification images. The folder is created up front because the static file
-// middleware ignores a web root that does not exist when the app starts.
-var uploadsPath = Path.Combine(app.Environment.ContentRootPath, "wwwroot", "uploads");
-Directory.CreateDirectory(uploadsPath);
-app.UseStaticFiles(new StaticFileOptions
-{
-    FileProvider = new Microsoft.Extensions.FileProviders.PhysicalFileProvider(uploadsPath),
-    RequestPath = "/uploads",
-});
+// Verification images (NID, student pass) are private: they are no longer served from /uploads, only through
+// GET /verify/... to their owner and admins (see ImageStorageService).
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();

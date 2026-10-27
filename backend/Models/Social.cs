@@ -97,11 +97,41 @@ public class ChatMessage
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
+// "hold" is the stored value for Pending, kept for existing data and clients.
 public static class VerificationStatus
 {
     public const string Hold = "hold";
     public const string Approved = "approved";
     public const string Rejected = "rejected";
+
+    public static string Label(string status) => status == Hold ? "pending" : status;
+}
+
+public static class VerificationDocumentTypes
+{
+    public const string StudentPass = "student_pass";
+    public const string Nid = "nid";
+
+    public static readonly string[] All = [StudentPass, Nid];
+}
+
+// An uploaded verification document image. The file is kept outside the public web folder and is only served to
+// its owner and admins (GET /verify/images/{id}).
+public class VerificationImage
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public User? User { get; set; }
+
+    // File name inside the private storage folder: "<random id>.<ext>", never from the user.
+    [MaxLength(100)]
+    public string StorageKey { get; set; } = "";
+
+    [MaxLength(30)]
+    public string ContentType { get; set; } = "";
+
+    public long SizeBytes { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 public class Verification
@@ -125,11 +155,23 @@ public class Verification
     [MaxLength(255)]
     public string Gmail { get; set; } = "";
 
+    [MaxLength(20)]
+    public string DocumentType { get; set; } = VerificationDocumentTypes.StudentPass;
+
+    public Guid? ImageId { get; set; }
+    public VerificationImage? Image { get; set; }
+
+    // Older submissions only: a link to a file in the old public uploads folder.
     [MaxLength(500)]
     public string? ImageUrl { get; set; }
 
     [MaxLength(20)]
     public string Status { get; set; } = VerificationStatus.Hold;
+
+    [MaxLength(500)]
+    public string? RejectionReason { get; set; }
+
+    public Guid? ReviewedById { get; set; }
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? ReviewedAt { get; set; }
