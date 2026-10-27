@@ -73,30 +73,11 @@ public class WalletService(AppDbContext db, IOptions<RewardOptions> rewards)
             ON CONFLICT (user_id) DO NOTHING
             """, ct);
 
-    public async Task<Offer> GetOrCreateOffersAsync(Guid userId)
-    {
-        var offer = await db.Offers.Include(o => o.Wallet).FirstOrDefaultAsync(o => o.UserId == userId);
-        if (offer is null)
-        {
-            var wallet = await GetOrCreateAsync(userId);
-            offer = new Offer
-            {
-                UserId = userId,
-                Wallet = wallet,
-                Cashback = Rewards.WelcomeCashback,
-                Coupon = Rewards.WelcomeCoupon,
-                Discount = Rewards.WelcomeDiscount,
-            };
-            db.Offers.Add(offer);
-        }
-        return offer;
-    }
-
-    public void Credit(Wallet wallet, decimal amount, string type, string description)
+    public WalletTransaction Credit(Wallet wallet, decimal amount, string type, string description)
     {
         wallet.Balance += amount;
         Touch(wallet);
-        Record(wallet, type, amount, 0, description);
+        return Record(wallet, type, amount, 0, description);
     }
 
     public bool TryDebit(Wallet wallet, decimal amount, string type, string description) =>

@@ -28,7 +28,7 @@ public static class WalletTransactionTypes
     public const string Recharge = "recharge";             // taka added from GPay
     public const string GemsEarned = "gems-earned";        // gems rewarded for a trip or ride share
     public const string GemsConverted = "gems-converted";  // gems turned into taka
-    // Offers paid into the wallet use the offer kind as the type: "cashback" or "coupon".
+    // Offers paid into the wallet use the offer kind as the type: "cashback", "coupon" or "discount".
 }
 
 // Audit trail of every balance or gem change.
@@ -58,6 +58,29 @@ public class WalletTransaction
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
+public static class OfferKinds
+{
+    public const string Cashback = "cashback";
+    public const string Coupon = "coupon";
+    public const string Discount = "discount";
+
+    public static readonly string[] All = [Cashback, Coupon, Discount];
+}
+
+public static class OfferEntryReasons
+{
+    public const string Welcome = "welcome";     // the configured welcome offer, once per user
+    public const string Opening = "opening";     // what an account already had when the ledger started
+    public const string Granted = "granted";     // added by an admin
+    public const string Adjusted = "adjusted";   // set by an admin
+    public const string Redeemed = "redeemed";   // cashback paid into the wallet
+    public const string Trip = "trip";           // coupon or discount taken off a trip's fare
+
+    public static readonly string[] All = [Welcome, Opening, Granted, Adjusted, Redeemed, Trip];
+}
+
+// A user's offer balances, in taka: cashback (paid into the wallet when redeemed), coupon and discount value
+// (taken off a completed trip's fare). Every change is recorded as an OfferTransaction.
 public class Offer
 {
     public Guid Id { get; set; }
@@ -89,4 +112,43 @@ public class GpayAccount
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 
     public uint Version { get; set; }
+}
+
+// The audit trail of offer balances: + for value given, - for value used. Unique indexes stop the same welcome
+// offer, the same client reference, or a second coupon (or discount) on one trip from being recorded twice.
+public class OfferTransaction
+{
+    public Guid Id { get; set; }
+    public Guid OfferId { get; set; }
+    public Offer? Offer { get; set; }
+    public Guid UserId { get; set; }
+
+    [MaxLength(20)]
+    public string Kind { get; set; } = OfferKinds.Cashback;
+
+    public decimal Amount { get; set; }
+    public decimal BalanceAfter { get; set; }
+
+    [MaxLength(20)]
+    public string Reason { get; set; } = OfferEntryReasons.Granted;
+
+    [MaxLength(200)]
+    public string Description { get; set; } = "";
+
+    // The trip a coupon or discount was used on.
+    public Guid? TripId { get; set; }
+    public Trip? Trip { get; set; }
+
+    // The wallet credit this produced, if any.
+    public Guid? WalletTransactionId { get; set; }
+    public WalletTransaction? WalletTransaction { get; set; }
+
+    // A key from the client or admin that makes a repeated request a no-op; welcome entries use "welcome:<kind>".
+    [MaxLength(100)]
+    public string? Reference { get; set; }
+
+    // The admin who granted or adjusted it.
+    public Guid? CreatedById { get; set; }
+
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }

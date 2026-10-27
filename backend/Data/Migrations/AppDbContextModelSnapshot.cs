@@ -680,7 +680,108 @@ namespace SmartCommute.Server.Data.Migrations
                     b.HasIndex("WalletId")
                         .HasDatabaseName("ix_offers_wallet_id");
 
-                    b.ToTable("offers", (string)null);
+                    b.ToTable("offers", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_offers_cashback_not_negative", "cashback >= 0");
+
+                            t.HasCheckConstraint("ck_offers_coupon_not_negative", "coupon >= 0");
+
+                            t.HasCheckConstraint("ck_offers_discount_not_negative", "discount >= 0");
+                        });
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.OfferTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<decimal>("BalanceAfter")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("balance_after");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid>("OfferId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("offer_id");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("reference");
+
+                    b.Property<Guid?>("TripId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trip_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<Guid?>("WalletTransactionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("wallet_transaction_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_offer_transactions");
+
+                    b.HasIndex("OfferId")
+                        .HasDatabaseName("ix_offer_transactions_offer_id");
+
+                    b.HasIndex("WalletTransactionId")
+                        .HasDatabaseName("ix_offer_transactions_wallet_transaction_id");
+
+                    b.HasIndex("TripId", "Kind")
+                        .IsUnique()
+                        .HasDatabaseName("ix_offer_transactions_one_kind_per_trip")
+                        .HasFilter("trip_id IS NOT NULL");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_offer_transactions_user_id_created_at");
+
+                    b.HasIndex("UserId", "Reference")
+                        .IsUnique()
+                        .HasDatabaseName("ix_offer_transactions_one_per_reference")
+                        .HasFilter("reference IS NOT NULL");
+
+                    b.ToTable("offer_transactions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_offer_transactions_kind", "kind IN ('cashback', 'coupon', 'discount')");
+
+                            t.HasCheckConstraint("ck_offer_transactions_reason", "reason IN ('welcome', 'opening', 'granted', 'adjusted', 'redeemed', 'trip')");
+                        });
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.Rating", b =>
@@ -1658,6 +1759,34 @@ namespace SmartCommute.Server.Data.Migrations
                     b.Navigation("User");
 
                     b.Navigation("Wallet");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.OfferTransaction", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.Offer", "Offer")
+                        .WithMany()
+                        .HasForeignKey("OfferId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_offer_transactions_offers_offer_id");
+
+                    b.HasOne("SmartCommute.Server.Models.Trip", "Trip")
+                        .WithMany()
+                        .HasForeignKey("TripId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_offer_transactions_trips_trip_id");
+
+                    b.HasOne("SmartCommute.Server.Models.WalletTransaction", "WalletTransaction")
+                        .WithMany()
+                        .HasForeignKey("WalletTransactionId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_offer_transactions_wallet_transactions_wallet_transaction_id");
+
+                    b.Navigation("Offer");
+
+                    b.Navigation("Trip");
+
+                    b.Navigation("WalletTransaction");
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.Rating", b =>

@@ -275,3 +275,28 @@
 .sos-confirm-actions{display:flex;gap:8px;flex-wrap:wrap}
 @media(max-width:920px){.notifications-layout{grid-template-columns:1fr}}
 @media(max-width:700px){.top-actions>.icon-button.notification-bell{display:grid}.notifications-page .notification-row{flex-wrap:wrap}.notifications-page .notification-copy{flex:1 1 calc(100% - 50px)}.notifications-page .notification-row-actions{margin-left:47px}.sos-note input{font-size:16px}}
+/* ---- Offers: cashback, coupons & discounts (F15) ---- */
+.offers-page .offer-grid{margin-top:4px}.offers-page .offer-card{gap:6px;min-height:0}
+.offers-page .offer-card p{flex:none;margin:4px 0}
+.offer-status{font-size:11.5px;font-weight:700;border-radius:20px;padding:3px 10px;color:var(--fg-247248);background:var(--bg-e4f4e8)}
+.offer-status.empty{color:var(--fg-718078);background:var(--bg-eff4ef)}.offer-status.paused{color:var(--fg-986f25);background:var(--bg-fff3dc)}
+.offer-redeem{display:grid;gap:5px;width:100%;margin-top:auto}.offer-redeem label{font-size:12.5px;color:var(--fg-566d5e)}
+.offer-redeem>div{display:flex;gap:7px}.offer-redeem input{flex:1;min-width:0;border:1px solid var(--bd-e4ebe5);border-radius:6px;padding:10px 11px;font-size:14px;color:var(--fg-34483b);background:var(--bg-ffffff);outline:0}
+.offer-redeem input:focus{border-color:var(--bd-20875f)}.offer-redeem input[aria-invalid]{border-color:var(--bd-f3d7d2)}
+.offers-page .offer-card .offer-redeem .extra-button{width:auto}
+.offer-error{font-size:12.5px;font-weight:600;color:var(--fg-a95548)}
+.offers-welcome,.offers-wallet,.offers-paused{display:flex;align-items:center;gap:7px;margin:0 0 10px;font-size:13.5px;color:var(--fg-566d5e)}
+.offers-welcome{background:var(--bg-edf7ef);color:var(--fg-28734f);border-radius:8px;padding:9px 12px;font-weight:600}
+.offers-paused{background:var(--bg-fff3dc);color:var(--fg-986f25);border-radius:8px;padding:9px 12px;font-weight:600}
+.offers-wallet b{color:var(--fg-233b30)}
+.offers-error{display:grid;gap:8px;justify-items:start}.offers-error p{margin:0;font-size:14px}
+.offer-trips{display:grid}
+.offer-trip{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:13px 0;border-top:1px solid var(--bd-eef1ee)}
+.offer-trip>div:first-child{display:grid;gap:3px;min-width:0}.offer-trip b{font-size:14px;color:var(--fg-34483b)}.offer-trip small{font-size:12.5px;color:var(--fg-718078)}.offer-trip small b{font-size:12.5px}
+.offer-trip-actions{display:flex;gap:6px;flex-wrap:wrap}.offer-trip-actions .extra-button{font-size:12.5px;padding:8px 11px}
+.offer-history{list-style:none;margin:0;padding:0;display:grid}
+.offer-history li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 0;border-top:1px solid var(--bd-eef1ee)}
+.offer-history li>span{display:grid;gap:3px;min-width:0}.offer-history b{font-size:13.5px;color:var(--fg-34483b)}.offer-history small{font-size:12px;color:var(--fg-718078)}
+.offer-history strong{font:750 15px var(--font-head);white-space:nowrap}.offer-history strong.in{color:var(--fg-19865e)}.offer-history strong.out{color:var(--fg-a95548)}
+.offers-page .extra-panel-title h2{display:inline-flex;align-items:center;gap:6px}
+@media(max-width:700px){.offer-redeem input{font-size:16px}.offer-trip-actions{width:100%}.offer-trip-actions .extra-button{flex:1}}

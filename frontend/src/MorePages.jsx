@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { ArrowRight, ArrowUpDown, BusFront, Calculator, Check, CreditCard, MapPin, Navigation, RefreshCw, Search, ShieldCheck, Wallet } from 'lucide-react'
+import { ArrowRight, ArrowUpDown, BusFront, Calculator, Check, MapPin, Navigation, RefreshCw, Search, ShieldCheck, Wallet } from 'lucide-react'
 import './more.css'
 import { apiRequest } from './api'
 import { SosAlert } from './Notifications'
@@ -23,21 +23,6 @@ export function Loading({ label = 'Loading…' }) { return <div className="extra
 export function RequireSignIn({ openAuth }) { return <div className="extra-panel sign-in-panel"><ShieldCheck size={22} /><div><b>{t('Sign in to continue')}</b><p>{t('This feature uses your SmartCommute account.')}</p></div><button className="extra-button" onClick={openAuth}>{t('Sign in')} <ArrowRight size={14} /></button></div> }
 
 
-export function OffersPage({ token, signedIn, openAuth, notify }) {
-  const [offers, setOffers] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const load = useCallback(async () => { if (!signedIn) return; setLoading(true); try { setOffers(await api('/offers/user', token)); setError('') } catch (e) { setError(err(e)) } finally { setLoading(false) } }, [signedIn, token])
-  useEffect(() => { load() }, [load])
-  const convert = async (type) => {
-    const amount = Number(offers?.[type] || 0)
-    if (!amount) return
-    try { const result = await api(`/offers/use-${type}`, token, { method: 'POST', body: json({ amount }) }); setOffers(result.offers); notify(t(result.message || '{type} converted to wallet balance.', { type: t(type) })) }
-    catch (e) { setError(err(e)) }
-  }
-  if (!signedIn) return <section className="extra-page"><Heading icon={CreditCard} eyebrow={t('LITTLE PERKS, BETTER TRIPS')} title={t('Offers & rewards')} subtitle={t('See your rewards and convert eligible offers into wallet balance.')} /><RequireSignIn openAuth={openAuth} /></section>
-  return <section className="extra-page"><Heading icon={CreditCard} eyebrow={t('LITTLE PERKS, BETTER TRIPS')} title={t('Offers & rewards')} subtitle={t('See your rewards and convert eligible offers into wallet balance.')} /><Feedback error={error} />{loading ? <Loading /> : offers ? <div className="offer-grid">{[['cashback','Cashback','Cashback earned from eligible trips.'],['coupon','Coupons','Available coupon value for your account.'],['discount','Discounts','Taken off your fare automatically when you pay for a bus in the SmartCommute app.']].map(([key,label,description]) => <article className="extra-panel offer-card" key={key}><span className="offer-symbol">{key === 'cashback' ? '৳' : key === 'coupon' ? '✳' : '%'}</span><small>{t('YOUR {label}', { label: t(label).toUpperCase() })}</small><strong>৳{formatNumber(offers[key])}</strong><p>{t(description)}</p>{key !== 'discount' && <button className="extra-button" disabled={!Number(offers[key])} onClick={() => convert(key)}>{t('Move to wallet')} <ArrowRight size={14} /></button>}</article>)}</div> : <div className="extra-panel extra-empty-copy">{error || t('No offers are available.')} <button className="extra-button secondary" onClick={load}>{t('Try again')}</button></div>}</section>
-}
 
 export function GpayPage({ token, signedIn, openAuth, notify }) {
   const [account, setAccount] = useState(null)

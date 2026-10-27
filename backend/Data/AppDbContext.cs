@@ -16,6 +16,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Wallet> Wallets => Set<Wallet>();
     public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
     public DbSet<Offer> Offers => Set<Offer>();
+    public DbSet<OfferTransaction> OfferTransactions => Set<OfferTransaction>();
     public DbSet<GpayAccount> GpayAccounts => Set<GpayAccount>();
     public DbSet<Trip> Trips => Set<Trip>();
     public DbSet<FareRecord> Fares => Set<FareRecord>();
@@ -122,7 +123,33 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(x => x.TripId).IsUnique().HasFilter("trip_id IS NOT NULL");
         });
 
-        b.Entity<Offer>(e => e.HasIndex(x => x.UserId).IsUnique());
+        b.Entity<Offer>(e =>
+        {
+            e.HasIndex(x => x.UserId).IsUnique();
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_offers_cashback_not_negative", "cashback >= 0");
+                t.HasCheckConstraint("ck_offers_coupon_not_negative", "coupon >= 0");
+                t.HasCheckConstraint("ck_offers_discount_not_negative", "discount >= 0");
+            });
+        });
+
+        b.Entity<OfferTransaction>(e =>
+        {
+            e.HasOne(x => x.Offer).WithMany().HasForeignKey(x => x.OfferId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Trip).WithMany().HasForeignKey(x => x.TripId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.WalletTransaction).WithMany().HasForeignKey(x => x.WalletTransactionId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            e.HasIndex(x => new { x.UserId, x.Reference }).IsUnique().HasFilter("reference IS NOT NULL")
+                .HasDatabaseName("ix_offer_transactions_one_per_reference");
+            e.HasIndex(x => new { x.TripId, x.Kind }).IsUnique().HasFilter("trip_id IS NOT NULL")
+                .HasDatabaseName("ix_offer_transactions_one_kind_per_trip");
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_offer_transactions_kind", "kind IN ('cashback', 'coupon', 'discount')");
+                t.HasCheckConstraint("ck_offer_transactions_reason", "reason IN ('welcome', 'opening', 'granted', 'adjusted', 'redeemed', 'trip')");
+            });
+        });
 
         b.Entity<GpayAccount>(e =>
         {

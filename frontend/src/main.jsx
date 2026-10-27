@@ -12,12 +12,16 @@ import './profile.css'
 import './admin.css'
 import GoogleMapView, { mapsConfigured } from './GoogleMapView'
 import { ActiveTripPanel, TripRow, useActiveTrip, useBoardControls, useTripChanges } from './Trips'
-import { GpayPage, MapPage, OffersPage, VerificationPage } from './MorePages'
+import { GpayPage, MapPage, VerificationPage } from './MorePages'
+import { OffersPage } from './Offers'
 import { NotificationBell, NotificationsPage, useUnreadCount } from './Notifications'
 import { FriendsPage } from './Friends'
 import { ChatPage } from './Chat'
 import { RidePage } from './RideShare'
 import { BusReviews } from './Reviews'
+import womenBusDriver from './assets/home/women-bus-driver.jpg'
+import womenBusFleet from './assets/home/women-bus-fleet.jpg'
+import cityBus from './assets/home/dhaka-nagar-paribahan-bus.jpg'
 import { FavoriteButton, FavoritesPage, useFavoriteBuses, useFavoriteStatus } from './Favorites'
 import { API_BASE, UNAUTHORIZED_EVENT, apiRequest as request, isTokenExpired, tokenExpiry } from './api'
 import { formatDate, formatDateTime, formatNumber, getLang, setLang, t, toEnglish } from './i18n'
@@ -535,22 +539,19 @@ function HomePage({ user, token, signedIn, navigate, openAuth }) {
             </ul>
           </div>
 
-          <div className="hp-preview" aria-hidden="true">
-            <div className="hp-map">
-              <RouteMap />
-              <span className="hp-map-tag hp-tag-start"><i /> {t('Uttara')}</span>
-              <span className="hp-map-tag hp-tag-end"><i /> {t('Motijheel')}</span>
-            </div>
-            <div className="hp-float hp-float-trip">
-              <div className="hp-float-head"><span className="hp-bus-chip"><BusFront size={15} /></span><div><b>{t('Uttara → Motijheel')}</b><small>{t('Recommended route')}</small></div><span className="hp-live">{t('LIVE')}</span></div>
-              <div className="hp-trip-stats">
-                <span><small>{t('Fare')}</small><b>{money(30)}</b></span>
-                <span><small>{t('Stops')}</small><b>{formatNumber(14)}</b></span>
-                <span><small>{t('Type')}</small><b>{t('AC Bus')}</b></span>
-              </div>
-              <div className="hp-trip-line"><i /><span /><i /></div>
-            </div>
-            <div className="hp-float hp-float-ride"><span className="hp-ride-avatars"><i>R</i><i>N</i></span><div><b>{t('Ride share nearby')}</b><small>{t('Banani → Gulshan 2 · 2 seats')}</small></div></div>
+          <div className="hp-preview hp-photos">
+            <figure className="hp-photo hp-photo-fleet">
+              <img src={womenBusFleet} alt={t('A row of pink women-only double-decker buses')} width="857" height="482" decoding="async" fetchPriority="high" />
+              <figcaption>{t('Women-only buses')}</figcaption>
+            </figure>
+            <figure className="hp-photo hp-photo-driver">
+              <img src={womenBusDriver} alt={t('A woman driver at the wheel of a pink bus')} width="960" height="540" decoding="async" />
+              <figcaption>{t('Women at the wheel')}</figcaption>
+            </figure>
+            <figure className="hp-photo hp-photo-city">
+              <img src={cityBus} alt={t('A green Dhaka Nagar Paribahan city bus on the road')} width="1111" height="630" decoding="async" />
+              <figcaption>{t('Dhaka Nagar Paribahan')}</figcaption>
+            </figure>
           </div>
         </div>
       </section>
@@ -662,34 +663,6 @@ function useScrollMotion(pageRef) {
       page.classList.remove('hp-motion')
     }
   }, [pageRef])
-}
-
-// Stylised street map behind the home page route preview. Purely decorative.
-function RouteMap() {
-  const route = 'M92 372 L92 300 Q92 282 110 278 L214 256 Q232 252 236 234 L250 168 Q254 150 272 146 L384 126 Q402 122 408 104 L428 48'
-  return <svg viewBox="0 0 520 420" preserveAspectRatio="xMidYMid slice" className="hp-map-svg">
-    <rect width="520" height="420" fill="#eef2ec" />
-    <path d="M-10 330 C80 300 120 360 210 340 S360 300 530 340 L530 420 L-10 420Z" fill="#d6e7f0" />
-    <path d="M-10 330 C80 300 120 360 210 340 S360 300 530 340" stroke="#c4dbe8" strokeWidth="3" fill="none" />
-    <rect x="300" y="190" width="96" height="70" rx="10" fill="#d9ead5" />
-    <rect x="30" y="70" width="70" height="90" rx="10" fill="#d9ead5" />
-    <g fill="#e3e8e1">
-      {[[130, 40, 80, 60], [230, 30, 90, 50], [130, 120, 70, 70], [30, 190, 120, 50], [170, 280, 90, 30], [440, 160, 70, 90], [300, 30, 60, 60], [420, 270, 90, 40]].map(([x, y, w, h]) => <rect key={`${x}-${y}`} x={x} y={y} width={w} height={h} rx="6" />)}
-    </g>
-    <g stroke="#ffffff" strokeLinecap="round" fill="none">
-      <path d="M0 110 L520 70" strokeWidth="14" /><path d="M0 250 L520 210" strokeWidth="12" />
-      <path d="M118 0 L96 420" strokeWidth="12" /><path d="M262 0 L238 330" strokeWidth="10" />
-      <path d="M410 0 L380 330" strokeWidth="10" /><path d="M0 170 L520 140" strokeWidth="6" />
-      <path d="M180 0 L170 330" strokeWidth="6" /><path d="M330 0 L310 330" strokeWidth="6" />
-    </g>
-    <path d={route} stroke="#ffffff" strokeWidth="11" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-    <path d={route} stroke="#19865e" strokeWidth="6" fill="none" strokeLinecap="round" strokeLinejoin="round" />
-    <path d={route} stroke="#7fd3ad" strokeWidth="2" fill="none" strokeDasharray="2 12" strokeLinecap="round" className="hp-route-flow" />
-    {[[92, 330], [150, 270], [236, 234], [250, 168], [330, 136], [408, 104]].map(([cx, cy]) => <circle key={`${cx}-${cy}`} cx={cx} cy={cy} r="5" fill="#fff" stroke="#19865e" strokeWidth="3" />)}
-    <circle cx="92" cy="372" r="9" fill="#19865e" stroke="#fff" strokeWidth="4" />
-    <circle cx="428" cy="48" r="9" fill="#e5533d" stroke="#fff" strokeWidth="4" />
-    <g className="hp-bus-marker" transform="translate(250 200)"><circle r="18" fill="#19865e" opacity=".18" className="hp-pulse" /><circle r="10" fill="#19865e" stroke="#fff" strokeWidth="3" /></g>
-  </svg>
 }
 
 // Every stop name in the database, offered as suggestions in the place inputs (input list="stop-suggestions").

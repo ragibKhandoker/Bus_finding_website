@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using SmartCommute.Server.Models;
+using SmartCommute.Server.Services;
 
 namespace SmartCommute.Server.ViewModels;
 
@@ -83,19 +84,122 @@ public class OfferViewModel : EntityViewModel
     };
 }
 
+// The details the Offers page shows besides the balances: what the welcome offer was, recent offer history, and
+// completed trips a coupon or discount can still be used on.
+public class OfferDetailsViewModel : OfferViewModel
+{
+    public WelcomeOfferViewModel Welcome { get; init; } = new();
+    public List<OfferTransactionViewModel> History { get; init; } = [];
+    public List<TripOfferViewModel> Trips { get; init; } = [];
+
+    public static OfferDetailsViewModel From(Offer o, RewardOptions rewards, List<OfferTransaction> history, List<TripOfferView> trips)
+    {
+        var basic = OfferViewModel.From(o);
+        return new()
+        {
+            Id = basic.Id, UserId = basic.UserId, WalletId = basic.WalletId,
+            Cashback = basic.Cashback, Coupon = basic.Coupon, Discount = basic.Discount, IsActive = basic.IsActive,
+            CreatedAt = basic.CreatedAt, UpdatedAt = basic.UpdatedAt,
+            Welcome = new WelcomeOfferViewModel { Cashback = rewards.WelcomeCashback, Coupon = rewards.WelcomeCoupon, Discount = rewards.WelcomeDiscount },
+            History = history.Select(OfferTransactionViewModel.From).ToList(),
+            Trips = trips.Select(TripOfferViewModel.From).ToList(),
+        };
+    }
+}
+
+public class WelcomeOfferViewModel
+{
+    public decimal Cashback { get; init; }
+    public decimal Coupon { get; init; }
+    public decimal Discount { get; init; }
+}
+
+public class OfferTransactionViewModel : EntityViewModel
+{
+    public string Kind { get; init; } = "";
+    // + value given, - value used.
+    public decimal Amount { get; init; }
+    public decimal BalanceAfter { get; init; }
+    public string Reason { get; init; } = "";
+    public string Description { get; init; } = "";
+    public string? TripId { get; init; }
+    public DateTime CreatedAt { get; init; }
+
+    public static OfferTransactionViewModel From(OfferTransaction x) => new()
+    {
+        Id = x.Id.ToString(),
+        Kind = x.Kind,
+        Amount = x.Amount,
+        BalanceAfter = x.BalanceAfter,
+        Reason = x.Reason,
+        Description = x.Description,
+        TripId = x.TripId?.ToString(),
+        CreatedAt = x.CreatedAt,
+    };
+}
+
+public class TripOfferViewModel
+{
+    public string TripId { get; init; } = "";
+    public string BusName { get; init; } = "";
+    public string Source { get; init; } = "";
+    public string Destination { get; init; } = "";
+    public DateTime? EndedAt { get; init; }
+    public decimal Fare { get; init; }
+    public decimal CouponSaved { get; init; }
+    public decimal DiscountSaved { get; init; }
+    public decimal RemainingFare { get; init; }
+    public bool CouponUsed => CouponSaved > 0;
+    public bool DiscountUsed => DiscountSaved > 0;
+
+    public static TripOfferViewModel From(TripOfferView t) => new()
+    {
+        TripId = t.TripId.ToString(), BusName = t.BusName, Source = t.Source, Destination = t.Destination, EndedAt = t.EndedAt,
+        Fare = t.Fare, CouponSaved = t.CouponSaved, DiscountSaved = t.DiscountSaved, RemainingFare = t.RemainingFare,
+    };
+}
+
+// Admin only. Leaving userId out targets the admin's own offers.
 public class UpdateOffersRequest
 {
     [Range(0, 1_000_000)] public decimal Cashback { get; set; }
     [Range(0, 1_000_000)] public decimal Coupon { get; set; }
     [Range(0, 1_000_000)] public decimal Discount { get; set; }
     public bool IsActive { get; set; } = true;
-    // Admins may target another user; otherwise the caller's own offers are updated.
     public Guid? UserId { get; set; }
 }
 
+// Admin only. reference (optional) makes a repeated grant a no-op.
 public class AdminAmountRequest : AmountRequest
 {
     public Guid? UserId { get; set; }
+
+    [StringLength(100)]
+    public string? Reference { get; set; }
+}
+
+// amount left out redeems all the cashback. reference (optional, e.g. a random id per button press) makes a
+// repeated request return the first result instead of paying out again.
+public class UseCashbackRequest
+{
+    [Range(0.01, 1_000_000, ErrorMessage = "Amount must be greater than zero.")]
+    public decimal? Amount { get; set; }
+
+    [StringLength(100)]
+    public string? Reference { get; set; }
+}
+
+// Uses coupon or discount value on one of the caller's completed trips. amount left out uses as much as possible.
+public class UseOnTripRequest
+{
+    [Required(ErrorMessage = "Choose a completed trip to use it on.")]
+    public Guid? TripId { get; set; }
+
+    [Range(0.01, 1_000_000, ErrorMessage = "Amount must be greater than zero.")]
+    public decimal? Amount { get; set; }
+
+    [StringLength(100)]
+    public string? Reference { get; set; }
 }
 
 public class DeductRequest : AmountRequest

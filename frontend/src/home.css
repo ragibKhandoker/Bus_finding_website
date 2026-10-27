@@ -677,3 +677,23 @@ input{line-height:1.6}
 @media(prefers-reduced-motion:reduce){.trip-live-dot{animation:none}}
 .route-hero-head .route-hero-favorite{margin-left:auto;flex:none}
 @media(max-width:700px){.route-hero-head{flex-wrap:wrap}.route-hero-head .route-hero-favorite{margin-left:0}}
+/* Home hero photos: pink women-only buses, with a woman driver and a green city bus overlapping the bottom corners. Captions sit on the
+   photos, so their colours are fixed (rgb) and do not change with the theme. */
+.hp-photo{position:absolute;margin:0;overflow:hidden;border-radius:24px;background:var(--bg-eef2ec);box-shadow:0 40px 80px -36px #13402c59,0 4px 14px #13281f0f}
+.hp-photo img{display:block;width:100%;height:100%;object-fit:cover}
+.hp-photo-fleet{inset:0 0 64px 24px}
+.hp-photo-fleet img{object-position:58% 50%}
+.hp-photo-driver,.hp-photo-city{bottom:0;width:47%;aspect-ratio:4/3;border:6px solid var(--bd-ffffff);border-radius:22px}
+.hp-photo-driver{left:0}
+.hp-photo-city{right:-14px}
+.hp-photo-city img{object-position:40% 55%}
+.hp-photo-driver img{object-position:64% 32%}
+.hp-photo figcaption{position:absolute;display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;background:rgb(19 40 31 / .72);color:rgb(255 255 255);font:700 12.5px var(--font-head);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.hp-photo figcaption:before{content:"";width:8px;height:8px;border-radius:50%;background:rgb(240 98 170);flex:none}
+.hp-photo-fleet figcaption{right:14px;top:14px}
+.hp-photo-driver figcaption,.hp-photo-city figcaption{left:10px;bottom:10px;font-size:11.5px;padding:5px 10px}
+.hp-motion .hp-photo-fleet{translate:0 calc(var(--hp-y,0px)*.05)}
+.hp-motion .hp-photo-driver{translate:0 calc(var(--hp-y,0px)*-.14)}
+.hp-motion .hp-photo-city{translate:0 calc(var(--hp-y,0px)*-.2)}
+@media(max-width:1024px){.hp-photo-fleet{left:0}.hp-photo-city{right:0}}
+@media(max-width:700px){.hp-photo-fleet{bottom:48px;border-radius:20px}.hp-photo-driver,.hp-photo-city{width:48%;border-width:4px;border-radius:16px}.hp-photo-fleet figcaption{right:10px;top:10px;font-size:11.5px}.hp-photo-driver figcaption,.hp-photo-city figcaption{font-size:10.5px;padding:4px 8px;left:6px;bottom:6px}}

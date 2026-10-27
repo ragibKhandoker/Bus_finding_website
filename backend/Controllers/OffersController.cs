@@ -1,100 +1,94 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using SmartCommute.Server.Data;
 using SmartCommute.Server.Models;
 using SmartCommute.Server.Services;
 using SmartCommute.Server.ViewModels;
 
 namespace SmartCommute.Server.Controllers;
 
+// Offers: cashback, coupon and discount value. Users see and use their own; only admins add or set value.
 [Authorize]
 [Route("offers")]
-public class OffersController(AppDbContext db, WalletService wallets) : ApiControllerBase
+public class OffersController(OfferService offers) : ApiControllerBase
 {
     // Returns the offers object itself (not wrapped) because the clients parse the body directly.
     [HttpGet("user")]
-    public async Task<IActionResult> Get()
+    public Task<IActionResult> Get() => Details(CurrentUserId);
+
+    // A user may read their own offers; an admin may read anyone's.
+    [HttpGet("user/{userId:guid}")]
+    public Task<IActionResult> GetFor(Guid userId) =>
+        userId == CurrentUserId || IsAdmin ? Details(userId) : Task.FromResult<IActionResult>(ForbiddenError("You can only see your own offers."));
+
+    private async Task<IActionResult> Details(Guid userId)
     {
-        var offer = await wallets.GetOrCreateOffersAsync(CurrentUserId);
-        await db.SaveChangesAsync();
-        return Ok(OfferViewModel.From(offer));
+        var offer = await offers.EnsureAsync(userId);
+        return Ok(OfferDetailsViewModel.From(offer, offers.Rewards, await offers.HistoryAsync(userId), await offers.TripsAsync(userId)));
     }
 
-    // Granting offers creates spendable value, so only admins may do it.
+    // Setting balances creates spendable value, so only admins may do it.
     [Authorize(Roles = UserRoles.Admin)]
     [HttpPut("user")]
-    public async Task<IActionResult> Update(UpdateOffersRequest request)
+    public Task<IActionResult> Update(UpdateOffersRequest request) => Set(request.UserId ?? CurrentUserId, request);
+
+    [Authorize(Roles = UserRoles.Admin)]
+    [HttpPut("user/{userId:guid}")]
+    public Task<IActionResult> UpdateFor(Guid userId, UpdateOffersRequest request) => Set(userId, request);
+
+    private async Task<IActionResult> Set(Guid userId, UpdateOffersRequest request)
     {
-        var offer = await wallets.GetOrCreateOffersAsync(request.UserId ?? CurrentUserId);
-        offer.Cashback = request.Cashback;
-        offer.Coupon = request.Coupon;
-        offer.Discount = request.Discount;
-        offer.IsActive = request.IsActive;
-        offer.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync();
-        return Ok(OfferViewModel.From(offer));
+        var result = await offers.SetAsync(CurrentUserId, userId, request.Cashback, request.Coupon, request.Discount, request.IsActive);
+        return result.Succeeded ? Ok(OfferViewModel.From(result.Offer!)) : Error(result.StatusCode, result.Message);
     }
 
     [Authorize(Roles = UserRoles.Admin)]
     [HttpPost("add-cashback")]
-    public Task<IActionResult> AddCashback(AdminAmountRequest request) => Add(request, o => o.Cashback += request.Amount);
+    public Task<IActionResult> AddCashback(AdminAmountRequest request) => Grant(request, OfferKinds.Cashback);
 
     [Authorize(Roles = UserRoles.Admin)]
     [HttpPost("add-coupon")]
-    public Task<IActionResult> AddCoupon(AdminAmountRequest request) => Add(request, o => o.Coupon += request.Amount);
+    public Task<IActionResult> AddCoupon(AdminAmountRequest request) => Grant(request, OfferKinds.Coupon);
 
     [Authorize(Roles = UserRoles.Admin)]
     [HttpPost("add-discount")]
-    public Task<IActionResult> AddDiscount(AdminAmountRequest request) => Add(request, o => o.Discount += request.Amount);
+    public Task<IActionResult> AddDiscount(AdminAmountRequest request) => Grant(request, OfferKinds.Discount);
 
-    [HttpPost("use-cashback")]
-    public Task<IActionResult> UseCashback(AmountRequest request) =>
-        Use(request.Amount, "cashback", o => o.Cashback, (o, v) => o.Cashback = v, creditsWallet: true);
-
-    [HttpPost("use-coupon")]
-    public Task<IActionResult> UseCoupon(AmountRequest request) =>
-        Use(request.Amount, "coupon", o => o.Coupon, (o, v) => o.Coupon = v, creditsWallet: true);
-
-    // A discount is spent against a fare the app has already reduced, so it is not paid into the wallet.
-    [HttpPost("use-discount")]
-    public Task<IActionResult> UseDiscount(AmountRequest request) =>
-        Use(request.Amount, "discount", o => o.Discount, (o, v) => o.Discount = v, creditsWallet: false);
-
-    private async Task<IActionResult> Add(AdminAmountRequest request, Action<Offer> apply)
+    private async Task<IActionResult> Grant(AdminAmountRequest request, string kind)
     {
-        var offer = await wallets.GetOrCreateOffersAsync(request.UserId ?? CurrentUserId);
-        apply(offer);
-        offer.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync();
-        return Ok(OfferViewModel.From(offer));
+        var result = await offers.GrantAsync(CurrentUserId, request.UserId ?? CurrentUserId, kind, request.Amount, request.Reference);
+        return result.Succeeded ? Ok(OfferViewModel.From(result.Offer!)) : Error(result.StatusCode, result.Message);
     }
 
-    private async Task<IActionResult> Use(decimal amount, string kind, Func<Offer, decimal> get, Action<Offer, decimal> set, bool creditsWallet)
+    // Pays cashback into the wallet: { "amount": 20, "reference": "…" }, or {} for all of it.
+    [HttpPost("use-cashback")]
+    public async Task<IActionResult> UseCashback(UseCashbackRequest request) =>
+        Used(await offers.RedeemCashbackAsync(CurrentUserId, request.Amount, request.Reference));
+
+    // Takes coupon or discount value off a completed trip: { "tripId": "…", "amount"?: 10, "reference"?: "…" }.
+    [HttpPost("use-coupon")]
+    public async Task<IActionResult> UseCoupon(UseOnTripRequest request) =>
+        Used(await offers.ApplyToTripAsync(CurrentUserId, OfferKinds.Coupon, request.TripId!.Value, request.Amount, request.Reference));
+
+    [HttpPost("use-discount")]
+    public async Task<IActionResult> UseDiscount(UseOnTripRequest request) =>
+        Used(await offers.ApplyToTripAsync(CurrentUserId, OfferKinds.Discount, request.TripId!.Value, request.Amount, request.Reference));
+
+    private IActionResult Used(OfferResult result)
     {
-        var offer = await wallets.GetOrCreateOffersAsync(CurrentUserId);
-        if (!offer.IsActive)
+        if (!result.Succeeded)
         {
-            return BadRequestError("Your offers are not active.");
+            return Error(result.StatusCode, result.Message);
         }
-        if (get(offer) < amount)
-        {
-            return BadRequestError($"Not enough {kind} available.");
-        }
-
-        set(offer, get(offer) - amount);
-        offer.UpdatedAt = DateTime.UtcNow;
-        if (creditsWallet)
-        {
-            wallets.Credit(offer.Wallet!, amount, kind, $"Converted {kind} to balance");
-        }
-        await db.SaveChangesAsync();
-
+        var offer = result.Offer!;
         return Ok(new
         {
             success = true,
-            message = creditsWallet ? $"৳{amount} {kind} added to your wallet." : $"৳{amount} discount applied.",
+            message = result.Message,
             offers = OfferViewModel.From(offer),
             wallet = WalletViewModel.From(offer.Wallet!),
+            entry = result.Entry is null ? null : OfferTransactionViewModel.From(result.Entry),
+            transaction = result.Entry?.WalletTransaction is { } credit ? WalletTransactionViewModel.From(credit) : null,
+            trip = result.Extra,
         });
     }
 }

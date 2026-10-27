@@ -18,6 +18,7 @@ public class AuthController(
     JwtTokenService tokens,
     FriendCodeGenerator friendCodes,
     FriendService friends,
+    OfferService offers,
     NotificationService notifications) : ApiControllerBase
 {
     private static readonly PasswordHasher<User> Hasher = new();
@@ -62,8 +63,11 @@ public class AuthController(
         };
         user.PasswordHash = Hasher.HashPassword(user, request.Password);
         db.Users.Add(user);
-        db.Wallets.Add(new Wallet { User = user });
-        // The user, wallet and friend code are saved together. If a simultaneous sign-up took the same friend
+        var wallet = new Wallet { User = user };
+        db.Wallets.Add(wallet);
+        // The welcome offer from the Rewards settings is saved in the same transaction as the account.
+        offers.AddWelcomeOffers(user, wallet);
+        // The user, wallet, offers and friend code are saved together. If a simultaneous sign-up took the same friend
         // code first, the unique index rejects the insert and it is retried with a new code.
         for (var attempt = 1; ; attempt++)
         {

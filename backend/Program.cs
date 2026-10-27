@@ -185,6 +185,7 @@ builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<RideShareService>();
 builder.Services.AddScoped<RideRequestService>();
 builder.Services.AddScoped<ReviewService>();
+builder.Services.AddScoped<OfferService>();
 builder.Services.AddScoped<WalletService>();
 builder.Services.AddScoped<TripService>();
 builder.Services.AddScoped<FareService>();
