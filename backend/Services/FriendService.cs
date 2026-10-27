@@ -79,7 +79,8 @@ public class FriendService(AppDbContext db, NotificationService notifications)
         var now = DateTime.UtcNow;
         var request = new FriendRequest { FromUserId = senderId, ToUserId = receiverId, CreatedAt = now, UpdatedAt = now };
         db.FriendRequests.Add(request);
-        notifications.Notify(receiverId, "New friend request", $"{sender.Name} wants to add you as a friend.", actionUrl: "/friends");
+        notifications.Notify(receiverId, "New friend request", $"{sender.Name} wants to add you as a friend.", actionUrl: "/friends",
+            category: NotificationCategories.Friend, senderId: senderId, relatedId: request.Id);
         try
         {
             await db.SaveChangesAsync();
@@ -127,7 +128,8 @@ public class FriendService(AppDbContext db, NotificationService notifications)
             await db.Database.ExecuteSqlInterpolatedAsync(
                 $"INSERT INTO friendships (user1id, user2id, created_at) VALUES ({user1}, {user2}, {now}) ON CONFLICT DO NOTHING");
             notifications.Notify(request.FromUserId, "Friend request accepted",
-                $"{request.ToUser!.Name} accepted your friend request.", NotificationTypes.Success, "/friends");
+                $"{request.ToUser!.Name} accepted your friend request.", NotificationTypes.Success, "/friends",
+                NotificationCategories.Friend, request.ToUserId, request.Id);
             await db.SaveChangesAsync();
             await transaction.CommitAsync();
 

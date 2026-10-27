@@ -125,7 +125,8 @@ public class RideShareService(AppDbContext db, WalletService wallets, Notificati
             foreach (var request in post.Requests.Where(r => r.Status != RideRequestStatus.Rejected))
             {
                 notifications.Notify(request.RequesterId, "Ride cancelled",
-                    $"The ride from {post.Source} to {post.Destination} was cancelled by the host.", NotificationTypes.Warning);
+                    $"The ride from {post.Source} to {post.Destination} was cancelled by the host.", NotificationTypes.Warning,
+                    category: NotificationCategories.Ride, senderId: hostId, relatedId: post.Id);
             }
             await db.SaveChangesAsync();
         }

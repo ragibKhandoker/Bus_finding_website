@@ -107,7 +107,8 @@ public class VerifyController(AppDbContext db, ImageStorageService images, Notif
         notifications.Notify(verification.UserId,
             approve ? "Student verification approved" : "Student verification rejected",
             approve ? "Your student status has been verified." : "Your verification was rejected. You can submit a new request.",
-            approve ? NotificationTypes.Success : NotificationTypes.Warning);
+            approve ? NotificationTypes.Success : NotificationTypes.Warning,
+            category: NotificationCategories.Account, relatedId: verification.Id);
         await db.SaveChangesAsync();
 
         return Ok(new

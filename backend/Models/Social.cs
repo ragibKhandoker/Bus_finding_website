@@ -11,6 +11,19 @@ public static class NotificationTypes
     public const string Sos = "sos";
 }
 
+// What a notification is about, so the page can show a fitting icon and filter by kind.
+public static class NotificationCategories
+{
+    public const string General = "general";
+    public const string Account = "account";
+    public const string Friend = "friend";
+    public const string Ride = "ride";
+    public const string Reward = "reward";
+    public const string Sos = "sos";
+
+    public static readonly string[] All = [General, Account, Friend, Ride, Reward, Sos];
+}
+
 public class Notification
 {
     public Guid Id { get; set; }
@@ -23,8 +36,19 @@ public class Notification
     [MaxLength(1000)]
     public string Message { get; set; } = "";
 
+    // How it should look (info, success, warning, error, sos).
     [MaxLength(20)]
     public string Type { get; set; } = NotificationTypes.Info;
+
+    [MaxLength(20)]
+    public string Category { get; set; } = NotificationCategories.General;
+
+    // Who caused it (a friend, a rider, the sender of an SOS), when someone did.
+    public Guid? SenderId { get; set; }
+    public User? Sender { get; set; }
+
+    // The friend request, ride, review or trip it is about, when there is one.
+    public Guid? RelatedId { get; set; }
 
     public bool IsRead { get; set; }
 

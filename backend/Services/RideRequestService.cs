@@ -66,7 +66,8 @@ public class RideRequestService(AppDbContext db, NotificationService notificatio
         };
         db.RideRequests.Add(request);
         notifications.Notify(post.UserId, "New ride request",
-            $"{requester.Name} wants to join your ride from {post.Source} to {post.Destination}.", actionUrl: "/ride-share");
+            $"{requester.Name} wants to join your ride from {post.Source} to {post.Destination}.", actionUrl: "/ride-share",
+            category: NotificationCategories.Ride, senderId: requesterId, relatedId: post.Id);
         try
         {
             await db.SaveChangesAsync();
@@ -174,12 +175,14 @@ public class RideRequestService(AppDbContext db, NotificationService notificatio
             if (accept)
             {
                 notifications.Notify(request.RequesterId, "Ride request accepted",
-                    $"Your ride join request has been accepted. You're in for {post.Source} to {post.Destination}.", NotificationTypes.Success, "/ride-share");
+                    $"Your ride join request has been accepted. You're in for {post.Source} to {post.Destination}.", NotificationTypes.Success, "/ride-share",
+                    NotificationCategories.Ride, hostId, post.Id);
             }
             else
             {
                 notifications.Notify(request.RequesterId, "Ride request declined",
-                    $"Your ride join request has been rejected for {post.Source} to {post.Destination}.", NotificationTypes.Warning, "/ride-share");
+                    $"Your ride join request has been rejected for {post.Source} to {post.Destination}.", NotificationTypes.Warning, "/ride-share",
+                    NotificationCategories.Ride, hostId, post.Id);
             }
             await db.SaveChangesAsync();
             await transaction.CommitAsync();

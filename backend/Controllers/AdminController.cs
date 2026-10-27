@@ -55,7 +55,8 @@ public class AdminController(AppDbContext db, NotificationService notifications)
         user.PasswordHash = Hasher.HashPassword(user, temporaryPassword);
         user.UpdatedAt = DateTime.UtcNow;
         notifications.Notify(user.Id, "Password reset",
-            "An admin reset your password. Please choose a new password from your profile.", NotificationTypes.Warning);
+            "An admin reset your password. Please choose a new password from your profile.", NotificationTypes.Warning,
+            category: NotificationCategories.Account);
         await db.SaveChangesAsync();
 
         await db.UserSessions

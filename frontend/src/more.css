@@ -242,3 +242,36 @@
 .review-reply-delete{position:absolute;top:4px;right:0;display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:6px;background:none;color:var(--fg-a95548)}
 .review-more{justify-self:start}.review-load-error{display:grid;gap:8px;justify-items:start}
 @media(max-width:700px){.review-replies{margin-left:6px;padding-left:10px}.review-form textarea{font-size:16px}.review-summary{gap:12px}.review-actions button{padding:7px 9px}}
+/* ---- Notifications & SOS (F14) ---- */
+.notification-bell{position:relative}
+.notification-badge{position:absolute;top:-4px;right:-5px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;display:grid;place-items:center;background:var(--bg-bb463d);color:var(--fg-ffffff);font:700 10.5px "DM Sans",sans-serif;line-height:1;border:2px solid var(--bd-ffffff)}
+.notifications-layout{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:14px;align-items:start}
+.notifications-page .notification-actions{flex-wrap:wrap;justify-content:flex-end}
+.extra-button.secondary.danger{color:var(--fg-a95548);background:var(--bg-fff0ed);border-color:var(--bd-f3d7d2)}
+.notifications-page .notification-row{align-items:flex-start;border-radius:8px;padding:14px 10px;margin:0 -6px}
+.notifications-page .notification-row.unread{background:var(--bg-edf7ef)}.notifications-page .notification-row.sos.unread{background:var(--bg-fff0ed)}
+.notifications-page .notification-row.unread .notification-copy>b{font-weight:800}
+.notifications-page .notification-dot.friend,.notifications-page .notification-dot.ride{background:var(--bg-e4f4e8);color:var(--fg-247248)}
+.notifications-page .notification-dot.reward{background:var(--bg-fff3dc);color:var(--fg-986f25)}
+.notifications-page .notification-dot.sos{background:var(--bg-fff0ed);color:var(--fg-a95548)}
+.notification-copy{display:grid;gap:3px}
+.notification-kind{font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--fg-668476)}.notification-new{color:var(--fg-19865e)}
+.notifications-page .notification-copy p{margin:2px 0}
+.notification-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.notification-meta .link-button{font-size:13px}
+.notification-map{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;color:var(--fg-a95548)}
+.notification-empty{display:grid;justify-items:center;text-align:center;gap:8px;padding:34px 16px;color:var(--fg-718078)}.notification-empty b{font-size:16px;color:var(--fg-34483b)}.notification-empty span{font-size:13.5px;max-width:380px;line-height:1.5}
+.notification-more{margin-top:10px}
+.sos-panel{display:grid;gap:12px}.sos-panel p{margin:4px 0 0}
+.sos-warning{display:flex;align-items:flex-start;gap:5px;font-weight:600;color:var(--fg-a95548)!important}
+.sos-button{display:inline-flex;align-items:center;gap:7px;justify-self:start}
+.sos-confirm{display:grid;gap:10px}.sos-confirm fieldset{border:0;margin:0;padding:0;display:grid;gap:9px}
+.sos-confirm legend{font-size:13px;font-weight:700;color:var(--fg-34483b);margin-bottom:6px}
+.sos-kinds{display:flex;flex-wrap:wrap;gap:6px}.sos-kinds label{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--bd-e4ebe5);border-radius:20px;padding:6px 11px;font-size:13px;cursor:pointer;color:var(--fg-34483b);background:var(--bg-ffffff)}
+.sos-kinds label.active{border-color:var(--bd-f3d7d2);background:var(--bg-fff0ed);color:var(--fg-a95548);font-weight:700}
+.sos-kinds input{accent-color:#bb463d}
+.sos-note{display:grid;gap:5px}.sos-note span{font-size:12.5px;color:var(--fg-566d5e)}.sos-note input{border:1px solid var(--bd-e4ebe5);border-radius:6px;padding:10px 11px;font-size:14px;color:var(--fg-34483b);background:var(--bg-ffffff);outline:0}
+.sos-permission{display:flex;gap:5px;align-items:flex-start;font-size:12.5px!important;color:var(--fg-566d5e)!important}
+.sos-result{font-size:13px!important;font-weight:600;border-radius:6px;padding:8px 10px}.sos-result.success{display:flex;align-items:center;gap:6px;color:var(--fg-28734f)!important;background:var(--bg-edf7ef)}.sos-result.error{color:var(--fg-a95548)!important;background:var(--bg-fff0ed)}
+.sos-confirm-actions{display:flex;gap:8px;flex-wrap:wrap}
+@media(max-width:920px){.notifications-layout{grid-template-columns:1fr}}
+@media(max-width:700px){.top-actions>.icon-button.notification-bell{display:grid}.notifications-page .notification-row{flex-wrap:wrap}.notifications-page .notification-copy{flex:1 1 calc(100% - 50px)}.notifications-page .notification-row-actions{margin-left:47px}.sos-note input{font-size:16px}}

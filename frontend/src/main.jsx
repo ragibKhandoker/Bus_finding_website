@@ -12,7 +12,8 @@ import './profile.css'
 import './admin.css'
 import GoogleMapView, { mapsConfigured } from './GoogleMapView'
 import { ActiveTripPanel, TripRow, useActiveTrip, useBoardControls, useTripChanges } from './Trips'
-import { GpayPage, MapPage, NotificationsPage, OffersPage, VerificationPage } from './MorePages'
+import { GpayPage, MapPage, OffersPage, VerificationPage } from './MorePages'
+import { NotificationBell, NotificationsPage, useUnreadCount } from './Notifications'
 import { FriendsPage } from './Friends'
 import { ChatPage } from './Chat'
 import { RidePage } from './RideShare'
@@ -147,6 +148,7 @@ function App() {
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const signedIn = Boolean(token && user)
   const isAdmin = signedIn && user.role?.toLowerCase() === 'admin'
+  const unreadCount = useUnreadCount({ token, user, signedIn })
   const navigate = (target, options) => {
     showPage(target, options)
     window.scrollTo(0, 0)
@@ -178,6 +180,7 @@ function App() {
           </button>
           {signedIn ? (
             <>
+              <NotificationBell count={unreadCount} onOpen={() => navigate('Notifications')} />
               <button className="icon-button" title={t('My wallet')} onClick={() => navigate('Wallet')}><Wallet size={18} /></button>
               <button className="profile-chip" onClick={() => navigate('Profile')}>
                 <span className="avatar">{user.name?.[0]?.toUpperCase() || 'U'}</span>
@@ -199,7 +202,7 @@ function App() {
         {page === 'Profile' && <ProfilePage user={user} token={token} signedIn={signedIn} updateUser={setUser} signOut={signOut} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Friends' && <FriendsPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} onChat={(friend) => { navigate('Messages'); window.history.replaceState({ page: 'Messages' }, '', `/messages?with=${encodeURIComponent(friend.id || friend._id)}`) }} notify={notify} />}
         {page === 'Messages' && <ChatPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} onFindFriends={() => navigate('Friends')} />}
-        {page === 'Notifications' && <NotificationsPage user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
+        {page === 'Notifications' && <NotificationsPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Offers' && <OffersPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Favourites' && <FavoritesPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} navigate={navigate} />}
         {page === 'Map' && <MapPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}

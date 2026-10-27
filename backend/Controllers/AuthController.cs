@@ -238,7 +238,8 @@ public class AuthController(
             user.WorkArea = OptionalText(request.WorkArea);
         }
         user.UpdatedAt = DateTime.UtcNow;
-        notifications.Notify(user.Id, "Profile updated", "Your profile has been updated.", NotificationTypes.Success);
+        notifications.Notify(user.Id, "Profile updated", "Your profile has been updated.", NotificationTypes.Success,
+            category: NotificationCategories.Account);
         try
         {
             await db.SaveChangesAsync();

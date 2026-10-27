@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { ArrowRight, ArrowUpDown, Bell, BusFront, Calculator, Check, CreditCard, MapPin, Navigation, RefreshCw, Search, ShieldCheck, Trash2, Wallet } from 'lucide-react'
+import { ArrowRight, ArrowUpDown, BusFront, Calculator, Check, CreditCard, MapPin, Navigation, RefreshCw, Search, ShieldCheck, Wallet } from 'lucide-react'
 import './more.css'
 import { apiRequest } from './api'
+import { SosAlert } from './Notifications'
 import { formatDate, formatDateTime, formatNumber, getLang, t, toEnglish } from './i18n'
 
 // Leaflet is only downloaded when the map page is opened.
@@ -21,24 +22,6 @@ export function Feedback({ error, success }) {
 export function Loading({ label = 'Loading…' }) { return <div className="extra-loading"><i />{t(label)}</div> }
 export function RequireSignIn({ openAuth }) { return <div className="extra-panel sign-in-panel"><ShieldCheck size={22} /><div><b>{t('Sign in to continue')}</b><p>{t('This feature uses your SmartCommute account.')}</p></div><button className="extra-button" onClick={openAuth}>{t('Sign in')} <ArrowRight size={14} /></button></div> }
 
-export function NotificationsPage({ user, signedIn, openAuth, notify }) {
-  const [items, setItems] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const userId = user?.id || user?._id
-  const load = useCallback(async () => {
-    if (!signedIn || !userId) return
-    setLoading(true)
-    try { const data = await api(`/api/notifications/user/${encodeURIComponent(userId)}?limit=50`); setItems(data.data || []); setError('') }
-    catch (e) { setError(err(e)) } finally { setLoading(false) }
-  }, [signedIn, userId])
-  useEffect(() => { load() }, [load])
-  const act = async (path, options, message) => {
-    try { await api(path, null, options); notify(message); load() } catch (e) { setError(err(e)) }
-  }
-  if (!signedIn) return <section className="extra-page"><Heading icon={Bell} eyebrow={t('UPDATES FOR YOU')} title={t('Notifications')} subtitle={t('Stay on top of the things that matter to your commute.')} /><RequireSignIn openAuth={openAuth} /></section>
-  return <section className="extra-page"><Heading icon={Bell} eyebrow={t('UPDATES FOR YOU')} title={t('Notifications')} subtitle={t('Stay on top of the things that matter to your commute.')} /><Feedback error={error} /><article className="extra-panel notification-panel"><div className="extra-panel-title"><div><small>{t('YOUR INBOX')}</small><h2>{t('Notifications')} <span>{t('{count} unread', { count: items.filter((item) => !item.isRead).length })}</span></h2></div><div className="notification-actions"><button className="extra-button secondary" onClick={() => act('/api/notifications/read-all', { method: 'PATCH', body: json({ userId }) }, t('Notifications marked as read.'))}>{t('Mark all read')}</button><button className="extra-icon-button danger" title={t('Clear all')} onClick={() => window.confirm(t('Delete all notifications?')) && act(`/api/notifications/user/${userId}`, { method: 'DELETE' }, t('Notifications cleared.'))}><Trash2 size={15} /></button></div></div>{loading ? <Loading /> : items.length ? items.map((item) => <div className={`notification-row ${item.isRead ? '' : 'unread'}`} key={item._id}><span className="notification-dot">{item.type === 'error' ? '!' : <Bell size={15} />}</span><div className="notification-copy"><b>{t(item.title)}</b><p>{t(item.message)}</p><small>{formatDateTime(item.createdAt)}</small></div><div className="notification-row-actions">{!item.isRead && <button className="extra-icon-button" title={t('Mark as read')} onClick={() => act(`/api/notifications/read/${item._id}`, { method: 'PATCH' }, t('Marked as read.'))}><Check size={15} /></button>}<button className="extra-icon-button danger" title={t('Delete')} onClick={() => act(`/api/notifications/${item._id}`, { method: 'DELETE' }, t('Notification removed.'))}><Trash2 size={14} /></button></div></div>) : <p className="extra-empty-copy">{t('You are all caught up. No notifications.')}</p>}</article></section>
-}
 
 export function OffersPage({ token, signedIn, openAuth, notify }) {
   const [offers, setOffers] = useState(null)
@@ -206,17 +189,7 @@ export function MapPage({ token, user, signedIn, openAuth, notify }) {
       notify(t('Trip logged. Your journey now appears in trip history.'))
     } catch (ex) { setError(err(ex)) }
   }
-  const sendSOS = async (serviceType, serviceName) => {
-    if (!signedIn) return openAuth()
-    // serviceName goes to the server in English; only what the user reads is translated.
-    if (!window.confirm(t('Send a {service} alert with your location to all other SmartCommute users? This cannot be undone.', { service: t(serviceName) }))) return
-    const send = (coords) => api('/api/notifications/sos', null, { method: 'POST', body: json({ userId: user.id, userName: user.name, source: coords ? 'Current location' : 'Location not shared', latitude: coords?.latitude, longitude: coords?.longitude, serviceType, serviceName }) })
-    if (!navigator.geolocation) return setError(t('Location is not available in this browser; no alert was sent.'))
-    navigator.geolocation.getCurrentPosition(async ({ coords }) => {
-      try { const result = await send(coords); notify(t(result.message || '{service} alert sent.', { service: t(serviceName) })) }
-      catch (ex) { setError(err(ex)) }
-    }, () => setError(t('Location permission was denied; no alert was sent.')))
-  }
+
 
   const fare = result?.fare
   const money = (value) => `৳${formatNumber(value, { maximumFractionDigits: 2 })}`
@@ -266,7 +239,7 @@ export function MapPage({ token, user, signedIn, openAuth, notify }) {
             </button>)}</div>}
       </article>
       <article className="extra-panel"><div className="extra-panel-title"><div><small>{t('ACTIVE BUS LOOKUP')}</small><h2>{t('Check passenger count')}</h2></div></div><p className="extra-help">{t('Enter the bus ID (for example DBR-128-01) to see how many seats are taken. This does not show where the bus is.')}</p><form className="map-form map-form-stacked" onSubmit={(e) => { e.preventDefault(); busInfo(busyId) }}><input required value={busyId} onChange={(e) => setBusyId(e.target.value)} placeholder={t('Individual bus ID')} /><button className="extra-button secondary">{t('Look up bus')}</button></form>{signedIn && <div className="map-capacity-actions"><button className="extra-button secondary" onClick={() => capacityAction(busyId, 'board')}>{t('Board bus')}</button><button className="extra-button secondary" onClick={() => capacityAction(busyId, 'end-trip')}>{t('End trip')}</button></div>}</article>
-      <article className="extra-panel sos-panel"><div><small>{t('NEED URGENT HELP?')}</small><h2>{t('Emergency alert')}</h2><p>{t('Sends an alert with your current location to other SmartCommute users nearby. Use it only in a real emergency.')}</p></div><div className="map-capacity-actions"><button className="extra-button sos-button" onClick={() => sendSOS('trigger','Emergency')}>{t('SOS')}</button><button className="extra-button secondary" onClick={() => sendSOS('ambulance','Ambulance')}>{t('Ambulance')}</button><button className="extra-button secondary" onClick={() => sendSOS('police','Police')}>{t('Police')}</button><button className="extra-button secondary" onClick={() => sendSOS('fire','Fire')}>{t('Fire')}</button></div></article>
+      <SosAlert token={token} signedIn={signedIn} openAuth={openAuth} notify={notify} />
     </div>
   </div></section>
 }

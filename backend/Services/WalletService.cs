@@ -115,11 +115,25 @@ public class WalletService(AppDbContext db, IOptions<RewardOptions> rewards)
     }
 
     // tripId marks a trip reward; the ledger allows one per trip.
+    // Also tells the user about the reward; the notification is saved with the gems by the caller's SaveChanges.
     public void AddGems(Wallet wallet, int gems, string description, Guid? tripId = null)
     {
         wallet.Gems += gems;
         Touch(wallet);
         Record(wallet, WalletTransactionTypes.GemsEarned, 0, gems, description, tripId);
+        if (gems > 0)
+        {
+            db.Notifications.Add(new Notification
+            {
+                UserId = wallet.UserId,
+                Title = "You earned gems",
+                Message = $"You earned {gems} gems: {description}.",
+                Type = NotificationTypes.Success,
+                Category = NotificationCategories.Reward,
+                ActionUrl = "/wallet",
+                RelatedId = tripId,
+            });
+        }
     }
 
     // How a number of gems converts: only whole blocks of GemsPerTaka gems become taka; the rest stay as gems.

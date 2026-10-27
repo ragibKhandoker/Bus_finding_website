@@ -1,145 +1,89 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
-using SmartCommute.Server.Data;
-using SmartCommute.Server.Models;
+using SmartCommute.Server.Services;
 using SmartCommute.Server.ViewModels;
 
 namespace SmartCommute.Server.Controllers;
 
-// Called without a token by the existing clients; see CanActAs for how a token is honoured when present.
+// The signed-in user's notifications, and SOS alerts. Every call needs a token; a {userId} in the route must be the
+// signed-in user, and someone else's notification is reported as not found.
+[Authorize]
 [Route("api/notifications")]
-public class NotificationsController(AppDbContext db) : ApiControllerBase
+public class NotificationsController(NotificationService notifications) : ApiControllerBase
 {
+    // Newest first: ?page=1&pageSize=20 (pageSize at most 100; limit is the older name for pageSize), ?unreadOnly=true.
     [HttpGet("user/{userId:guid}")]
-    public async Task<IActionResult> ForUser(Guid userId, [FromQuery] int limit = 50, [FromQuery] bool unreadOnly = false)
+    public async Task<IActionResult> ForUser(Guid userId, [FromQuery] int page = 1, [FromQuery] int? pageSize = null,
+        [FromQuery] int? limit = null, [FromQuery] bool unreadOnly = false)
     {
-        if (!CanActAs(userId))
+        if (NotMe(userId) is { } refused)
         {
-            return ForbiddenError();
+            return refused;
         }
-
-        var query = db.Notifications.Where(n => n.UserId == userId);
-        if (unreadOnly)
+        page = Math.Max(1, page);
+        var size = Math.Clamp(pageSize ?? limit ?? 20, 1, 100);
+        var (items, total) = await notifications.ListAsync(userId, page, size, unreadOnly);
+        return Ok(new
         {
-            query = query.Where(n => !n.IsRead);
-        }
-        var items = await query
-            .OrderByDescending(n => n.CreatedAt)
-            .Take(Math.Clamp(limit, 1, 200))
-            .AsNoTracking()
-            .ToListAsync();
-        return Ok(new { success = true, count = items.Count, data = items.Select(NotificationViewModel.From) });
+            success = true,
+            count = items.Count,
+            total,
+            page,
+            pageSize = size,
+            totalPages = (int)Math.Ceiling(total / (double)size),
+            unreadCount = await notifications.UnreadCountAsync(userId),
+            data = items.Select(NotificationViewModel.From),
+        });
     }
 
     [HttpGet("unread/{userId:guid}")]
-    public async Task<IActionResult> UnreadCount(Guid userId)
-    {
-        if (!CanActAs(userId))
-        {
-            return ForbiddenError();
-        }
-        var count = await db.Notifications.CountAsync(n => n.UserId == userId && !n.IsRead);
-        return Ok(new { success = true, count });
-    }
+    public async Task<IActionResult> UnreadCount(Guid userId) =>
+        NotMe(userId) ?? Ok(new { success = true, count = await notifications.UnreadCountAsync(userId) });
 
     [HttpPatch("read/{notificationId:guid}")]
     public async Task<IActionResult> MarkRead(Guid notificationId)
     {
-        var notification = await db.Notifications.FindAsync(notificationId);
-        if (notification is null)
-        {
-            return NotFoundError("Notification not found.");
-        }
-        if (!CanActAs(notification.UserId))
-        {
-            return ForbiddenError();
-        }
-
-        notification.IsRead = true;
-        await db.SaveChangesAsync();
-        return Ok(new { success = true, data = NotificationViewModel.From(notification) });
+        var result = await notifications.MarkReadAsync(CurrentUserId, notificationId);
+        return result.Succeeded
+            ? Ok(new { success = true, data = NotificationViewModel.From(result.Value!), unreadCount = await notifications.UnreadCountAsync(CurrentUserId) })
+            : Error(result.StatusCode, result.Message);
     }
+
+    // PATCH read-all/{userId}; the older PATCH read-all (with { userId } in the body) does the same for the signed-in user.
+    [HttpPatch("read-all/{userId:guid}")]
+    public async Task<IActionResult> MarkAllRead(Guid userId) =>
+        NotMe(userId) ?? Ok(new { success = true, message = "Notifications marked as read.", count = await notifications.MarkAllReadAsync(userId), unreadCount = 0 });
 
     [HttpPatch("read-all")]
-    public async Task<IActionResult> MarkAllRead(UserIdRequest request)
-    {
-        var userId = request.UserId!.Value;
-        if (!CanActAs(userId))
-        {
-            return ForbiddenError();
-        }
-        var count = await db.Notifications
-            .Where(n => n.UserId == userId && !n.IsRead)
-            .ExecuteUpdateAsync(s => s.SetProperty(n => n.IsRead, true));
-        return Ok(new { success = true, count });
-    }
+    public Task<IActionResult> MarkAllReadForMe() => MarkAllRead(CurrentUserId);
 
     [HttpDelete("{notificationId:guid}")]
     public async Task<IActionResult> Delete(Guid notificationId)
     {
-        var notification = await db.Notifications.FindAsync(notificationId);
-        if (notification is null)
-        {
-            return NotFoundError("Notification not found.");
-        }
-        if (!CanActAs(notification.UserId))
-        {
-            return ForbiddenError();
-        }
-
-        db.Notifications.Remove(notification);
-        await db.SaveChangesAsync();
-        return Ok(new { success = true, message = "Notification deleted." });
+        var result = await notifications.DeleteAsync(CurrentUserId, notificationId);
+        return result.Succeeded
+            ? Ok(new { success = true, message = result.Message, unreadCount = await notifications.UnreadCountAsync(CurrentUserId) })
+            : Error(result.StatusCode, result.Message);
     }
 
+    // DELETE clear/{userId}; DELETE user/{userId} is the older path. Only the signed-in user's own notifications go.
+    [HttpDelete("clear/{userId:guid}")]
     [HttpDelete("user/{userId:guid}")]
-    public async Task<IActionResult> DeleteAll(Guid userId)
-    {
-        if (!CanActAs(userId))
-        {
-            return ForbiddenError();
-        }
-        var count = await db.Notifications.Where(n => n.UserId == userId).ExecuteDeleteAsync();
-        return Ok(new { success = true, count });
-    }
+    public async Task<IActionResult> Clear(Guid userId) =>
+        NotMe(userId) ?? Ok(new { success = true, message = "Notifications cleared.", count = await notifications.ClearAsync(userId), unreadCount = 0 });
 
-    // Sends an emergency alert with the sender's location to every other user.
+    // Sends an emergency alert with a Google Maps link to the sender's friends and ride companions (see
+    // NotificationService.SosRecipientsAsync). It is an in-app alert only; no emergency service is contacted.
     [EnableRateLimiting("strict")]
     [HttpPost("sos")]
     public async Task<IActionResult> Sos(SosRequest request)
     {
-        var sender = await db.Users.FindAsync(request.UserId);
-        if (sender is null)
-        {
-            return NotFoundError("User not found.");
-        }
-        if (!CanActAs(sender.Id))
-        {
-            return ForbiddenError();
-        }
-
-        var service = string.IsNullOrWhiteSpace(request.ServiceName) ? "Emergency" : request.ServiceName.Trim();
-        var name = string.IsNullOrWhiteSpace(request.UserName) ? sender.Name : request.UserName.Trim();
-        var where = string.IsNullOrWhiteSpace(request.Source) ? "an unknown location" : request.Source.Trim();
-        string? mapUrl = null;
-        if (request.Latitude is { } lat && request.Longitude is { } lon)
-        {
-            mapUrl = FormattableString.Invariant($"https://www.openstreetmap.org/?mlat={lat}&mlon={lon}#map=17/{lat}/{lon}");
-            where += FormattableString.Invariant($" ({lat:F5}, {lon:F5})");
-        }
-
-        var recipients = await db.Users.Where(u => u.Id != sender.Id).Select(u => u.Id).ToListAsync();
-        db.Notifications.AddRange(recipients.Select(id => new Notification
-        {
-            UserId = id,
-            Title = $"🚨 {service} alert",
-            Message = $"{name} needs {service.ToLowerInvariant()} help near {where}.",
-            Type = NotificationTypes.Sos,
-            ActionUrl = mapUrl,
-        }));
-        await db.SaveChangesAsync();
-
-        return Created201(new { success = true, message = $"{service} alert sent to {recipients.Count} users.", count = recipients.Count });
+        var result = await notifications.SendSosAsync(CurrentUserId, request.Latitude, request.Longitude, request.ServiceName, request.Message);
+        return result.Succeeded
+            ? Created201(new { success = true, message = result.Message, count = result.Value })
+            : Error(result.StatusCode, result.Message);
     }
+
+    private ObjectResult? NotMe(Guid userId) => userId == CurrentUserId ? null : ForbiddenError("You can only see your own notifications.");
 }

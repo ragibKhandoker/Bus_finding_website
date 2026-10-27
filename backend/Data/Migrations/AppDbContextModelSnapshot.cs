@@ -566,6 +566,12 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("action_url");
 
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("category");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -579,6 +585,14 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)")
                         .HasColumnName("message");
+
+                    b.Property<Guid?>("RelatedId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("related_id");
+
+                    b.Property<Guid?>("SenderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sender_id");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -599,10 +613,19 @@ namespace SmartCommute.Server.Data.Migrations
                     b.HasKey("Id")
                         .HasName("pk_notifications");
 
+                    b.HasIndex("SenderId")
+                        .HasDatabaseName("ix_notifications_sender_id");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_notifications_user_id_created_at");
+
                     b.HasIndex("UserId", "IsRead", "CreatedAt")
                         .HasDatabaseName("ix_notifications_user_id_is_read_created_at");
 
-                    b.ToTable("notifications", (string)null);
+                    b.ToTable("notifications", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_notifications_category", "category IN ('general', 'account', 'friend', 'ride', 'reward', 'sos')");
+                        });
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.Offer", b =>
@@ -1598,12 +1621,20 @@ namespace SmartCommute.Server.Data.Migrations
 
             modelBuilder.Entity("SmartCommute.Server.Models.Notification", b =>
                 {
+                    b.HasOne("SmartCommute.Server.Models.User", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_notifications_users_sender_id");
+
                     b.HasOne("SmartCommute.Server.Models.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_notifications_users_user_id");
+
+                    b.Navigation("Sender");
 
                     b.Navigation("User");
                 });

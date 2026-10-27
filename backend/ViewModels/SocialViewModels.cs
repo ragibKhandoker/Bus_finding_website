@@ -9,7 +9,11 @@ public class NotificationViewModel : EntityViewModel
     public string Title { get; init; } = "";
     public string Message { get; init; } = "";
     public string Type { get; init; } = "";
+    public string Category { get; init; } = "";
+    public string? SenderId { get; init; }
+    public string? RelatedId { get; init; }
     public bool IsRead { get; init; }
+    // A page in the app ("/friends") or, for an SOS, a Google Maps link to the sender's location.
     public string? ActionUrl { get; init; }
     public DateTime CreatedAt { get; init; }
 
@@ -20,34 +24,32 @@ public class NotificationViewModel : EntityViewModel
         Title = n.Title,
         Message = n.Message,
         Type = n.Type,
+        Category = n.Category,
+        SenderId = n.SenderId?.ToString(),
+        RelatedId = n.RelatedId?.ToString(),
         IsRead = n.IsRead,
         ActionUrl = n.ActionUrl,
         CreatedAt = n.CreatedAt,
     };
 }
 
+// The sender is the signed-in user. Latitude and longitude come from the browser and are required; serviceName
+// says what kind of help is needed. Fields older clients send (userId, userName, source, serviceType) are ignored.
 public class SosRequest
 {
-    [Required]
-    public Guid? UserId { get; set; }
-
-    [StringLength(100)]
-    public string? UserName { get; set; }
-
-    [StringLength(200)]
-    public string? Source { get; set; }
-
-    [Range(-90, 90)]
+    [Required(ErrorMessage = "Your location is needed to send an SOS. Allow location access and try again.")]
+    [Range(-90, 90, ErrorMessage = "That location is not valid.")]
     public double? Latitude { get; set; }
 
-    [Range(-180, 180)]
+    [Required(ErrorMessage = "Your location is needed to send an SOS. Allow location access and try again.")]
+    [Range(-180, 180, ErrorMessage = "That location is not valid.")]
     public double? Longitude { get; set; }
-
-    [StringLength(30)]
-    public string? ServiceType { get; set; }
 
     [StringLength(50)]
     public string? ServiceName { get; set; }
+
+    [StringLength(200, ErrorMessage = "The note can be at most 200 characters.")]
+    public string? Message { get; set; }
 }
 
 public class ChatMessageViewModel : EntityViewModel

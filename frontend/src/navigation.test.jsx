@@ -21,6 +21,8 @@ beforeAll(async () => {
       '/friends': { success: true, data: [friend] },
       '/api/chat/unread-counts': { success: true, total: 3, unreadCounts: { f1: 3 }, conversations: [] },
       '/api/chat': { success: true, chats: [] },
+      '/api/notifications/unread/u1': { success: true, count: 3 },
+      '/api/notifications/user/u1': { success: true, total: 0, totalPages: 1, unreadCount: 3, data: [] },
       '/api/chat/f1': { success: true, created: false, chat: { _id: 'c9', otherParticipant: friend, hasMoreMessages: false, messages: [{ _id: 'm1', senderId: 'f1', senderName: 'Nadia Islam', text: 'Hi Rider!', content: 'Hi Rider!', read: true, createdAt: '2026-10-27T10:00:00Z' }] } },
     }
     const body = responses[pathname] || { success: true, data: [] }
@@ -83,5 +85,14 @@ describe('More → Friends navigation', () => {
     expect(window.location.pathname).toBe('/ride-share')
     expect(document.querySelector('nav.nav-links.open')).toBeNull()
     expect(await screen.findByRole('tab', { name: /Open rides/ })).toBeTruthy()
+  })
+
+  it('shows the unread count on the bell, which opens Notifications', async () => {
+    const user = userEvent.setup()
+    const bell = await screen.findByRole('button', { name: 'Notifications, 3 unread' })
+    expect(within(bell).getByTestId('unread-badge').textContent).toBe('3')
+    await user.click(bell)
+    expect(window.location.pathname).toBe('/notifications')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Notifications' })).toBeTruthy()
   })
 })

@@ -194,7 +194,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         b.Entity<Rating>(e => e.HasIndex(x => new { x.BusId, x.UserId }).IsUnique());
 
-        b.Entity<Notification>(e => e.HasIndex(x => new { x.UserId, x.IsRead, x.CreatedAt }));
+        b.Entity<Notification>(e =>
+        {
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            // Deleting the sender's account keeps the alerts they sent, just without the link to them.
+            e.HasOne(x => x.Sender).WithMany().HasForeignKey(x => x.SenderId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(x => new { x.UserId, x.IsRead, x.CreatedAt });
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            e.ToTable(t => t.HasCheckConstraint("ck_notifications_category",
+                "category IN ('general', 'account', 'friend', 'ride', 'reward', 'sos')"));
+        });
 
         b.Entity<Chat>(e =>
         {
