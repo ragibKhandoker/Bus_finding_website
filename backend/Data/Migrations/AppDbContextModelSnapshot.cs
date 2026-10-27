@@ -735,6 +735,10 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("likes");
 
+                    b.Property<int?>("Rating")
+                        .HasColumnType("integer")
+                        .HasColumnName("rating");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -758,7 +762,14 @@ namespace SmartCommute.Server.Data.Migrations
                     b.HasIndex("BusId", "CreatedAt")
                         .HasDatabaseName("ix_reviews_bus_id_created_at");
 
-                    b.ToTable("reviews", (string)null);
+                    b.HasIndex("BusId", "Rating")
+                        .HasDatabaseName("ix_reviews_rated")
+                        .HasFilter("rating IS NOT NULL");
+
+                    b.ToTable("reviews", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_reviews_rating_range", "rating IS NULL OR rating BETWEEN 1 AND 5");
+                        });
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.ReviewReaction", b =>
@@ -826,11 +837,11 @@ namespace SmartCommute.Server.Data.Migrations
                     b.HasKey("Id")
                         .HasName("pk_review_replies");
 
-                    b.HasIndex("ReviewId")
-                        .HasDatabaseName("ix_review_replies_review_id");
-
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_review_replies_user_id");
+
+                    b.HasIndex("ReviewId", "CreatedAt")
+                        .HasDatabaseName("ix_review_replies_review_id_created_at");
 
                     b.ToTable("review_replies", (string)null);
                 });

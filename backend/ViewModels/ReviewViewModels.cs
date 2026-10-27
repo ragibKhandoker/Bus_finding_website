@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using SmartCommute.Server.Models;
+using SmartCommute.Server.Services;
 
 namespace SmartCommute.Server.ViewModels;
 
@@ -70,106 +71,134 @@ public class FavoriteBusRequest
     public string? Operator { get; set; }
 }
 
+// Who wrote a review or reply: only what anyone may see.
+public class ReviewAuthorViewModel
+{
+    public string Id { get; init; } = "";
+    public string Name { get; init; } = "";
+    public bool Verified { get; init; }
+
+    public static ReviewAuthorViewModel From(Guid id, User? user, string fallbackName) => new()
+    {
+        Id = id.ToString(),
+        Name = user?.Name ?? fallbackName,
+        Verified = user?.Pass ?? false,
+    };
+}
+
 public class ReplyViewModel : EntityViewModel
 {
+    public string ReviewId { get; init; } = "";
     public string UserId { get; init; } = "";
     public string UserName { get; init; } = "";
+    public ReviewAuthorViewModel Author { get; init; } = new();
     public string Comment { get; init; } = "";
-    public int Likes { get; init; }
-    public int Dislikes { get; init; }
     public DateTime CreatedAt { get; init; }
 
     public static ReplyViewModel From(ReviewReply r) => new()
     {
         Id = r.Id.ToString(),
+        ReviewId = r.ReviewId.ToString(),
         UserId = r.UserId.ToString(),
-        UserName = r.UserName,
+        UserName = r.User?.Name ?? r.UserName,
+        Author = ReviewAuthorViewModel.From(r.UserId, r.User, r.UserName),
         Comment = r.Comment,
-        Likes = r.Likes,
-        Dislikes = r.Dislikes,
         CreatedAt = r.CreatedAt,
     };
 }
 
+// A top-level review with its replies (oldest first). Likes and Dislikes are counted from the reactions;
+// MyReaction is "like", "dislike" or null for the signed-in reader (null when signed out).
 public class ReviewViewModel : EntityViewModel
 {
     public string BusId { get; init; } = "";
     public string UserId { get; init; } = "";
     public string UserName { get; init; } = "";
+    public ReviewAuthorViewModel Author { get; init; } = new();
+    public int? Rating { get; init; }
     public string Comment { get; init; } = "";
     public int Likes { get; init; }
     public int Dislikes { get; init; }
+    public string? MyReaction { get; init; }
     // Number of replies; the replies themselves are in repliesList.
     public int Replies { get; init; }
     public List<ReplyViewModel> RepliesList { get; init; } = [];
     public DateTime CreatedAt { get; init; }
+    public DateTime UpdatedAt { get; init; }
+    public bool Edited => UpdatedAt > CreatedAt.AddSeconds(1);
 
-    public static ReviewViewModel From(Review r) => new()
+    public static ReviewViewModel From(Review r, ReactionCounts? counts = null, string? myReaction = null) => new()
     {
         Id = r.Id.ToString(),
         BusId = r.BusId.ToString(),
         UserId = r.UserId.ToString(),
-        UserName = r.UserName,
+        UserName = r.User?.Name ?? r.UserName,
+        Author = ReviewAuthorViewModel.From(r.UserId, r.User, r.UserName),
+        Rating = r.Rating,
         Comment = r.Comment,
-        Likes = r.Likes,
-        Dislikes = r.Dislikes,
+        Likes = counts?.Likes ?? r.Likes,
+        Dislikes = counts?.Dislikes ?? r.Dislikes,
+        MyReaction = myReaction,
         Replies = r.Replies.Count,
-        RepliesList = r.Replies.OrderBy(x => x.CreatedAt).Select(ReplyViewModel.From).ToList(),
+        RepliesList = r.Replies.OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).Select(ReplyViewModel.From).ToList(),
         CreatedAt = r.CreatedAt,
+        UpdatedAt = r.UpdatedAt,
     };
 }
 
+// The author is the signed-in user; a userId or userName a client still sends is ignored.
 public class CreateReviewRequest
 {
-    [Required]
+    [Required(ErrorMessage = "Choose a bus.")]
     public Guid? BusId { get; set; }
 
-    [Required]
-    public Guid? UserId { get; set; }
+    [Required(ErrorMessage = "Choose a rating from 1 to 5 stars.")]
+    [Range(1, 5, ErrorMessage = "A rating must be from 1 to 5 stars.")]
+    public int? Rating { get; set; }
 
-    [StringLength(100)]
-    public string? UserName { get; set; }
+    [StringLength(Review.MaxCommentLength, ErrorMessage = "A review can be at most 1000 characters.")]
+    public string? Comment { get; set; }
+}
 
-    [Required, StringLength(1000, MinimumLength = 1)]
-    public string Comment { get; set; } = "";
+// Fields left out (null) are not changed.
+public class UpdateReviewRequest
+{
+    [Range(1, 5, ErrorMessage = "A rating must be from 1 to 5 stars.")]
+    public int? Rating { get; set; }
+
+    [StringLength(Review.MaxCommentLength, ErrorMessage = "A review can be at most 1000 characters.")]
+    public string? Comment { get; set; }
 }
 
 public class ReplyRequest
 {
-    [Required]
-    public Guid? UserId { get; set; }
-
-    [StringLength(100)]
-    public string? UserName { get; set; }
-
-    [Required, StringLength(1000, MinimumLength = 1)]
-    public string Comment { get; set; } = "";
-}
-
-public class UpdateReviewRequest
-{
-    [Required, StringLength(1000, MinimumLength = 1)]
-    public string Comment { get; set; } = "";
-}
-
-public class SubmitRatingRequest
-{
-    [Required]
+    // Optional: when sent, it must be the bus the review is about.
     public Guid? BusId { get; set; }
 
-    [Required]
-    public Guid? UserId { get; set; }
-
-    [Range(1, 5)]
-    public double Rating { get; set; }
-
-    [StringLength(1000)]
+    [StringLength(Review.MaxCommentLength, ErrorMessage = "A reply can be at most 1000 characters.")]
     public string? Comment { get; set; }
 }
 
+// POST /api/ratings, kept for older clients: sets the signed-in user's rating for a bus.
+public class SubmitRatingRequest
+{
+    [Required(ErrorMessage = "Choose a bus.")]
+    public Guid? BusId { get; set; }
+
+    [Required(ErrorMessage = "Choose a rating from 1 to 5 stars.")]
+    [Range(1, 5, ErrorMessage = "A rating must be from 1 to 5 stars.")]
+    public int? Rating { get; set; }
+
+    [StringLength(Review.MaxCommentLength)]
+    public string? Comment { get; set; }
+}
+
+// A bus's ratings. AverageRating is null when nobody has rated it yet. Distribution maps stars ("1".."5") to counts.
 public class RatingSummaryViewModel
 {
     public string BusId { get; init; } = "";
-    public double AverageRating { get; init; }
+    public double? AverageRating { get; init; }
     public int TotalRatings { get; init; }
+    public int TotalReviews { get; init; }
+    public Dictionary<string, int> Distribution { get; init; } = [];
 }

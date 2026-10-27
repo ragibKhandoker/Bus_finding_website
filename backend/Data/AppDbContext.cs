@@ -179,7 +179,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.HasMany(x => x.Replies).WithOne(x => x.Review).HasForeignKey(x => x.ReviewId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.BusId, x.CreatedAt });
+            // The rating summary only reads rated reviews.
+            e.HasIndex(x => new { x.BusId, x.Rating }).HasFilter("rating IS NOT NULL").HasDatabaseName("ix_reviews_rated");
+            e.ToTable(t => t.HasCheckConstraint("ck_reviews_rating_range", "rating IS NULL OR rating BETWEEN 1 AND 5"));
         });
+
+        b.Entity<ReviewReply>(e => e.HasIndex(x => new { x.ReviewId, x.CreatedAt }));
 
         b.Entity<ReviewReaction>(e =>
         {

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { ArrowRight, ArrowUpDown, Bell, BusFront, Calculator, Check, ChevronRight, CreditCard, MapPin, Navigation, RefreshCw, Search, ShieldCheck, Trash2, Wallet } from 'lucide-react'
+import { ArrowRight, ArrowUpDown, Bell, BusFront, Calculator, Check, CreditCard, MapPin, Navigation, RefreshCw, Search, ShieldCheck, Trash2, Wallet } from 'lucide-react'
 import './more.css'
 import { apiRequest } from './api'
 import { formatDate, formatDateTime, formatNumber, getLang, t, toEnglish } from './i18n'
@@ -292,31 +292,3 @@ export function VerificationPage({ token, user, signedIn, openAuth, notify }) {
   return <section className="extra-page"><Heading icon={ShieldCheck} eyebrow={t('ELIGIBILITY & PASSES')} title={admin ? t('Verification review') : t('Student verification')} subtitle={admin ? t('Review student pass applications.') : t('Submit an institution ID for review and check your status.')} /><Feedback error={error} />{loading ? <Loading /> : admin ? <article className="extra-panel extra-list-panel"><div className="extra-panel-title"><div><small>{t('ADMIN REVIEW')}</small><h2>{t('Requests')} <span>{formatNumber(queue.length)}</span></h2></div><button className="extra-icon-button" onClick={load}><RefreshCw size={15} /></button></div>{queue.length ? queue.map((item) => <div className="verification-row" key={item._id}><div><b>{item.userName || item.userId?.name || t('Applicant')} · {item.institutionName}</b><small>{item.userEmail} · {t('ID')} {item.institutionId} · {item.gmail} · {t(item.status)}</small></div>{item.imageUrl && <a href={item.imageUrl} target="_blank" rel="noreferrer">{t('View ID')}</a>}{item.status === 'hold' && <><button className="extra-button" onClick={() => review(item._id, true)}>{t('Approve')}</button><button className="extra-button secondary" onClick={() => review(item._id, false)}>{t('Reject')}</button></>}</div>) : <p className="extra-empty-copy">{t('No verification requests found.')}</p>}</article> : <div className="verify-layout"><article className="extra-panel verify-status"><small>{t('YOUR STATUS')}</small><b className={`status-badge ${status?.status || 'none'}`}>{status?.status ? t(status.status) : t('Not submitted')}</b><p>{status?.status === 'approved' ? t('Your student status has been verified.') : status?.status === 'hold' ? t('Your request is waiting for review.') : status?.status === 'rejected' ? t('Your last request was rejected. You can submit a new one.') : t('Student pass verification helps confirm your eligibility.')}</p>{status?.institutionName && <small>{status.institutionName} · {status.institutionId}</small>}</article>{(!status || status.status === 'rejected') && <form className="extra-panel verify-form" onSubmit={submit}><h2>{t('Submit for review')}</h2><label>{t('Institution name')}<input required value={form.institutionName} onChange={(e) => setForm({ ...form, institutionName: e.target.value })} placeholder={t('University or institution')} /></label><label>{t('Institution ID')}<input required value={form.institutionId} onChange={(e) => setForm({ ...form, institutionId: e.target.value })} placeholder={t('Student ID number')} /></label><label>{t('Institution email')}<input required type="email" value={form.gmail} onChange={(e) => setForm({ ...form, gmail: e.target.value })} placeholder="you@institution.edu" /></label><label>{t('Upload ID image (optional)')}<input type="file" accept="image/png,image/jpeg" onChange={(e) => { const file = e.target.files?.[0]; if (file && file.size <= 3_000_000) { const reader = new FileReader(); reader.onload = () => setImage(String(reader.result)); reader.readAsDataURL(file) } else if (file) setError(t('Choose an image smaller than 3 MB.')) }} /></label>{image && <img className="verify-preview" src={image} alt={t('Verification ID preview')} />}<button className="extra-button">{t('Submit verification')} <ArrowRight size={14} /></button><small className="verify-note">{t('Image uploads require the backend’s Cloudinary configuration.')}</small></form>}</div>}</section>
 }
 
-export function BusReviews({ bus, user, signedIn, notify }) {
-  const [expanded, setExpanded] = useState(false)
-  const [reviews, setReviews] = useState([])
-  const [comment, setComment] = useState('')
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
-  const load = async () => {
-    setLoading(true)
-    try { const data = await api(`/api/reviews/bus/${encodeURIComponent(bus._id)}`); setReviews(data.reviews || []); setError('') }
-    catch (e) { setError(err(e)) } finally { setLoading(false) }
-  }
-  const toggle = () => {
-    if (!expanded) load()
-    setExpanded(!expanded)
-  }
-  const submit = async (e) => {
-    e.preventDefault()
-    if (!signedIn) return setError(t('Sign in to leave a review.'))
-    try { await api('/api/reviews', null, { method: 'POST', body: json({ busId: bus._id, userId: user.id, userName: user.name, comment }) }); setComment(''); notify(t('Review posted.')); load() }
-    catch (e2) { setError(err(e2)) }
-  }
-  const reactToReview = async (reviewId, reaction) => {
-    if (!signedIn) return setError(t('Sign in to react to a review.'))
-    try { await api(`/api/reviews/${reviewId}/${reaction}`, null, { method: 'POST', body: json({ userId: user.id }) }); load() }
-    catch (e) { setError(err(e)) }
-  }
-  return <div className="bus-reviews"><button className="review-toggle" onClick={toggle}>{expanded ? t('Hide community reviews') : t('Community reviews')} <ChevronRight size={13} /></button>{expanded && <div className="review-content">{error && <div className="extra-feedback error">{error}</div>}{signedIn && <form className="review-compose" onSubmit={submit}><input required maxLength={1000} value={comment} onChange={(e) => setComment(e.target.value)} placeholder={t('Review {name}…', { name: bus.busName ? t(bus.busName) : t('this bus') })} /><button className="extra-button">{t('Post review')}</button></form>}{loading ? <div className="extra-loading"><i />{t('Loading reviews…')}</div> : reviews.length ? reviews.map((review) => <div className="review-row" key={review._id}><span className="extra-avatar">{review.userName?.[0]?.toUpperCase() || 'R'}</span><div><b>{review.userName || t('Commuter')}</b><p>{review.comment}</p><small>{formatDate(review.createdAt)}</small></div><div className="review-reactions"><button onClick={() => reactToReview(review._id, 'like')}>♥ {formatNumber(review.likes)}</button><button onClick={() => reactToReview(review._id, 'dislike')}>− {formatNumber(review.dislikes)}</button></div></div>) : !error && <p className="extra-empty-copy">{t('No reviews yet. Share the first one.')}</p>}</div>}</div>
-}

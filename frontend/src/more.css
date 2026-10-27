@@ -202,3 +202,43 @@
 .ride-request-status.accepted{color:var(--fg-247248);background:var(--bg-e4f4e8)}.ride-request-status.rejected{color:var(--fg-a95548);background:var(--bg-fff0ed)}
 .ride-join-state{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;color:var(--fg-247248);background:var(--bg-e4f4e8);border-radius:20px;padding:6px 11px;white-space:nowrap}
 .ride-join-note{margin:8px 0 0;font-size:12.5px;color:var(--fg-986f25)}
+/* ---- Bus reviews & ratings (F13) ---- */
+.bus-reviews .review-toggle{display:inline-flex;align-items:center;gap:7px;font-size:13px;flex-wrap:wrap}
+.review-toggle-score{display:inline-flex;align-items:center;gap:3px;font-weight:600;color:var(--fg-986f25)}.review-toggle-score svg{fill:currentColor}
+.bus-reviews .review-content{display:grid;gap:12px;padding-top:10px}
+.review-stars{display:inline-flex;gap:1px;color:var(--fg-c5ccc7);flex:none}.review-stars svg.on{color:var(--fg-e3a008);fill:currentColor}
+.review-summary{display:flex;gap:18px;align-items:center;flex-wrap:wrap;background:var(--bg-f7faf7);border:1px solid var(--bd-eef1ee);border-radius:9px;padding:12px 14px}
+.review-average{display:grid;gap:4px;justify-items:start}.review-average strong{font:800 30px var(--font-head);color:var(--fg-233b30);line-height:1}.review-average strong small{font-size:14px;color:var(--fg-718078);font-weight:600}
+.review-average>span:last-child{font-size:12.5px;color:var(--fg-718078)}
+.review-distribution{list-style:none;margin:0;padding:0;display:grid;gap:3px;flex:1;min-width:190px}
+.review-distribution li{display:grid;grid-template-columns:48px 1fr 28px;align-items:center;gap:7px;font-size:12px;color:var(--fg-566d5e)}
+.review-distribution i{height:7px;border-radius:4px;background:var(--bg-eff4ef);overflow:hidden;display:block}.review-distribution b{display:block;height:100%;background:var(--bg-e3a008);border-radius:4px}
+.review-empty-summary{margin:0;font-size:13.5px;color:var(--fg-566d5e);background:var(--bg-f7faf7);border-radius:8px;padding:10px 12px}
+.star-picker{display:flex;align-items:center;gap:2px}
+.star-picker button{display:grid;place-items:center;width:34px;height:34px;border:0;background:none;border-radius:6px;color:var(--fg-c5ccc7);padding:0}
+.star-picker button.on{color:var(--fg-e3a008)}.star-picker button.on svg{fill:currentColor}
+.star-picker button:hover:not(:disabled){background:var(--bg-fff3dc)}.star-picker button:focus-visible{outline:2px solid var(--bd-20875f);outline-offset:1px}
+.star-picker-label{margin-left:8px;font-size:12.5px;font-weight:600;color:var(--fg-566d5e)}
+.review-form{display:grid;gap:8px}.review-form textarea{width:100%;resize:vertical;min-height:64px;border:1px solid var(--bd-e4ebe5);border-radius:8px;padding:10px 12px;font:14px/1.45 "DM Sans","Bangla Digits","Hind Siliguri",sans-serif;color:var(--fg-34483b);background:var(--bg-ffffff);outline:0}
+.review-form textarea:focus{border-color:var(--bd-20875f)}
+.review-form-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.review-form-actions small{font-size:12px;color:var(--fg-718078);margin-left:auto}
+.review-form-actions .extra-button{font-size:13px;padding:9px 14px}
+.review-error{margin:0;font-size:13px;font-weight:600;color:var(--fg-a95548)}
+.review-signin{margin:0;font-size:13.5px;color:var(--fg-566d5e)}
+.review-list{display:grid}
+.review-item{display:grid;gap:7px;padding:13px 0;border-top:1px solid var(--bd-eef1ee)}
+.review-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.review-author{display:flex;align-items:center;gap:9px;min-width:0}.review-author>div{display:grid;gap:2px;min-width:0}
+.review-author b{display:inline-flex;align-items:center;gap:4px;font-size:14px;color:var(--fg-34483b)}.review-author b svg{color:var(--fg-19865e)}
+.review-author small{font-size:12px;color:var(--fg-718078)}
+.review-text{margin:0;font-size:14px;line-height:1.55;color:var(--fg-34483b);white-space:pre-wrap;overflow-wrap:anywhere}.review-text.muted{color:var(--fg-718078);font-style:italic}
+.review-actions{display:flex;gap:4px;flex-wrap:wrap}
+.review-actions button{display:inline-flex;align-items:center;gap:5px;border:1px solid transparent;background:var(--bg-eff5ef);border-radius:6px;color:var(--fg-566d5e);padding:6px 10px;font-size:12.5px;font-weight:600}
+.review-actions button:hover:not(:disabled){background:var(--bg-e2f1e6)}.review-actions button.active{background:var(--bg-e4f4e8);color:var(--fg-19865e);border-color:var(--bd-20875f)}
+.review-actions button.danger{color:var(--fg-a95548);background:var(--bg-fff0ed)}.review-actions button:disabled{opacity:.6}
+.review-actions button:focus-visible,.review-reply-delete:focus-visible{outline:2px solid var(--bd-20875f);outline-offset:2px}
+.review-replies{display:grid;gap:8px;margin-left:22px;padding-left:14px;border-left:3px solid var(--bd-e4ebe5)}
+.review-reply{position:relative;display:grid;gap:5px;padding:4px 0}.review-reply .extra-avatar{width:30px;height:30px;font-size:12px}
+.review-reply-delete{position:absolute;top:4px;right:0;display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:6px;background:none;color:var(--fg-a95548)}
+.review-more{justify-self:start}.review-load-error{display:grid;gap:8px;justify-items:start}
+@media(max-width:700px){.review-replies{margin-left:6px;padding-left:10px}.review-form textarea{font-size:16px}.review-summary{gap:12px}.review-actions button{padding:7px 9px}}

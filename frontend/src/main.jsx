@@ -12,10 +12,11 @@ import './profile.css'
 import './admin.css'
 import GoogleMapView, { mapsConfigured } from './GoogleMapView'
 import { ActiveTripPanel, TripRow, useActiveTrip, useBoardControls, useTripChanges } from './Trips'
-import { BusReviews, GpayPage, MapPage, NotificationsPage, OffersPage, VerificationPage } from './MorePages'
+import { GpayPage, MapPage, NotificationsPage, OffersPage, VerificationPage } from './MorePages'
 import { FriendsPage } from './Friends'
 import { ChatPage } from './Chat'
 import { RidePage } from './RideShare'
+import { BusReviews } from './Reviews'
 import { FavoriteButton, FavoritesPage, useFavoriteBuses, useFavoriteStatus } from './Favorites'
 import { API_BASE, UNAUTHORIZED_EVENT, apiRequest as request, isTokenExpired, tokenExpiry } from './api'
 import { formatDate, formatDateTime, formatNumber, getLang, setLang, t, toEnglish } from './i18n'
@@ -483,7 +484,7 @@ function BusDetailPage({ routeNumber, token, user, signedIn, notify, navigate, o
       </ol>
       <p className="route-note">{t('Stop lists come from public listings and the locations are approximate.')}</p>
     </section>
-    <section className="panel route-reviews"><BusReviews bus={bus} user={user} signedIn={signedIn} notify={notify} /></section>
+    <section className="panel route-reviews"><BusReviews bus={bus} user={user} token={token} signedIn={signedIn} notify={notify} openAuth={openAuth} defaultOpen /></section>
   </div>
 }
 
@@ -849,7 +850,7 @@ function BusPage({ token, signedIn, user, notify, navigate, openAuth }) {
         <div className="results-heading"><div><div className="eyebrow">{searched.mode === 'route' ? t('YOUR ROUTE') : t('BUS SEARCH')}</div><h2>{searched.mode === 'route' ? t('{from} to {to}', { from: t(trip?.start.name || searched.from), to: t(trip?.end.name || searched.to) }) : t('Buses matching “{name}”', { name: searched.name })}</h2></div>{!loading && !error && <span className="result-count">{buses.length === 1 ? t('{count} bus found', { count: 1 }) : t('{count} buses found', { count: buses.length })}</span>}</div>
         {loading ? <BusSearchLoader mode={searched.mode} />
           : error ? <div className="empty-state"><span className="empty-icon"><CircleAlert size={23} /></span><b>{t('Search could not be completed')}</b><span>{error}</span></div>
-          : buses.length ? <div className="bus-list">{buses.map((bus) => <BusCard key={bus._id} bus={bus} user={user} signedIn={signedIn} selected={bus._id === selectedId} onSelect={() => setSelectedId(bus._id)} favorite={favorites.isFavorite(bus)} favoritePending={favorites.isPending(bus)} onFavorite={() => favorites.toggle(bus)} onAddTrip={() => saveTrip(bus)} boarding={{ token, signedIn, openAuth, notify, activeTrip }} onDetails={bus.routeNumber ? () => navigate('Bus details', { route: bus.routeNumber }) : null} notify={notify} />)}</div>
+          : buses.length ? <div className="bus-list">{buses.map((bus) => <BusCard key={bus._id} bus={bus} user={user} token={token} signedIn={signedIn} openAuth={openAuth} selected={bus._id === selectedId} onSelect={() => setSelectedId(bus._id)} favorite={favorites.isFavorite(bus)} favoritePending={favorites.isPending(bus)} onFavorite={() => favorites.toggle(bus)} onAddTrip={() => saveTrip(bus)} boarding={{ token, signedIn, openAuth, notify, activeTrip }} onDetails={bus.routeNumber ? () => navigate('Bus details', { route: bus.routeNumber }) : null} notify={notify} />)}</div>
           : <div className="empty-state"><span className="empty-icon"><BusFront size={23} /></span><b>{t('No buses found just yet')}</b><span>{searched.mode === 'route' ? t('No bus in the database stops at both places. Try a nearby stop.') : t('Try another bus name or route number.')}</span></div>}
       </div>
       {showMap && <aside className="results-map">
@@ -897,7 +898,7 @@ function BusSearchLoader({ mode }) {
 }
 
 // One search result: name, route number and stops, and for a route search where to board and get off.
-function BusCard({ bus, user, signedIn, selected, onSelect, favorite, favoritePending, onFavorite, onAddTrip, boarding, onDetails, notify }) {
+function BusCard({ bus, user, token, signedIn, openAuth, selected, onSelect, favorite, favoritePending, onFavorite, onAddTrip, boarding, onDetails, notify }) {
   const board = useBoardControls({ bus, ...boarding })
   const stops = getStops(bus)
   const match = bus.match
@@ -914,7 +915,7 @@ function BusCard({ bus, user, signedIn, selected, onSelect, favorite, favoritePe
         <button className={selected ? 'bus-map-toggle active' : 'bus-map-toggle'} onClick={onSelect} aria-pressed={selected}><MapIcon size={13} /> {selected ? t('Shown on map') : t('Show on map')}</button>
         {onDetails && <button className="bus-details-link" onClick={onDetails}>{t('View details')} <ArrowRight size={12} /></button>}
       </div>
-    </div><div className="bus-result-side"><FavoriteButton active={favorite} pending={favoritePending} onClick={onFavorite} /><span className="fare-label">{t('STARTS FROM')}</span><b>{money(bus.base_fare)}</b><small>{t('per ride')}</small>{board.button}<button className="button button-outline button-small" onClick={onAddTrip} title={t('Add a trip you already took to your history')}>{t('Log trip')}</button></div>{board.form}<BusReviews bus={bus} user={user} signedIn={signedIn} notify={notify} />
+    </div><div className="bus-result-side"><FavoriteButton active={favorite} pending={favoritePending} onClick={onFavorite} /><span className="fare-label">{t('STARTS FROM')}</span><b>{money(bus.base_fare)}</b><small>{t('per ride')}</small>{board.button}<button className="button button-outline button-small" onClick={onAddTrip} title={t('Add a trip you already took to your history')}>{t('Log trip')}</button></div>{board.form}<BusReviews bus={bus} user={user} token={token} signedIn={signedIn} notify={notify} openAuth={openAuth} />
   </article>
 }
 
