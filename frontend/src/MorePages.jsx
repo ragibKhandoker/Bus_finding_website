@@ -1,136 +1,25 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { ArrowRight, Bell, Check, ChevronRight, CreditCard, MapPin, MessageCircle, Navigation, Plus, RefreshCw, Send, ShieldCheck, Trash2, Users, Wallet } from 'lucide-react'
+import { ArrowRight, ArrowUpDown, Bell, BusFront, Calculator, Check, ChevronRight, CreditCard, MapPin, Navigation, RefreshCw, Search, ShieldCheck, Trash2, Wallet } from 'lucide-react'
 import './more.css'
 import { apiRequest } from './api'
-import { formatDate, formatDateTime, formatNumber, formatTime, t, toEnglish } from './i18n'
+import { formatDate, formatDateTime, formatNumber, getLang, t, toEnglish } from './i18n'
+
+// Leaflet is only downloaded when the map page is opened.
+const FareMap = React.lazy(() => import('./FareMap'))
 
 const api = (path, token, options = {}) => apiRequest(path, { ...options, token })
 const json = (value) => JSON.stringify(value)
 const valueOf = (item) => item?._id || item?.id || ''
 // Server messages are in English; the ones with a Bangla entry are shown translated.
 const err = (error) => t(error?.message || 'Request failed')
-function Heading({ icon: Icon, eyebrow, title, subtitle }) {
+export function Heading({ icon: Icon, eyebrow, title, subtitle }) {
   return <header className="extra-heading"><span><Icon size={20} /></span><div><small>{eyebrow}</small><h1>{title}</h1><p>{subtitle}</p></div></header>
 }
-function Feedback({ error, success }) {
+export function Feedback({ error, success }) {
   return <>{error && <div className="extra-feedback error">{error}</div>}{success && <div className="extra-feedback success">{success}</div>}</>
 }
-function Loading({ label = 'Loading…' }) { return <div className="extra-loading"><i />{t(label)}</div> }
-function RequireSignIn({ openAuth }) { return <div className="extra-panel sign-in-panel"><ShieldCheck size={22} /><div><b>{t('Sign in to continue')}</b><p>{t('This feature uses your SmartCommute account.')}</p></div><button className="extra-button" onClick={openAuth}>{t('Sign in')} <ArrowRight size={14} /></button></div> }
-
-export function FriendsPage({ token, user, signedIn, openAuth, onChat, notify }) {
-  const [friends, setFriends] = useState([])
-  const [requests, setRequests] = useState([])
-  const [friendCode, setFriendCode] = useState('')
-  const [searchCode, setSearchCode] = useState('')
-  const [searchedUser, setSearchedUser] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const load = useCallback(async () => {
-    if (!signedIn) return
-    setLoading(true)
-    try {
-      const [f, r, c] = await Promise.all([
-        api('/auth/friends', token), api('/auth/pending-friend-requests', token), api('/auth/friend-code', token),
-      ])
-      setFriends(f.friends || f.data || (Array.isArray(f) ? f : []))
-      setRequests(r.requests || [])
-      setFriendCode(c.friendCode || '')
-      setError('')
-    } catch (e) { setError(err(e)) } finally { setLoading(false) }
-  }, [signedIn, token])
-  useEffect(() => { load() }, [load])
-  const find = async (event) => {
-    event.preventDefault()
-    setError(''); setSearchedUser(null)
-    try { setSearchedUser(await api(`/auth/search-friend/${encodeURIComponent(searchCode.trim())}`, token)) } catch (e) { setError(err(e)) }
-  }
-  const sendRequest = async () => {
-    try { await api('/auth/send-friend-request', token, { method: 'POST', body: json({ toUserId: valueOf(searchedUser) }) }); notify(t('Friend request sent.')); setSearchedUser(null); setSearchCode('') }
-    catch (e) { setError(err(e)) }
-  }
-  const resolveRequest = async (requestId, accepted) => {
-    try { await api(`/auth/${accepted ? 'accept' : 'reject'}-friend-request/${requestId}`, token, { method: 'PUT' }); notify(accepted ? t('Friend request accepted.') : t('Friend request declined.')); load() }
-    catch (e) { setError(err(e)) }
-  }
-  if (!signedIn) return <section className="extra-page"><Heading icon={Users} eyebrow={t('YOUR PEOPLE')} title={t('Friends')} subtitle={t('Keep your commute crew close.')} /><RequireSignIn openAuth={openAuth} /></section>
-  return <section className="extra-page">
-    <Heading icon={Users} eyebrow={t('YOUR PEOPLE')} title={t('Friends')} subtitle={t('Find your friends and plan the next journey together.')} />
-    <Feedback error={error} />
-    <div className="extra-grid friends-layout">
-      <article className="extra-panel friend-code-card"><small>{t('YOUR FRIEND CODE')}</small><strong>{friendCode || '—'}</strong><p>{t('Share this code so friends can find and add you.')}</p><form onSubmit={find}><input required value={searchCode} onChange={(e) => setSearchCode(e.target.value)} placeholder={t('Enter a friend\'s code')} /><button className="extra-button" type="submit">{t('Find')} <ArrowRight size={14} /></button></form>{searchedUser && <div className="person-result"><span className="extra-avatar">{searchedUser.name?.[0]?.toUpperCase()}</span><div><b>{searchedUser.name}</b><small>{searchedUser.email}</small></div><button className="extra-button" onClick={sendRequest}>{t('Add friend')} <Plus size={13} /></button></div>}</article>
-      <article className="extra-panel"><div className="extra-panel-title"><div><small>{t('INCOMING')}</small><h2>{t('Friend requests')} <span>{formatNumber(requests.length)}</span></h2></div><button className="extra-icon-button" onClick={load} aria-label={t('Refresh')}><RefreshCw size={15} /></button></div>{loading ? <Loading /> : requests.length ? requests.map((request) => { const sender = request.fromUserId || request.from || request.sender || request.user || request; const id = request._id || request.id; return <div className="person-row" key={id}><span className="extra-avatar">{sender.name?.[0]?.toUpperCase() || 'F'}</span><div><b>{sender.name || t('SmartCommute member')}</b><small>{sender.email || t('Wants to connect')}</small></div><button className="extra-button" onClick={() => resolveRequest(id, true)}>{t('Accept')} <Check size={13} /></button><button className="extra-icon-button danger" onClick={() => resolveRequest(id, false)} title={t('Decline')}><Trash2 size={14} /></button></div> }) : <p className="extra-empty-copy">{t('No pending requests.')}</p>}</article>
-    </div>
-    <article className="extra-panel extra-list-panel"><div className="extra-panel-title"><div><small>{t('YOUR COMMUNITY')}</small><h2>{t('Friends')} <span>{formatNumber(friends.length)}</span></h2></div><button className="extra-icon-button" onClick={load} aria-label={t('Refresh')}><RefreshCw size={15} /></button></div>{loading ? <Loading /> : friends.length ? friends.map((friend) => <div className="person-row" key={valueOf(friend)}><span className="extra-avatar">{friend.name?.[0]?.toUpperCase() || 'F'}</span><div><b>{friend.name || t('SmartCommute member')}</b><small>{friend.email || t('Friend')}</small></div><button className="extra-button secondary" onClick={() => onChat(friend)}><MessageCircle size={14} /> {t('Message')}</button></div>) : <p className="extra-empty-copy">{t('Your friend list is waiting to grow. Add a friend with their code above.')}</p>}</article>
-  </section>
-}
-
-export function ChatPage({ token, user, signedIn, openAuth, notify }) {
-  const [chats, setChats] = useState([])
-  const [chatId, setChatId] = useState('')
-  const [contact, setContact] = useState(null)
-  const [messages, setMessages] = useState([])
-  const [otherId, setOtherId] = useState('')
-  const [text, setText] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const loadChats = useCallback(async () => {
-    if (!signedIn) return
-    setLoading(true)
-    try { const data = await api('/api/chat', token); setChats(data.chats || []); setError('') }
-    catch (e) { setError(err(e)) } finally { setLoading(false) }
-  }, [signedIn, token])
-  useEffect(() => { loadChats() }, [loadChats])
-  useEffect(() => {
-    const contactId = sessionStorage.getItem('chat_contact_id')
-    if (!contactId || !signedIn) return
-    sessionStorage.removeItem('chat_contact_id')
-    setOtherId(contactId)
-    api(`/api/chat/${encodeURIComponent(contactId)}`, token)
-      .then((data) => { setChatId(data.chat._id); setContact(data.chat.participants?.find((p) => valueOf(p) !== String(user.id))); setMessages(data.chat.messages || []) })
-      .catch((e) => setError(err(e)))
-  }, [signedIn, token, user?.id])
-  const openChat = async (id, person) => {
-    setError('')
-    try {
-      const data = await api(`/api/chat/${encodeURIComponent(id)}`, token)
-      setChatId(data.chat._id); setContact(person || data.chat.participants?.find((p) => valueOf(p) !== String(user.id)))
-      setMessages(data.chat.messages || [])
-      const refreshed = await api(`/api/chat/messages/${data.chat._id}`, token)
-      setMessages(refreshed.messages || [])
-      loadChats()
-    } catch (e) { setError(err(e)) }
-  }
-  useEffect(() => {
-    if (!chatId) return undefined
-    const timer = window.setInterval(async () => {
-      try { const data = await api(`/api/chat/messages/${chatId}`, token); setMessages(data.messages || []) } catch {}
-    }, 6000)
-    return () => window.clearInterval(timer)
-  }, [chatId, token])
-  const start = async (event) => {
-    event.preventDefault()
-    if (!otherId.trim()) return
-    try { const data = await api(`/api/chat/${encodeURIComponent(otherId.trim())}`, token); setChatId(data.chat._id); setContact(data.chat.participants?.find((p) => valueOf(p) !== String(user.id))); setMessages(data.chat.messages || []); setOtherId(''); setError('') }
-    catch (e) { setError(err(e)) }
-  }
-  const send = async (event) => {
-    event.preventDefault()
-    if (!text.trim() || !chatId) return
-    const sending = text.trim(); setText('')
-    try { await api('/api/chat/send', token, { method: 'POST', body: json({ chatId, text: sending }) }); const data = await api(`/api/chat/messages/${chatId}`, token); setMessages(data.messages || []); loadChats() }
-    catch (e) { setText(sending); setError(err(e)) }
-  }
-  if (!signedIn) return <section className="extra-page"><Heading icon={MessageCircle} eyebrow={t('KEEP IN TOUCH')} title={t('Messages')} subtitle={t('Pick up a conversation with a friend.')} /><RequireSignIn openAuth={openAuth} /></section>
-  return <section className="extra-page">
-    <Heading icon={MessageCircle} eyebrow={t('KEEP IN TOUCH')} title={t('Messages')} subtitle={t('Chat with your SmartCommute friends.')} />
-    <Feedback error={error} />
-    <div className="chat-layout extra-panel">
-      <aside className="chat-sidebar"><div className="extra-panel-title"><div><small>{t('INBOX')}</small><h2>{t('Conversations')}</h2></div><button className="extra-icon-button" onClick={loadChats} aria-label={t('Refresh')}><RefreshCw size={14} /></button></div><form className="start-chat-form" onSubmit={start}><input value={otherId} onChange={(e) => setOtherId(e.target.value)} placeholder={t('Friend user ID')} required /><button className="extra-icon-button" title={t('Start chat')}><Plus size={16} /></button></form>{loading ? <Loading /> : chats.length ? chats.map((chat) => <button key={chat._id} className={`chat-contact ${chat._id === chatId ? 'current' : ''}`} onClick={() => openChat(valueOf(chat.otherParticipant), chat.otherParticipant)}><span className="extra-avatar">{chat.otherParticipant?.name?.[0]?.toUpperCase() || 'C'}</span><span><b>{chat.otherParticipant?.name || t('Contact')}</b><small>{chat.lastMessage?.text || t('Start a conversation')}</small></span>{chat.unreadCount > 0 && <i>{formatNumber(chat.unreadCount)}</i>}</button>) : <p className="extra-empty-copy">{t('No conversations yet. Start one with a friend\'s user ID.')}</p>}</aside>
-      <div className="chat-main">{chatId ? <><div className="chat-title"><span className="extra-avatar">{contact?.name?.[0]?.toUpperCase() || 'C'}</span><div><b>{contact?.name || t('Conversation')}</b><small>{contact?.email || t('SmartCommute chat')}</small></div></div><div className="chat-messages">{messages.map((message, index) => { const sender = typeof message.senderId === 'object' ? valueOf(message.senderId) : String(message.senderId); const own = sender === String(user.id); return <div className={`message-bubble ${own ? 'mine' : ''}`} key={message._id || index}><span>{message.text}</span><small>{formatTime(message.createdAt)}</small></div> })}{!messages.length && <p className="extra-empty-copy">{t('Say hello to start the conversation.')}</p>}</div><form className="chat-compose" onSubmit={send}><input value={text} onChange={(e) => setText(e.target.value)} placeholder={t('Write a message…')} /><button className="extra-button" disabled={!text.trim()}><Send size={14} /> {t('Send')}</button></form></> : <div className="chat-placeholder"><MessageCircle size={27} /><b>{t('Your conversations, all in one place.')}</b><span>{t('Choose a conversation or start one with a friend\'s user ID.')}</span></div>}</div>
-    </div>
-  </section>
-}
+export function Loading({ label = 'Loading…' }) { return <div className="extra-loading"><i />{t(label)}</div> }
+export function RequireSignIn({ openAuth }) { return <div className="extra-panel sign-in-panel"><ShieldCheck size={22} /><div><b>{t('Sign in to continue')}</b><p>{t('This feature uses your SmartCommute account.')}</p></div><button className="extra-button" onClick={openAuth}>{t('Sign in')} <ArrowRight size={14} /></button></div> }
 
 export function NotificationsPage({ user, signedIn, openAuth, notify }) {
   const [items, setItems] = useState([])
@@ -186,45 +75,117 @@ export function GpayPage({ token, signedIn, openAuth, notify }) {
   return <section className="extra-page"><Heading icon={Wallet} eyebrow={t('YOUR DIGITAL WALLET')} title={t('GPay & recharge')} subtitle={t('Manage the in-app GPay balance and move funds to your commute wallet.')} /><Feedback error={error} />{loading ? <Loading /> : <div className="gpay-layout"><article className="extra-panel gpay-card"><small>{t('GPAY BALANCE')}</small><strong>৳{formatNumber(account?.balance)}</strong><span>{account ? t('GPay account active') : t('No GPay account connected')}</span>{!account && <div className="pin-row"><input aria-label={t('GPay PIN')} inputMode="numeric" maxLength={4} value={pin} onChange={(e) => setPin(e.target.value)} placeholder={t('4-digit PIN')} /><button className="extra-button" onClick={async () => { const result = await call('/gpay/register', null, t('GPay account created. Save your new PIN securely.')); if (result?.data) { setAccount(result.data); setPin(result.data.displayCode || '') } }}>{t('Create account')}</button><button className="extra-button secondary" disabled={!pin} onClick={() => call('/gpay/login', { code: pin }, t('GPay unlocked.'))}>{t('Unlock')}</button></div>}{account?.displayCode && <p className="gpay-notice">{t('This API returns a display PIN at registration. Keep it private; the web client does not save it.')}</p>}</article>{account && <article className="extra-panel gpay-actions"><h2>{t('Move funds')}</h2><p>{t('These are in-app stored-value operations. No external payment provider is connected.')}</p><form onSubmit={recharge}><label>{t('AMOUNT (BDT)')}<input required min="1" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder={t('e.g. 500')} /></label><button className="extra-button">{t('Recharge commute wallet')} <ArrowRight size={14} /></button></form><button className="extra-button secondary" onClick={pay}>{t('Pay from GPay balance')}</button></article>}</div>}</section>
 }
 
+// One place field of the fare calculator. Typing suggests bus stops from our own database as you go; place
+// search on OpenStreetMap (Nominatim) only runs when asked (Enter or the button), as its usage policy requires.
+function LocationField({ id, label, placeholder, place, onSelect, onLocate }) {
+  const [text, setText] = useState(place?.name ? t(place.name) : '')
+  const [stops, setStops] = useState([])
+  const [places, setPlaces] = useState(null)
+  const [open, setOpen] = useState(false)
+  const [searching, setSearching] = useState(false)
+  const [problem, setProblem] = useState('')
+
+  // A place chosen from outside (history, "use my location", swap) replaces whatever was typed.
+  useEffect(() => { if (place) setText(place.name ? t(place.name) : '') }, [place])
+
+  useEffect(() => {
+    const term = text.trim()
+    if (place || term.length < 2) { setStops([]); return }
+    let cancelled = false
+    const timer = setTimeout(() => {
+      api(`/api/stops/search?${new URLSearchParams({ q: toEnglish(term) })}`)
+        .then((data) => { if (!cancelled) setStops(data.data || []) })
+        .catch(() => { if (!cancelled) setStops([]) })
+    }, 250)
+    return () => { cancelled = true; clearTimeout(timer) }
+  }, [text, place])
+
+  const searchPlaces = async () => {
+    const term = text.trim()
+    if (term.length < 2) return setProblem(t('Type at least 2 letters to search.'))
+    setSearching(true); setProblem(''); setOpen(true)
+    try {
+      const data = await api(`/api/geocoding/search?${new URLSearchParams({ q: toEnglish(term), limit: '6', dhaka: 'true', lang: getLang() })}`)
+      setPlaces(data.data || [])
+      if (!data.data?.length) setProblem(t('No places in Dhaka matched. Try a nearby landmark or area name.'))
+    } catch (e) { setPlaces([]); setProblem(err(e)) }
+    finally { setSearching(false) }
+  }
+  const choose = (next) => { onSelect(next); setOpen(false); setPlaces(null); setProblem('') }
+  const type = (value) => { setText(value); setPlaces(null); setProblem(''); setOpen(true); if (place) onSelect(null) }
+  const shortName = (displayName) => displayName.split(',').slice(0, 2).join(',').trim()
+  const showList = open && !place && text.trim().length >= 2
+
+  return <div className="location-field" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false) }}>
+    <label htmlFor={id}>{label}</label>
+    <div className={place ? 'location-input chosen' : 'location-input'}>
+      <MapPin size={15} />
+      <input id={id} autoComplete="off" value={text} placeholder={placeholder} aria-expanded={showList} aria-controls={`${id}-list`}
+        onFocus={() => setOpen(true)} onChange={(e) => type(e.target.value)}
+        onKeyDown={(e) => { if (e.key === 'Enter' && !place) { e.preventDefault(); searchPlaces() } if (e.key === 'Escape') setOpen(false) }} />
+      {onLocate && <button type="button" className="location-locate" title={t('Use my location')} aria-label={t('Use my location')} onClick={onLocate}><Navigation size={14} /></button>}
+    </div>
+    {place
+      ? <small className="location-coords" title={`${place.lat}, ${place.lon}`}><Check size={13} /> {t('Selected: {name}', { name: t(place.name) })}</small>
+      : text.trim().length >= 2 && !showList && <small className="location-hint">{t('Pick a place from the list to select it.')}</small>}
+    {showList && <div className="location-list" id={`${id}-list`} role="listbox">
+      {stops.length > 0 && <small className="location-group">{t('BUS STOPS')}</small>}
+      {stops.map((stop) => <button type="button" role="option" aria-selected="false" key={`stop-${stop.name}`} onClick={() => choose({ name: stop.name, lat: stop.lat, lon: stop.lng, kind: 'stop' })}><BusFront size={14} /><span><b>{t(stop.name)}</b><small>{t('Bus stop')}</small></span></button>)}
+      {places?.length > 0 && <small className="location-group">{t('PLACES')}</small>}
+      {places?.map((p) => <button type="button" role="option" aria-selected="false" key={`place-${p.place_id}`} onClick={() => choose({ name: shortName(p.display_name), lat: p.lat, lon: p.lon, kind: 'place' })}><MapPin size={14} /><span><b>{shortName(p.display_name)}</b><small>{p.display_name}</small></span></button>)}
+      {problem && <small className="location-problem">{problem}</small>}
+      {places === null && <button type="button" className="location-search-more" disabled={searching} onClick={searchPlaces}>{searching ? <><i className="location-spinner" /> {t('Searching places…')}</> : <><Search size={14} /> {t('Not in the list? Search all places for “{text}”', { text: text.trim() })}</>}</button>}
+      {places !== null && <small className="location-credit">{t('Place search © OpenStreetMap contributors')}</small>}
+    </div>}
+  </div>
+}
+
 export function MapPage({ token, user, signedIn, openAuth, notify }) {
-  const [query, setQuery] = useState('')
-  const [results, setResults] = useState([])
-  const [origin, setOrigin] = useState('')
-  const [destination, setDestination] = useState('')
-  const [route, setRoute] = useState(null)
+  const [start, setStart] = useState(null)
+  const [end, setEnd] = useState(null)
+  const [rate, setRate] = useState(null)
+  const [result, setResult] = useState(null)
+  const [calculating, setCalculating] = useState(false)
   const [error, setError] = useState('')
+  const [history, setHistory] = useState([])
+  const [historyState, setHistoryState] = useState('idle')
   const [busyId, setBusyId] = useState('')
   const [tripBusId, setTripBusId] = useState('')
-  const search = async (e) => {
-    e.preventDefault(); setError('')
-    const [stopResult, placeResult] = await Promise.allSettled([
-      api(`/api/stops/search?${new URLSearchParams({ q: toEnglish(query) })}`),
-      api(`/api/geocoding/search?${new URLSearchParams({ q: query, limit: '5' })}`),
-    ])
-    const stopPlaces = stopResult.status === 'fulfilled' ? (stopResult.value.data || []).map((stop) => ({ display_name: stop.name, lat: stop.lat, lon: stop.lng, place_id: `stop-${stop.name}` })) : []
-    const places = placeResult.status === 'fulfilled' ? (placeResult.value.data || []) : []
-    const combined = [...stopPlaces, ...places]
-    setResults(combined)
-    if (!combined.length) setError(placeResult.status === 'rejected' ? err(placeResult.reason) : t('No places were found. Try a nearby landmark.'))
-  }
-  const routeSearch = async (e) => {
-    e.preventDefault(); setError(''); setRoute(null)
-    try {
-      const locatePlace = async (name) => {
-        const stop = await api(`/api/stops/coordinates?${new URLSearchParams({ name: toEnglish(name) })}`)
-        if (stop.data) return { data: { ...stop.data, display_name: stop.data.name, lon: stop.data.lng } }
-        return api(`/api/geocoding/geocode?${new URLSearchParams({ q: name })}`)
-      }
-      const [a,b] = await Promise.all([locatePlace(origin), locatePlace(destination)])
-      const x = a.data, y = b.data
-      const data = await api(`/api/geocoding/distance?${new URLSearchParams({ sourceLat: x.lat, sourceLon: x.lon, destLat: y.lat, destLon: y.lon })}`)
-      setRoute({ source: x, destination: y, ...data.data })
-      if (signedIn) api('/api/fares', token, { method: 'POST', body: json({ userId: user.id, source: origin, destination, distance: data.data.distance, sourceCoordinates: { lat: x.lat, lon: x.lon }, destinationCoordinates: { lat: y.lat, lon: y.lon } }) }).catch(() => {})
-    } catch (ex) { setError(err(ex)) }
-  }
+
+  useEffect(() => { api('/api/fares/rate').then((data) => setRate(data.data)).catch(() => setRate(null)) }, [])
+  const loadHistory = useCallback(async () => {
+    if (!signedIn) { setHistory([]); return }
+    setHistoryState('loading')
+    try { const data = await api('/api/fares/history?limit=20', token); setHistory(data.data || []); setHistoryState('idle') }
+    catch (e) { setHistoryState(err(e)) }
+  }, [signedIn, token])
+  useEffect(() => { loadHistory() }, [loadHistory])
+
+  // Changing either place clears the old result, so a fare is never shown for places that are no longer selected.
+  const pickStart = (place) => { setStart(place); setResult(null) }
+  const pickEnd = (place) => { setEnd(place); setResult(null) }
+  const swap = () => { setStart(end); setEnd(start); setResult(null) }
   const locate = () => {
     if (!navigator.geolocation) return setError(t('Location is not available in this browser.'))
-    navigator.geolocation.getCurrentPosition(({ coords }) => { const place = { display_name: t('Your current location'), lat: coords.latitude, lon: coords.longitude }; setResults([place]) }, () => setError(t('Location permission was denied. Search for a place instead.')))
+    navigator.geolocation.getCurrentPosition(({ coords }) => pickStart({ name: 'Your current location', lat: coords.latitude, lon: coords.longitude, kind: 'location' }), () => setError(t('Location permission was denied. Search for a place instead.')))
+  }
+  const calculate = async (e) => {
+    e.preventDefault(); setError('')
+    if (!start) return setError(t('Choose a starting point from the suggestions.'))
+    if (!end) return setError(t('Choose a destination from the suggestions.'))
+    setCalculating(true)
+    try {
+      const data = await api('/api/fares/calculate', token, { method: 'POST', body: json({ source: start.name, destination: end.name, sourceCoordinates: { lat: start.lat, lon: start.lon }, destinationCoordinates: { lat: end.lat, lon: end.lon } }) })
+      setResult(data.data)
+      if (signedIn) loadHistory()
+    } catch (ex) { setError(err(ex)) }
+    finally { setCalculating(false) }
+  }
+  const showSaved = (item) => {
+    const point = (name, c) => c ? { name, lat: c.lat, lon: c.lon, kind: 'history' } : null
+    setStart(point(item.source, item.sourceCoordinates)); setEnd(point(item.destination, item.destinationCoordinates))
+    setResult({ fare: item, path: [], saved: false, fromHistory: true }); setError('')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
   const busInfo = async (id) => {
     if (!signedIn) return openAuth()
@@ -238,9 +199,10 @@ export function MapPage({ token, user, signedIn, openAuth, notify }) {
   }
   const logRouteTrip = async () => {
     if (!signedIn) return openAuth()
-    if (!route || !tripBusId.trim()) return setError(t('Enter the bus ID before logging this route as a trip.'))
+    if (!result || !tripBusId.trim()) return setError(t('Enter the bus ID before logging this route as a trip.'))
+    const fare = result.fare
     try {
-      await api('/trip/add', token, { method: 'POST', body: json({ busId: tripBusId.trim(), busName: 'Dhaka commute', distance: route.distance, fare: route.fare, source: origin, destination }) })
+      await api('/trip/add', token, { method: 'POST', body: json({ busId: tripBusId.trim(), busName: 'Dhaka commute', distance: fare.distance, fare: fare.fare, source: fare.source, destination: fare.destination }) })
       notify(t('Trip logged. Your journey now appears in trip history.'))
     } catch (ex) { setError(err(ex)) }
   }
@@ -255,7 +217,58 @@ export function MapPage({ token, user, signedIn, openAuth, notify }) {
       catch (ex) { setError(err(ex)) }
     }, () => setError(t('Location permission was denied; no alert was sent.')))
   }
-  return <section className="extra-page"><Heading icon={MapPin} eyebrow={t('PLACES, STOPS & DISTANCE')} title={t('Explore the map')} subtitle={t('Search Dhaka places, estimate route distance and fare, or check a known active bus ID.')} /><Feedback error={error} /><div className="map-grid"><article className="extra-panel map-search-panel"><div className="extra-panel-title"><div><small>{t('FIND A PLACE')}</small><h2>{t('Search the map')}</h2></div><button className="extra-icon-button" onClick={locate} title={t('Use my location')}><Navigation size={15} /></button></div><form className="map-form" onSubmit={search}><input required value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t('Search a place in Dhaka')} /><button className="extra-button">{t('Search')} <ArrowRight size={14} /></button></form>{results.map((place, i) => <button className="place-result" key={place.place_id || i} onClick={() => setQuery(place.display_name)}><MapPin size={16} /><span><b>{t(place.display_name?.split(',')[0])}</b><small>{t(place.display_name)}</small></span><a href={`https://www.openstreetmap.org/?mlat=${place.lat}&mlon=${place.lon}#map=16/${place.lat}/${place.lon}`} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()}>{t('Map')} <ChevronRight size={13} /></a></button>)}<div className="map-embed"><iframe title={t('OpenStreetMap view of Dhaka')} src="https://www.openstreetmap.org/export/embed.html?bbox=90.30%2C23.65%2C90.48%2C23.87&layer=mapnik&marker=23.78%2C90.38" loading="lazy" /></div><small className="map-attribution">{t('Map data © OpenStreetMap contributors')}</small></article><div className="map-side"><article className="extra-panel"><div className="extra-panel-title"><div><small>{t('ROUTE PLANNER')}</small><h2>{t('Distance & estimated fare')}</h2></div></div><form className="map-form map-form-stacked" onSubmit={routeSearch}><input required value={origin} onChange={(e) => setOrigin(e.target.value)} placeholder={t('From (e.g. Uttara)')} /><input required value={destination} onChange={(e) => setDestination(e.target.value)} placeholder={t('To (e.g. Motijheel)')} /><button className="extra-button">{t('Estimate route')} <ArrowRight size={14} /></button></form>{route && <div className="route-estimate"><b>{t('{distance} km', { distance: formatNumber(route.distance, { maximumFractionDigits: 2 }) })}</b><span>{t('Estimated fare')} ৳{formatNumber(Math.round(route.fare || 0))}</span><small>{t('Based on the backend’s ৳30/km estimate. Actual fares may differ.')}</small>{signedIn && <><input className="route-bus-id" value={tripBusId} onChange={(e) => setTripBusId(e.target.value)} placeholder={t('Bus ID (required to log trip)')} /><button className="extra-button" onClick={logRouteTrip}>{t('Log this trip')}</button></>}</div>}</article><article className="extra-panel"><div className="extra-panel-title"><div><small>{t('ACTIVE BUS LOOKUP')}</small><h2>{t('Check passenger count')}</h2></div></div><p className="extra-help">{t('Enter a known individual bus ID. This API reports occupancy only; it does not provide GPS tracking.')}</p><form className="map-form map-form-stacked" onSubmit={(e) => { e.preventDefault(); busInfo(busyId) }}><input required value={busyId} onChange={(e) => setBusyId(e.target.value)} placeholder={t('Individual bus ID')} /><button className="extra-button secondary">{t('Look up bus')}</button></form>{signedIn && <div className="map-capacity-actions"><button className="extra-button secondary" onClick={() => capacityAction(busyId, 'board')}>{t('Board bus')}</button><button className="extra-button secondary" onClick={() => capacityAction(busyId, 'end-trip')}>{t('End trip')}</button></div>}</article><article className="extra-panel sos-panel"><div><small>{t('NEED URGENT HELP?')}</small><h2>{t('Emergency alert')}</h2><p>{t('This API notifies all other SmartCommute users and shares your current coordinates.')}</p></div><div className="map-capacity-actions"><button className="extra-button sos-button" onClick={() => sendSOS('trigger','Emergency')}>{t('SOS')}</button><button className="extra-button secondary" onClick={() => sendSOS('ambulance','Ambulance')}>{t('Ambulance')}</button><button className="extra-button secondary" onClick={() => sendSOS('police','Police')}>{t('Police')}</button><button className="extra-button secondary" onClick={() => sendSOS('fire','Fire')}>{t('Fire')}</button></div></article></div></div></section>
+
+  const fare = result?.fare
+  const money = (value) => `৳${formatNumber(value, { maximumFractionDigits: 2 })}`
+  return <section className="extra-page fare-page"><Heading icon={Calculator} eyebrow={t('PLACES, DISTANCE & FARE')} title={t('Map & fare calculator')} subtitle={t('Find out how far it is between two places in Dhaka and about how much the bus fare will be.')} /><Feedback error={error} /><div className="map-grid">
+    <div className="map-main">
+      <article className="extra-panel fare-calc">
+        <div className="extra-panel-title"><div><small>{t('FARE CALCULATOR')}</small><h2>{t('Where are you going?')}</h2></div>{rate?.configured && <span className="fare-rate-chip">{t('Rate: {rate} per km', { rate: money(rate.farePerKm) })}</span>}</div>
+        <ol className="fare-steps">
+          <li className={start ? 'done' : ''}>{t('Type your starting point and pick it from the list.')}</li>
+          <li className={end ? 'done' : ''}>{t('Do the same for your destination.')}</li>
+          <li className={fare ? 'done' : ''}>{t('Press “Calculate distance & fare”.')}</li>
+        </ol>
+        <form className="fare-form" onSubmit={calculate} noValidate>
+          <LocationField id="fare-from" label={t('From (starting point)')} placeholder={t('Type a place, e.g. Mirpur 10')} place={start} onSelect={pickStart} onLocate={locate} />
+          <button type="button" className="fare-swap" onClick={swap} disabled={!start || !end} title={t('Swap places')} aria-label={t('Swap places')}><ArrowUpDown size={14} /></button>
+          <LocationField id="fare-to" label={t('To (destination)')} placeholder={t('Type a place, e.g. Motijheel')} place={end} onSelect={pickEnd} />
+          <button className="extra-button fare-submit" disabled={calculating || rate?.configured === false}>{calculating ? <><i className="location-spinner light" /> {t('Calculating…')}</> : <>{t('Calculate distance & fare')} <ArrowRight size={14} /></>}</button>
+          {rate?.configured === false && <small className="location-problem">{t('Fare calculation is unavailable: the fare rate is not configured on the server.')}</small>}
+        </form>
+        {fare && <div className="fare-result" aria-live="polite">
+          <div className="fare-route"><b>{t(fare.source)}</b><ArrowRight size={13} /><b>{t(fare.destination)}</b></div>
+          <div className="fare-stats">
+            <div><small>{fare.distanceEstimated ? t('DISTANCE (APPROX.)') : t('DISTANCE BY ROAD')}</small><strong>{t('{distance} km', { distance: formatNumber(fare.distance, { maximumFractionDigits: 2 }) })}</strong></div>
+            <div><small>{t('RATE PER KM')}</small><strong>{fare.farePerKm != null ? money(fare.farePerKm) : '—'}</strong></div>
+            <div className="fare-total"><small>{t('ESTIMATED FARE')}</small><strong>{money(fare.fare)}</strong></div>
+          </div>
+          {fare.farePerKm != null && <p className="fare-explain">{t('How it is worked out: {distance} km × {rate} per km = {exact}, rounded up to {fare}.', { distance: formatNumber(fare.distance, { maximumFractionDigits: 2 }), rate: money(fare.farePerKm), exact: money(fare.distance * fare.farePerKm), fare: money(fare.fare) })}</p>}
+          {result.duration > 0 && <small>{t('Travel time: about {minutes} minutes by road, without traffic.', { minutes: Math.round(result.duration) })}</small>}
+          {fare.distanceEstimated && <small className="fare-warning">{t('We could not get the road route right now, so this distance is only an approximate guess. Try again later for the exact road distance.')}</small>}
+          <small>{t('This is an estimate. The fare you pay on the bus may be different.')}</small>
+          {!result.fromHistory && <small className="fare-saved">{signedIn ? (result.saved ? t('Saved to your fare history.') : t('Already saved to your fare history.')) : t('Sign in to keep a history of your fare calculations.')}</small>}
+          {signedIn && <div className="fare-log"><input className="route-bus-id" value={tripBusId} onChange={(e) => setTripBusId(e.target.value)} placeholder={t('Bus ID (required to log trip)')} /><button type="button" className="extra-button secondary" onClick={logRouteTrip}>{t('Log this trip')}</button></div>}
+        </div>}
+      </article>
+      <article className="extra-panel fare-map-panel"><React.Suspense fallback={<div className="fare-map"><Loading label="Loading map…" /></div>}><FareMap start={start} end={end} path={result?.path || []} /></React.Suspense><small className="map-attribution">{t('Map data © OpenStreetMap contributors · Routes by OSRM')}</small></article>
+    </div>
+    <div className="map-side">
+      <article className="extra-panel">
+        <div className="extra-panel-title"><div><small>{t('SAVED CALCULATIONS')}</small><h2>{t('Your past calculations')}</h2></div>{signedIn && <button className="extra-icon-button" onClick={loadHistory} title={t('Refresh')} aria-label={t('Refresh')}><RefreshCw size={14} /></button>}</div>
+        {!signedIn ? <p className="extra-empty-copy">{t('Sign in to see the fares you have calculated.')} <button className="link-button" onClick={openAuth}>{t('Sign in')}</button></p>
+          : historyState === 'loading' && !history.length ? <Loading />
+          : historyState !== 'idle' && historyState !== 'loading' ? <div className="extra-feedback error">{historyState}</div>
+          : !history.length ? <p className="extra-empty-copy">{t('No saved calculations yet. Calculate a fare and it will appear here.')}</p>
+          : <div className="fare-history"><p className="extra-help">{t('Tap a row to see it on the map again.')}</p>{history.map((item) => <button key={item._id} className="fare-history-row" onClick={() => showSaved(item)} title={t('Show on the map')}>
+              <span><b>{t(item.source)} → {t(item.destination)}</b><small>{formatDateTime(item.createdAt)} · {t('{distance} km', { distance: formatNumber(item.distance, { maximumFractionDigits: 2 }) })}{item.farePerKm != null ? ` · ${t('{rate} per km', { rate: money(item.farePerKm) })}` : ''}{item.distanceEstimated ? ` · ${t('approximate')}` : ''}</small></span>
+              <strong>{money(item.fare)}</strong>
+            </button>)}</div>}
+      </article>
+      <article className="extra-panel"><div className="extra-panel-title"><div><small>{t('ACTIVE BUS LOOKUP')}</small><h2>{t('Check passenger count')}</h2></div></div><p className="extra-help">{t('Enter the bus ID (for example DBR-128-01) to see how many seats are taken. This does not show where the bus is.')}</p><form className="map-form map-form-stacked" onSubmit={(e) => { e.preventDefault(); busInfo(busyId) }}><input required value={busyId} onChange={(e) => setBusyId(e.target.value)} placeholder={t('Individual bus ID')} /><button className="extra-button secondary">{t('Look up bus')}</button></form>{signedIn && <div className="map-capacity-actions"><button className="extra-button secondary" onClick={() => capacityAction(busyId, 'board')}>{t('Board bus')}</button><button className="extra-button secondary" onClick={() => capacityAction(busyId, 'end-trip')}>{t('End trip')}</button></div>}</article>
+      <article className="extra-panel sos-panel"><div><small>{t('NEED URGENT HELP?')}</small><h2>{t('Emergency alert')}</h2><p>{t('Sends an alert with your current location to other SmartCommute users nearby. Use it only in a real emergency.')}</p></div><div className="map-capacity-actions"><button className="extra-button sos-button" onClick={() => sendSOS('trigger','Emergency')}>{t('SOS')}</button><button className="extra-button secondary" onClick={() => sendSOS('ambulance','Ambulance')}>{t('Ambulance')}</button><button className="extra-button secondary" onClick={() => sendSOS('police','Police')}>{t('Police')}</button><button className="extra-button secondary" onClick={() => sendSOS('fire','Fire')}>{t('Fire')}</button></div></article>
+    </div>
+  </div></section>
 }
 
 export function VerificationPage({ token, user, signedIn, openAuth, notify }) {

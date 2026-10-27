@@ -42,7 +42,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.HasIndex(x => x.Email).IsUnique();
             e.HasIndex(x => x.FriendCode).IsUnique();
-            e.ToTable(t => t.HasCheckConstraint("ck_users_role", "role IN ('commuter', 'driver', 'admin')"));
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_users_role", "role IN ('commuter', 'driver', 'admin')");
+                t.HasCheckConstraint("ck_users_friend_code_format", "friend_code ~ '^[A-Z0-9]{5}$'");
+            });
         });
 
         b.Entity<UserSession>(e =>
@@ -56,13 +60,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(x => x.FromUser).WithMany().HasForeignKey(x => x.FromUserId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.ToUser).WithMany().HasForeignKey(x => x.ToUserId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.ToUserId, x.Status });
+            e.HasIndex(x => new { x.FromUserId, x.Status });
+            // At most one pending request per pair in either direction is enforced by the expression index
+            // ix_friend_requests_one_pending_per_pair, created in the AddFriendRequestFlow migration.
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_friend_requests_not_self", "from_user_id <> to_user_id");
+                t.HasCheckConstraint("ck_friend_requests_status", "status IN ('pending', 'accepted', 'rejected')");
+            });
         });
 
         b.Entity<Friendship>(e =>
         {
-            e.HasKey(x => new { x.UserId, x.FriendId });
-            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
-            e.HasOne(x => x.Friend).WithMany().HasForeignKey(x => x.FriendId).OnDelete(DeleteBehavior.Cascade);
+            e.HasKey(x => new { x.User1Id, x.User2Id });
+            e.HasOne(x => x.User1).WithMany().HasForeignKey(x => x.User1Id).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.User2).WithMany().HasForeignKey(x => x.User2Id).OnDelete(DeleteBehavior.Cascade);
+            e.ToTable(t => t.HasCheckConstraint("ck_friendships_ordered_pair", "user1id < user2id"));
         });
 
         b.Entity<Bus>(e =>
@@ -95,6 +108,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(x => x.UserId).IsUnique();
             e.HasOne(x => x.User).WithOne(u => u.Wallet).HasForeignKey<Wallet>(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
             e.Property(x => x.Version).IsRowVersion();
+            // The database itself refuses a negative balance, whatever code path tries to write one.
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_wallets_balance_not_negative", "balance >= 0");
+                t.HasCheckConstraint("ck_wallets_gems_not_negative", "gems >= 0");
+            });
         });
 
         b.Entity<WalletTransaction>(e =>
@@ -120,18 +139,38 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.Property(x => x.Version).IsRowVersion();
         });
 
-        b.Entity<FareRecord>(e => e.HasIndex(x => new { x.Source, x.Destination }));
+        b.Entity<FareRecord>(e =>
+        {
+            e.HasIndex(x => new { x.Source, x.Destination });
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+        });
 
         b.Entity<RidePost>(e =>
         {
             e.HasMany(x => x.Requests).WithOne(x => x.RidePost).HasForeignKey(x => x.RidePostId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.Status, x.CreatedAt });
+            // The open-rides list: only open, undeleted posts, newest first.
+            e.HasIndex(x => x.CreatedAt).HasFilter("status = 'active' AND deleted_at IS NULL").HasDatabaseName("ix_ride_posts_open");
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_ride_posts_status", "status IN ('active', 'completed')");
+                t.HasCheckConstraint("ck_ride_posts_gender_preference", "gender_preference IN ('Any', 'Male', 'Female')");
+                t.HasCheckConstraint("ck_ride_posts_max_participants", "max_participants BETWEEN 2 AND 20");
+                t.HasCheckConstraint("ck_ride_posts_places_not_blank", @"source ~ '\S' AND destination ~ '\S'");
+            });
         });
 
         b.Entity<RideRequest>(e =>
         {
             e.HasOne(x => x.Requester).WithMany().HasForeignKey(x => x.RequesterId).OnDelete(DeleteBehavior.Cascade);
-            e.HasIndex(x => new { x.RidePostId, x.RequesterId });
+            // One live (pending or accepted) request per rider per ride. A rejected rider may ask again, which adds a
+            // new row, so rejected rows are left out of the uniqueness.
+            e.HasIndex(x => new { x.RidePostId, x.RequesterId }).IsUnique().HasFilter("status <> 'rejected'")
+                .HasDatabaseName("ix_ride_requests_one_live_per_rider");
+            e.HasIndex(x => new { x.RequesterId, x.CreatedAt });
+            e.ToTable(t => t.HasCheckConstraint("ck_ride_requests_status", "status IN ('pending', 'accepted', 'rejected')"));
         });
 
         b.Entity<FavoriteBus>(e => e.HasIndex(x => new { x.UserId, x.BusId }).IsUnique());
@@ -158,12 +197,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(x => x.User1).WithMany().HasForeignKey(x => x.User1Id).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.User2).WithMany().HasForeignKey(x => x.User2Id).OnDelete(DeleteBehavior.Cascade);
             e.HasMany(x => x.Messages).WithOne(x => x.Chat).HasForeignKey(x => x.ChatId).OnDelete(DeleteBehavior.Cascade);
+            e.ToTable(t => t.HasCheckConstraint("ck_chats_ordered_pair", "user1id < user2id"));
         });
 
         b.Entity<ChatMessage>(e =>
         {
             e.HasOne(x => x.Sender).WithMany().HasForeignKey(x => x.SenderId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.ChatId, x.CreatedAt });
+            // Unread counts only look at unread rows, so they stay fast however long a conversation gets.
+            e.HasIndex(x => new { x.ChatId, x.SenderId }).HasFilter("read = false").HasDatabaseName("ix_chat_messages_unread");
+            e.ToTable(t => t.HasCheckConstraint("ck_chat_messages_text_not_blank", @"text ~ '\S'"));
         });
 
         b.Entity<Verification>(e => e.HasIndex(x => new { x.UserId, x.CreatedAt }));

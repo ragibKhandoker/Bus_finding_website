@@ -20,7 +20,7 @@ public class HomeController(AppDbContext db, ILogger<HomeController> logger) : C
                 model.Users = await db.Users.CountAsync();
                 model.Buses = await db.Buses.CountAsync();
                 model.Stops = await db.BusStops.Select(s => s.Name).Distinct().CountAsync();
-                model.ActiveRides = await db.RidePosts.CountAsync(r => r.Status == Models.RideStatus.Active);
+                model.ActiveRides = await db.RidePosts.CountAsync(r => r.Status == Models.RideStatus.Active && r.DeletedAt == null);
             }
         }
         catch (Exception ex)

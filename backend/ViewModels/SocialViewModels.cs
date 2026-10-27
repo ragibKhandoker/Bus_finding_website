@@ -54,8 +54,13 @@ public class ChatMessageViewModel : EntityViewModel
 {
     public string ChatId { get; init; } = "";
     public string SenderId { get; init; } = "";
+    // Empty when the sender was not loaded with the message.
+    public string SenderName { get; init; } = "";
     public string Text { get; init; } = "";
+    // The same as Text; F10 clients read "content".
+    public string Content => Text;
     public bool Read { get; init; }
+    public DateTime? ReadAt { get; init; }
     public DateTime CreatedAt { get; init; }
 
     public static ChatMessageViewModel From(ChatMessage m) => new()
@@ -63,35 +68,47 @@ public class ChatMessageViewModel : EntityViewModel
         Id = m.Id.ToString(),
         ChatId = m.ChatId.ToString(),
         SenderId = m.SenderId.ToString(),
+        SenderName = m.Sender?.Name ?? "",
         Text = m.Text,
         Read = m.Read,
+        ReadAt = m.ReadAt,
         CreatedAt = m.CreatedAt,
     };
 }
 
+// A conversation as GET /api/chat/{otherUserId} returns it. Messages holds the latest page, oldest first.
 public class ChatViewModel : EntityViewModel
 {
-    public List<PersonViewModel> Participants { get; init; } = [];
+    public List<FriendProfileViewModel> Participants { get; init; } = [];
+    public FriendProfileViewModel OtherParticipant { get; init; } = new();
     public List<ChatMessageViewModel> Messages { get; init; } = [];
+    public bool HasMoreMessages { get; init; }
+    public int UnreadCount { get; init; }
     public DateTime? LastMessageAt { get; init; }
     public DateTime CreatedAt { get; init; }
 }
 
 public class ChatSummaryViewModel : EntityViewModel
 {
-    public PersonViewModel OtherParticipant { get; init; } = new();
+    public FriendProfileViewModel OtherParticipant { get; init; } = new();
     public ChatMessageViewModel? LastMessage { get; init; }
     public int UnreadCount { get; init; }
     public DateTime? LastMessageAt { get; init; }
+    public DateTime CreatedAt { get; init; }
 }
 
+// "content" is the F10 field name; "text" is still accepted from older clients. The controller trims the
+// message and refuses it when nothing is left.
 public class SendMessageRequest
 {
-    [Required]
+    [Required(ErrorMessage = "Choose a conversation first.")]
     public Guid? ChatId { get; set; }
 
-    [Required, StringLength(2000, MinimumLength = 1)]
-    public string Text { get; set; } = "";
+    [StringLength(ChatMessage.MaxLength, ErrorMessage = "A message can be at most 2000 characters.")]
+    public string? Content { get; set; }
+
+    [StringLength(ChatMessage.MaxLength, ErrorMessage = "A message can be at most 2000 characters.")]
+    public string? Text { get; set; }
 }
 
 public class VerificationViewModel : EntityViewModel

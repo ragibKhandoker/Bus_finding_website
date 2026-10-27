@@ -675,3 +675,5 @@ input{line-height:1.6}
   .board-stops>*{flex:1 1 100%}
 }
 @media(prefers-reduced-motion:reduce){.trip-live-dot{animation:none}}
+.route-hero-head .route-hero-favorite{margin-left:auto;flex:none}
+@media(max-width:700px){.route-hero-head{flex-wrap:wrap}.route-hero-head .route-hero-favorite{margin-left:0}}

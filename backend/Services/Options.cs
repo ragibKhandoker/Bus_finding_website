@@ -20,6 +20,12 @@ public class RewardOptions
     public decimal GpayStartingBalance { get; set; } = 5000;
 }
 
+public class RideShareOptions
+{
+    // Most people one ride post can be for, counting the host. The database refuses anything above 20.
+    public int MaxParticipants { get; set; } = 10;
+}
+
 public class GeoOptions
 {
     public string NominatimBaseUrl { get; set; } = "https://nominatim.openstreetmap.org";

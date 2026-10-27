@@ -162,7 +162,8 @@ public class SendFriendRequestRequest
 
 public class AddFriendByCodeRequest
 {
-    [Required, StringLength(5, MinimumLength = 5)]
+    [Required(ErrorMessage = "Please enter a friend code.")]
+    [RegularExpression(@"^\s*[A-Za-z0-9]{5}\s*$", ErrorMessage = "A friend code is exactly 5 letters or digits.")]
     public string FriendCode { get; set; } = "";
 }
 
@@ -182,4 +183,74 @@ public class FriendRequestViewModel : EntityViewModel
         Status = r.Status,
         CreatedAt = r.CreatedAt,
     };
+}
+
+// What anyone who knows a person's friend code may see about them: no email, phone or other private details.
+public class FriendProfileViewModel : EntityViewModel
+{
+    [System.Text.Json.Serialization.JsonPropertyName("id")]
+    public string IdAlias => Id;
+    public string Name { get; init; } = "";
+    public string FriendCode { get; init; } = "";
+    public string Bio { get; init; } = "";
+    // True for an admin-verified student.
+    public bool Verified { get; init; }
+    public DateTime MemberSince { get; init; }
+
+    public static FriendProfileViewModel From(User u) => new()
+    {
+        Id = u.Id.ToString(),
+        Name = u.Name,
+        FriendCode = u.FriendCode,
+        Bio = u.Bio ?? "",
+        Verified = u.Pass,
+        MemberSince = u.CreatedAt,
+    };
+}
+
+public class FriendViewModel : FriendProfileViewModel
+{
+    public DateTime FriendsSince { get; init; }
+
+    public static FriendViewModel From(User u, DateTime friendsSince)
+    {
+        var profile = FriendProfileViewModel.From(u);
+        return new()
+        {
+            Id = profile.Id,
+            Name = profile.Name,
+            FriendCode = profile.FriendCode,
+            Bio = profile.Bio,
+            Verified = profile.Verified,
+            MemberSince = profile.MemberSince,
+            FriendsSince = friendsSince,
+        };
+    }
+}
+
+// A friend request as the /friends endpoints return it, with both people's public profiles.
+public class FriendRequestDetailsViewModel : EntityViewModel
+{
+    public FriendProfileViewModel Sender { get; init; } = new();
+    public FriendProfileViewModel Receiver { get; init; } = new();
+    public string Status { get; init; } = "";
+    public DateTime CreatedAt { get; init; }
+    public DateTime UpdatedAt { get; init; }
+
+    public static FriendRequestDetailsViewModel From(FriendRequest r) => new()
+    {
+        Id = r.Id.ToString(),
+        Sender = FriendProfileViewModel.From(r.FromUser!),
+        Receiver = FriendProfileViewModel.From(r.ToUser!),
+        Status = r.Status,
+        CreatedAt = r.CreatedAt,
+        UpdatedAt = r.UpdatedAt,
+    };
+}
+
+public class SendFriendRequestByCodeRequest
+{
+    [Required(ErrorMessage = "Please enter a friend code.")]
+    [RegularExpression(@"^\s*[A-Za-z0-9]{5}\s*$", ErrorMessage = "A friend code is exactly 5 letters or digits.")]
+    public string FriendCode { get; set; } = "";
 }

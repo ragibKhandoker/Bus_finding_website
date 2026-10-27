@@ -2,3 +2,203 @@
 .ride-owner-actions{border-top:1px solid var(--bd-edf0ed);padding-top:9px;margin-top:10px}.ride-request-list{display:grid;gap:7px;margin-top:8px}.ride-request-row{display:flex;align-items:center;gap:6px;border-top:1px solid var(--bd-eef1ee);padding-top:8px}.ride-request-row>span{display:grid;gap:3px;flex:1}.ride-request-row b{font-size:9px}.ride-request-row small,.ride-request-error{color:var(--fg-87938c);font-size:8px}.ride-request-error{display:block;padding:5px 0}.sos-panel{border-color:var(--bd-f0d9d4);background:var(--bg-fffaf9)}.sos-panel small{font-size:8px;color:var(--fg-a6584b);letter-spacing:1px;font-weight:700}.sos-panel h2{font:700 14px "Manrope","Bangla Digits","Hind Siliguri",sans-serif;margin:5px 0}.sos-panel p{font-size:9px;color:var(--fg-8e817d);line-height:1.6;margin:0}.sos-button{background:var(--bg-bb463d)}.sos-button:hover{background:var(--bg-9f322b)}.route-bus-id{width:100%;border:1px solid var(--bd-e4ebe5);border-radius:6px;padding:9px;font-size:9px}.route-estimate .extra-button{justify-self:start}.bus-result{flex-wrap:wrap}.bus-reviews{flex:1 0 calc(100% - 55px);margin-left:55px;border-top:1px solid var(--bd-edf0ed);padding-top:9px}.review-toggle{display:flex;align-items:center;gap:4px;background:none;border:0;padding:0;color:var(--fg-37805c);font-size:9px;font-weight:700}.review-content{padding-top:8px}.review-compose{display:flex;gap:7px;margin:0 0 7px}.review-compose input{flex:1;min-width:0;border:1px solid var(--bd-e5ece6);border-radius:6px;padding:8px;font-size:9px}.review-compose .extra-button{font-size:8px;padding:8px}.review-row{display:flex;align-items:flex-start;gap:8px;padding:9px 0;border-top:1px solid var(--bd-eef1ee)}.review-row>div:nth-child(2){flex:1;min-width:0}.review-row b{font-size:9px}.review-row p{font-size:9px;line-height:1.5;color:var(--fg-6e7e74);margin:3px 0}.review-row small{font-size:8px;color:var(--fg-98a29c)}.review-reactions{display:flex;gap:4px}.review-reactions button{background:var(--bg-eff5ef);border:0;border-radius:5px;color:var(--fg-5c7766);padding:5px;font-size:8px}
 @media(max-width:920px){.extra-page{width:calc(100% - 48px)}.more-nav-menu{right:0}.nav-links{gap:15px;margin-right:22px}.nav-link{font-size:12px}}
 @media(max-width:700px){.extra-page{width:calc(100% - 32px);padding:30px 0 45px;min-height:calc(100vh - 141px)}.extra-heading{gap:11px;margin-bottom:20px}.extra-heading>span{width:39px;height:39px}.extra-heading h1{font-size:25px}.extra-heading p{font-size:10px}.extra-grid,.offer-grid,.gpay-layout,.map-grid,.verify-layout{grid-template-columns:1fr}.extra-panel{padding:13px}.friend-code-card>strong{font-size:23px}.person-result,.person-row{gap:7px}.person-row .extra-button{padding:8px;font-size:9px}.chat-layout{grid-template-columns:1fr;min-height:unset}.chat-sidebar{border-right:0;border-bottom:1px solid var(--bd-edf0ed)}.chat-contact{padding:8px}.chat-contact small{max-width:220px}.chat-main{min-height:410px}.chat-messages{min-height:275px;max-height:380px}.notification-panel{padding:12px}.notification-row{gap:7px;padding:11px 0}.notification-copy b{font-size:10px}.notification-actions .extra-button{font-size:8px;padding:8px}.offer-card{min-height:190px}.gpay-card{min-height:200px}.map-embed{height:205px}.map-form{gap:6px}.map-form input,.friend-code-card input{font-size:10px;padding:9px}.verification-row{flex-wrap:wrap}.verification-row>div{flex-basis:100%}.sign-in-panel{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.sign-in-panel>div{flex:1}.sign-in-panel p{font-size:9px;margin:4px 0}.more-nav-wrap{height:auto;display:block}.more-nav-wrap>.nav-link{height:42px;width:100%}.more-nav-wrap>.nav-link.active:after{bottom:5px;top:5px;left:-16px;right:auto;width:3px;height:auto}.more-nav-menu{position:static;border:0;box-shadow:none;background:var(--bg-f1f6f1);margin:0 0 6px 5px;min-width:unset}.topbar .nav-links{max-height:calc(100vh - 70px);overflow:auto}}
+/* ---- Map & fare calculator ---- */
+.map-main{display:grid;gap:13px;min-width:0}.fare-calc{position:relative}.fare-rate-chip{font-size:10px;font-weight:700;color:var(--fg-19865e);background:var(--bg-e4f3e8);border-radius:20px;padding:5px 9px;white-space:nowrap}
+.fare-form{display:grid;gap:6px}.fare-swap{justify-self:end;display:grid;place-items:center;width:28px;height:28px;margin:-4px 6px -8px 0;border-radius:50%;background:var(--bg-ffffff);color:var(--fg-74847a);border:1px solid var(--bd-e6ece7);position:relative;z-index:2}.fare-swap:hover:not(:disabled){background:var(--bg-f0f5f1)}.fare-swap:disabled{opacity:.45;cursor:not-allowed}.fare-submit{margin-top:6px;justify-self:start}
+.location-field{position:relative;display:grid;gap:5px}.location-field>label{font-size:9px;font-weight:700;letter-spacing:1.2px;color:var(--fg-668476);text-transform:uppercase}
+.location-input{display:flex;align-items:center;gap:7px;border:1px solid var(--bd-e4ebe5);border-radius:7px;padding:0 6px 0 10px;color:var(--fg-5e816a);background:var(--bg-ffffff)}.location-input:focus-within{border-color:var(--bd-20875f)}.location-input.chosen{border-color:var(--bd-a9d3bc);background:var(--bg-edf7ef)}
+.location-input input{flex:1;min-width:0;border:0;outline:0;background:transparent;padding:10px 0;font-size:11px;color:var(--fg-34483b)}
+.location-locate{display:grid;place-items:center;width:28px;height:28px;border-radius:6px;border:0;background:transparent;color:var(--fg-5e816a)}.location-locate:hover{background:var(--bg-f0f5f1)}
+.location-coords{font-size:8px;color:var(--fg-28734f)}
+.location-list{position:absolute;top:100%;left:0;right:0;z-index:30;margin-top:4px;max-height:300px;overflow-y:auto;background:var(--bg-ffffff);border:1px solid var(--bd-e7ece8);border-radius:8px;box-shadow:0 10px 26px #13281f26;padding:5px}
+.location-list>button{width:100%;display:flex;align-items:center;gap:8px;text-align:left;border:0;background:transparent;border-radius:6px;padding:8px 7px;color:var(--fg-5e816a)}.location-list>button:hover,.location-list>button:focus{background:var(--bg-f0f5f1);outline:0}
+.location-list>button span{display:grid;gap:2px;min-width:0;flex:1}.location-list>button b{font-size:10px;color:var(--fg-3d5144)}.location-list>button small{font-size:8px;color:var(--fg-8a958e);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.location-group{display:block;padding:6px 7px 3px;font-size:8px;font-weight:700;letter-spacing:1.3px;color:var(--fg-909a93)}
+.location-list>.location-search-more{color:var(--fg-19865e);font-size:10px;font-weight:700;border-top:1px solid var(--bd-eef1ee);border-radius:0 0 6px 6px}.location-list>.location-search-more:disabled{opacity:.7;cursor:progress}
+.location-problem{display:block;padding:6px 7px;font-size:9px;color:var(--fg-a95548)}.location-credit{display:block;padding:5px 7px 2px;font-size:8px;color:var(--fg-909a93)}
+.location-spinner{width:12px;height:12px;flex:none;border-radius:50%;border:2px solid var(--bd-dce8df);border-top-color:var(--bd-20875f);animation:spin .8s linear infinite;display:inline-block}.location-spinner.light{border-color:var(--bd-ffffff59);border-top-color:var(--bd-ffffff)}
+.fare-result{display:grid;gap:7px;border-top:1px solid var(--bd-edf0ed);padding-top:12px;margin-top:13px}.fare-result>small{font-size:9px;color:var(--fg-909a93);line-height:1.5}
+.fare-route{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--fg-3d5144)}.fare-route svg{color:var(--fg-8a958e)}
+.fare-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.fare-stats>div{display:grid;gap:4px;border:1px solid var(--bd-e7ece8);border-radius:8px;padding:10px;min-width:0}.fare-stats small{font-size:8px;font-weight:700;letter-spacing:1.1px;color:var(--fg-668476)}
+.fare-stats strong{font:750 17px "Manrope","Bangla Digits","Hind Siliguri",sans-serif;color:var(--fg-2f5d43);overflow-wrap:anywhere}.fare-stats .fare-total{background:var(--bg-edf7ef);border-color:var(--bd-d7eadb)}.fare-stats .fare-total strong{color:var(--fg-19865e)}
+.fare-result>.fare-warning{color:var(--fg-8a6418);background:var(--bg-fff7e8);border:1px solid var(--bd-f1e1bd);border-radius:6px;padding:7px 9px}.fare-result>.fare-saved{color:var(--fg-28734f)}
+.fare-log{display:flex;gap:7px;margin-top:3px}.fare-log .route-bus-id{flex:1;min-width:0}
+.fare-map-panel{padding:8px}.fare-map{position:relative;z-index:0;height:380px;border-radius:7px;overflow:hidden;background:var(--bg-edf3ee)}.fare-map-panel .map-attribution{padding:0 4px 2px}
+.fare-history{display:grid}.fare-history-row{display:flex;align-items:center;gap:10px;text-align:left;width:100%;border:0;border-top:1px solid var(--bd-eef1ee);background:transparent;padding:9px 2px}.fare-history-row:hover{background:var(--bg-f0f5f1)}
+.fare-history-row span{display:grid;gap:3px;min-width:0;flex:1}.fare-history-row b{font-size:10px;color:var(--fg-3d5144)}.fare-history-row small{font-size:8px;color:var(--fg-8a958e)}.fare-history-row strong{font:750 13px "Manrope","Bangla Digits","Hind Siliguri",sans-serif;color:var(--fg-19865e);white-space:nowrap}
+.link-button{border:0;background:none;padding:0;color:var(--fg-19865e);font-weight:700;font-size:inherit;text-decoration:underline;cursor:pointer}
+@media(max-width:700px){.fare-map{height:280px}.fare-stats{grid-template-columns:1fr 1fr}.fare-stats .fare-total{grid-column:1/-1}.location-input input{font-size:16px}.fare-submit{justify-self:stretch}.fare-log{flex-direction:column}}
+/* Larger, higher-contrast text on the map & fare page, so first-time users can read every step. */
+.fare-page .extra-heading p{font-size:13px;line-height:1.5;color:var(--fg-566d5e)}.fare-page .extra-panel-title small,.fare-page .location-group{font-size:10.5px;letter-spacing:1.2px}.fare-page .extra-panel-title h2{font-size:18px}
+.fare-steps{margin:0 0 14px;padding:10px 12px 10px 30px;background:var(--bg-f0f5f1);border-radius:8px;display:grid;gap:5px;font-size:12.5px;line-height:1.45;color:var(--fg-34483b)}.fare-steps li::marker{font-weight:700;color:var(--fg-19865e)}.fare-steps li.done{color:var(--fg-28734f)}.fare-steps li.done::after{content:" ✓";font-weight:700}
+.fare-page .location-field>label{font-size:12px;letter-spacing:.3px;text-transform:none;color:var(--fg-34483b)}.fare-page .location-input input{font-size:14px;padding:12px 0}
+.fare-page .location-coords{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:600}.location-hint{font-size:12px;color:var(--fg-a95548)}
+.fare-page .location-list>button b{font-size:13px}.fare-page .location-list>button small{font-size:11px}.fare-page .location-list>.location-search-more{font-size:12.5px}.fare-page .location-problem{font-size:12px}.fare-page .location-credit{font-size:10.5px}
+.fare-page .fare-rate-chip{font-size:12px}.fare-page .fare-submit{font-size:13px;padding:11px 16px}.fare-page .fare-route{font-size:14px}
+.fare-page .fare-stats small{font-size:10.5px}.fare-page .fare-stats strong{font-size:21px}.fare-page .fare-result>small{font-size:12px;color:var(--fg-566d5e)}
+.fare-explain{margin:0;font-size:13px;line-height:1.5;color:var(--fg-34483b);background:var(--bg-f0f5f1);border-radius:6px;padding:8px 10px}
+.fare-page .fare-history-row b{font-size:13px}.fare-page .fare-history-row small{font-size:11px}.fare-page .fare-history-row strong{font-size:15px}
+.fare-page .extra-help,.fare-page .extra-empty-copy,.fare-page .sos-panel p{font-size:12px;line-height:1.55}.fare-page .map-form input,.fare-page .route-bus-id{font-size:13px}.fare-page .extra-button{font-size:12px}.fare-page .map-attribution{font-size:10px}
+@media(max-width:700px){.fare-page .extra-heading p{font-size:12.5px}.fare-page .location-input input{font-size:16px}.fare-page .fare-stats strong{font-size:19px}}
+/* ---- Favourite buses page ---- */
+.fav-count{font-size:12px;color:var(--fg-668476);margin:0 0 10px}
+.fav-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:13px}
+.fav-card{display:grid;gap:12px;align-content:start}
+.fav-card-head{display:flex;align-items:flex-start;gap:11px}.fav-card-head>div{flex:1;min-width:0}
+.fav-card-icon{width:38px;height:38px;border-radius:10px;background:var(--bg-e4f3e8);color:var(--fg-19865e);display:grid;place-items:center;flex:none}
+.fav-card h2{font:700 16px "Manrope","Bangla Digits","Hind Siliguri",sans-serif;margin:0;color:var(--fg-13281f);letter-spacing:-.3px}
+.fav-card-head p{margin:3px 0 0;font-size:12px;color:var(--fg-6f8178)}
+.fav-card .route-badge{font-size:11px;font-weight:700;flex:none}
+.fav-route{display:flex;align-items:center;flex-wrap:wrap;gap:7px;font-size:13px;font-weight:600;color:var(--fg-2a3d33)}.fav-route>svg{color:var(--fg-9aaaa1)}
+.fav-route span{display:inline-flex;align-items:center;gap:6px}.fav-route i{width:8px;height:8px;border-radius:50%}.fav-route i.start{background:var(--bg-19865e)}.fav-route i.end{background:var(--bg-e5533d)}
+.fav-facts{display:flex;flex-wrap:wrap;gap:8px}.fav-facts span{display:grid;gap:2px;padding:8px 11px;border-radius:9px;background:var(--bg-f2f6f3);min-width:76px}
+.fav-facts small{font-size:10.5px;color:var(--fg-6f8178)}.fav-facts b{font-size:14px;color:var(--fg-13281f)}
+.fav-actions{display:flex;gap:8px;flex-wrap:wrap}.fav-actions .extra-button{font-size:12px;padding:9px 13px;width:auto}
+.fav-remove{color:var(--fg-c95f53)}
+.fav-empty{display:grid;justify-items:center;text-align:center;gap:8px;padding:34px 20px}.fav-empty>span{width:46px;height:46px;border-radius:50%;display:grid;place-items:center;background:var(--bg-fdf0ee);color:var(--fg-db786d)}
+.fav-empty b{font-size:16px;color:var(--fg-13281f)}.fav-empty p{margin:0 0 6px;font-size:13px;color:var(--fg-6f8178);max-width:360px;line-height:1.5}.fav-empty .extra-button{width:auto;font-size:12px;padding:10px 15px}
+@media(max-width:700px){.fav-grid{grid-template-columns:1fr}.fav-actions .extra-button{flex:1}}
+/* ---- Friends page ---- */
+.friends-requests{margin-top:13px}.friends-retry{margin:0 0 12px}
+.friend-code-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:8px 0}.friend-code-card .friend-code-row>strong{font:800 28px "Manrope","Bangla Digits","Hind Siliguri",sans-serif;letter-spacing:3px;color:var(--fg-234535)}
+.friend-eyebrow{color:var(--fg-668476);font-size:9px;letter-spacing:1.5px;font-weight:700}
+.friend-search-form{display:grid;gap:6px;margin-top:8px}.friend-search-form>label{font-size:11px;font-weight:600;color:var(--fg-34483b)}.friend-search-form>div{display:flex;gap:8px}
+.friend-search-form input{border:1px solid var(--bd-e4ebe5);border-radius:6px;padding:10px 11px;min-width:0;flex:1;color:var(--fg-34483b);background:var(--bg-ffffff);font:700 13px "DM Sans",sans-serif;letter-spacing:2px;text-transform:uppercase;outline:0}.friend-search-form input:focus{border-color:var(--bd-20875f)}.friend-search-form input[aria-invalid]{border-color:var(--bd-f3d7d2)}
+.friend-hint{font-size:9px;color:var(--fg-87938c)}.friend-hint.error{color:var(--fg-a95548)}
+.friend-not-found{font-size:11px;color:var(--fg-a95548);background:var(--bg-fff0ed);border:1px solid var(--bd-f3d7d2);border-radius:6px;padding:9px 11px;margin:12px 0 0}
+.friend-result{display:grid;gap:10px;margin-top:13px;padding-top:12px;border-top:1px solid var(--bd-eef1ee)}.friend-result-person{display:flex;gap:9px;align-items:flex-start}.friend-result-person>div{display:grid;gap:4px;min-width:0}
+.friend-result-person small{font-size:9px;color:var(--fg-87938c)}.friend-result-person p{font-size:10px;color:var(--fg-718078);line-height:1.5;margin:2px 0 0}
+.friend-result-actions{display:flex;align-items:center;gap:7px;flex-wrap:wrap}.friend-note{flex-basis:100%;font-size:10px;color:var(--fg-718078);margin:0}
+.friend-name{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--fg-3d5044)}.friend-name svg{color:var(--fg-19865e);flex:none}
+.friend-status{display:inline-flex;align-items:center;gap:4px;padding:5px 9px;border-radius:20px;font-size:9px;font-weight:700;white-space:nowrap}.friend-status.pending{background:var(--bg-fff3dc);color:var(--fg-986f25)}.friend-status.accepted{background:var(--bg-e4f4e8);color:var(--fg-247248)}
+.extra-button:focus-visible,.extra-icon-button:focus-visible{outline:2px solid var(--bd-20875f);outline-offset:2px}
+/* Larger, higher-contrast text on the Friends page so every section reads clearly. */
+.friends-page .extra-heading p{font-size:14px;line-height:1.5;color:var(--fg-566d5e)}
+.friends-page .extra-panel{padding:20px}
+.friends-page .extra-panel-title small,.friends-page .friend-code-card>small,.friends-page .friend-eyebrow{font-size:11px;letter-spacing:1.3px}
+.friends-page .extra-panel-title h2{font-size:19px}.friends-page .extra-panel-title h2 span{font-size:12px;padding:4px 9px}
+.friends-page .friend-code-card .friend-code-row>strong{font-size:34px;letter-spacing:4px}
+.friends-page .friend-code-card>p{font-size:13px;line-height:1.55;color:var(--fg-566d5e)}
+.friends-page .friend-search-form>label{font-size:14px}.friends-page .friend-search-form input{font-size:17px;padding:12px 13px}
+.friends-page .friend-hint{font-size:12.5px}.friends-page .friend-not-found{font-size:14px;padding:11px 13px}
+.friends-page .extra-avatar{width:40px;height:40px;font-size:15px}
+.friends-page .friend-name{font-size:15px;color:var(--fg-34483b)}
+.friends-page .person-row{gap:11px;padding:13px 0}.friends-page .person-row small,.friends-page .friend-result-person small{font-size:12.5px;color:var(--fg-718078)}
+.friends-page .friend-result-person p,.friends-page .friend-note{font-size:13.5px;line-height:1.5;color:var(--fg-566d5e)}
+.friends-page .extra-button{font-size:13px;padding:10px 14px}.friends-page .extra-icon-button{width:36px;height:36px}
+.friends-page .friend-status{font-size:12px;padding:6px 11px}
+.friends-page .extra-empty-copy{font-size:13.5px;line-height:1.6;color:var(--fg-718078)}
+.friends-page .extra-feedback{font-size:13px}.friends-page .extra-loading{font-size:13px}
+@media(max-width:700px){.friends-page .extra-heading p{font-size:13px}.friends-page .extra-panel{padding:15px}.friends-page .friend-code-card .friend-code-row>strong{font-size:28px}.friend-search-form input,.friends-page .friend-search-form input{font-size:16px}.friends-page .friend-name{font-size:14px}.friends-page .person-row{flex-wrap:wrap}.friends-page .person-row>div{flex-basis:calc(100% - 51px)}.friends-page .person-row>.extra-button{flex:1}}
+/* Larger, higher-contrast text on the Messages page so conversations read clearly. */
+.chat-page .extra-heading p{font-size:14px;line-height:1.5;color:var(--fg-566d5e)}
+.chat-page .extra-panel-title small{font-size:11px;letter-spacing:1.3px}.chat-page .extra-panel-title h2{font-size:19px}
+.chat-page .extra-icon-button{width:36px;height:36px}.chat-page .extra-avatar{width:40px;height:40px;font-size:15px}
+.chat-page .chat-layout{grid-template-columns:320px minmax(0,1fr);min-height:560px}.chat-page .chat-sidebar{padding:18px}
+.chat-page .start-chat-form{gap:7px;margin-bottom:12px}.chat-page .start-chat-form input{font-size:14px;padding:10px 12px}
+.chat-page .chat-contact{gap:11px;padding:11px 8px}.chat-page .chat-contact b{font-size:15px;color:var(--fg-34483b)}
+.chat-page .chat-contact small{font-size:12.5px;color:var(--fg-718078);max-width:200px}.chat-page .chat-contact>i{width:22px;height:22px;font-size:11px}
+.chat-page .chat-title{height:72px;gap:11px;padding:0 18px}.chat-page .chat-title b{font-size:16px;color:var(--fg-34483b)}.chat-page .chat-title small{font-size:12.5px;color:var(--fg-718078)}
+.chat-page .chat-messages{padding:20px;gap:11px;min-height:380px;max-height:560px}
+.chat-page .message-bubble{font-size:15px;line-height:1.45;padding:11px 14px;gap:6px;max-width:75%;overflow-wrap:anywhere;color:var(--fg-34483b)}.chat-page .message-bubble small{font-size:11px;color:var(--fg-718078)}
+.chat-page .chat-compose{gap:10px;padding:14px}.chat-page .chat-compose input{font-size:15px;padding:12px 13px}.chat-page .chat-compose .extra-button,.chat-page .extra-button{font-size:13px;padding:10px 15px}
+.chat-page .chat-placeholder b{font-size:17px}.chat-page .chat-placeholder span{font-size:13.5px;line-height:1.55;color:var(--fg-718078);max-width:340px}
+.chat-page .extra-empty-copy{font-size:13.5px;line-height:1.6;color:var(--fg-718078)}.chat-page .extra-feedback,.chat-page .extra-loading{font-size:13px}
+@media(max-width:700px){.chat-page .extra-heading p{font-size:13px}.chat-page .chat-layout{grid-template-columns:1fr;min-height:unset}.chat-page .chat-sidebar{padding:14px}.chat-page .chat-contact small{max-width:240px}.chat-page .start-chat-form input,.chat-page .chat-compose input{font-size:16px}.chat-page .message-bubble{font-size:14.5px;max-width:85%}.chat-page .chat-messages{min-height:300px;max-height:420px;padding:14px}}
+/* ---- Readable text on every page under More ----
+   The More pages share the .extra-* building blocks, which were sized at 8–10px. These rules raise them
+   (and each page's own pieces) to sizes that read comfortably; page-specific blocks above may go further. */
+.extra-page .extra-heading small,.extra-page .extra-panel-title small,.extra-page .offer-card>small,.extra-page .gpay-card>small,.extra-page .verify-status>small,.extra-page .sos-panel small{font-size:11px;letter-spacing:1.3px}
+.extra-page .extra-heading p{font-size:14px;line-height:1.5;color:var(--fg-566d5e)}
+.extra-page .extra-panel-title h2{font-size:19px}.extra-page .extra-panel-title h2 span{font-size:12px;padding:4px 9px}
+.extra-page .extra-button{font-size:13px;padding:10px 14px}.extra-page .extra-icon-button{width:36px;height:36px}
+.extra-page .extra-avatar{width:40px;height:40px;font-size:15px}
+.extra-page .person-result b,.extra-page .person-row b{font-size:15px;color:var(--fg-34483b)}.extra-page .person-result small,.extra-page .person-row small{font-size:12.5px;color:var(--fg-718078)}
+.extra-page .extra-empty-copy,.extra-page .extra-help{font-size:13.5px;line-height:1.6;color:var(--fg-718078)}
+.extra-page .extra-feedback,.extra-page .extra-loading{font-size:13px}
+.extra-page .sign-in-panel b{font-size:15px}.extra-page .sign-in-panel p{font-size:13px;line-height:1.5;color:var(--fg-718078)}
+.extra-page .map-form input,.extra-page .pin-row input,.extra-page .gpay-actions input,.extra-page .verify-form input:not([type=file]),.extra-page .route-bus-id{font-size:15px;padding:11px 12px}
+/* Notifications */
+.extra-page .notification-row{gap:13px;padding:16px 4px}.extra-page .notification-dot{width:38px;height:38px;font-size:15px}
+.extra-page .notification-copy b{font-size:15px;color:var(--fg-34483b)}.extra-page .notification-copy p{font-size:13.5px;line-height:1.55;color:var(--fg-566d5e);margin:5px 0}.extra-page .notification-copy small{font-size:12px;color:var(--fg-718078)}
+/* Offers */
+.extra-page .offer-card{min-height:240px;padding:20px}.extra-page .offer-symbol{width:40px;height:40px;font-size:18px}
+.extra-page .offer-card strong{font-size:28px}.extra-page .offer-card p{font-size:13.5px;line-height:1.55;color:var(--fg-566d5e)}
+/* GPay */
+.extra-page .gpay-card>strong{font-size:38px}.extra-page .gpay-card>span{font-size:13px}.extra-page .gpay-notice{font-size:12.5px;line-height:1.55}
+.extra-page .gpay-actions h2,.extra-page .verify-form h2{font-size:18px}.extra-page .gpay-actions>p{font-size:13px;line-height:1.55;color:var(--fg-566d5e)}
+.extra-page .gpay-actions label,.extra-page .verify-form label{font-size:13px;letter-spacing:.2px;color:var(--fg-34483b)}
+/* Verification */
+.extra-page .status-badge{font-size:12.5px;padding:7px 12px}.extra-page .verify-status p{font-size:13.5px;line-height:1.6;color:var(--fg-566d5e)}
+.extra-page .verify-form input[type=file]{font-size:13px}.extra-page .verify-note{font-size:12px}
+.extra-page .verification-row b{font-size:15px}.extra-page .verification-row small{font-size:12.5px;color:var(--fg-718078)}.extra-page .verification-row>a{font-size:13px}
+/* Map (places and SOS) */
+.extra-page .place-result b{font-size:14px}.extra-page .place-result small{font-size:12px}.extra-page .place-result a{font-size:12.5px}
+.extra-page .route-estimate span{font-size:13.5px}.extra-page .route-estimate small{font-size:12px}.extra-page .map-attribution{font-size:11px}
+.extra-page .sos-panel h2{font-size:17px}.extra-page .sos-panel p{font-size:13px;line-height:1.55}
+/* Wallet card */
+.wallet-card-head,.balance-caption,.wallet-card-foot{font-size:12px}.wallet-note>p,.wallet-hint{font-size:13px;line-height:1.55}
+@media(max-width:700px){.extra-page .extra-heading p{font-size:13px}.extra-page .extra-button{font-size:12.5px;padding:9px 12px}.extra-page .map-form input,.extra-page .pin-row input,.extra-page .gpay-actions input,.extra-page .verify-form input:not([type=file]),.extra-page .route-bus-id{font-size:16px}.extra-page .offer-card{min-height:200px}.extra-page .notification-row{gap:9px;padding:13px 0}}
+/* ---- One-to-one chat (F10) ---- */
+.chat-page .chat-sidebar{display:flex;flex-direction:column;min-width:0}.chat-contact-list{display:grid;gap:2px;overflow-y:auto;max-height:520px}
+.chat-new{width:100%;margin-bottom:10px}
+.chat-contact-top{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0}.chat-contact-top b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chat-page .chat-contact-top time{font-size:11.5px;color:var(--fg-718078);white-space:nowrap;flex:none}
+.chat-page .chat-contact.has-unread b,.chat-page .chat-contact.has-unread small{color:var(--fg-233b30);font-weight:700}
+.chat-page .chat-contact>i{width:auto;min-width:22px;padding:0 6px;border-radius:11px}
+.chat-empty{display:grid;justify-items:start;gap:10px;padding:8px 2px}.chat-empty p{margin:0;font-size:13.5px;line-height:1.6;color:var(--fg-718078)}
+.chat-back{display:none}
+.chat-page .chat-messages{align-items:stretch}.chat-page .message-bubble{align-self:flex-start}.chat-page .message-bubble.mine{align-self:flex-end}
+.message-text{white-space:pre-wrap}
+.chat-page .message-bubble small{display:inline-flex;align-items:center;gap:4px;justify-content:flex-end}.chat-page .message-bubble small b{font-weight:700;color:var(--fg-566d5e)}.chat-page .message-bubble.mine small svg{color:var(--fg-19865e)}
+.chat-day{align-self:center;display:flex;justify-content:center;margin:6px 0}.chat-day span{font-size:11.5px;font-weight:700;color:var(--fg-668476);background:var(--bg-eff4ef);border-radius:20px;padding:4px 11px}
+.chat-older{align-self:center}.chat-say-hello{align-self:center;text-align:center}
+.chat-page .chat-compose{align-items:flex-end}
+.chat-compose textarea{flex:1;min-width:0;resize:none;max-height:140px;min-height:46px;border:1px solid var(--bd-e4ebe5);border-radius:8px;padding:12px 13px;font:15px/1.4 "DM Sans","Bangla Digits","Hind Siliguri",sans-serif;color:var(--fg-34483b);background:var(--bg-ffffff);outline:0;field-sizing:content}
+.chat-compose textarea:focus{border-color:var(--bd-20875f)}.chat-compose textarea[aria-invalid]{border-color:var(--bd-f3d7d2)}
+.chat-compose-help{margin:0;padding:0 14px 12px;font-size:12px;color:var(--fg-718078)}.chat-compose-help.error{color:var(--fg-a95548);font-weight:600}
+.friend-unread{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:var(--bg-19865e);color:var(--fg-ffffff);font:700 11px "DM Sans",sans-serif;font-style:normal}
+/* Phones: the list first; choosing a conversation shows it full width with a back button. */
+@media(max-width:700px){
+  .chat-page .chat-layout.has-chat .chat-sidebar{display:none}.chat-page .chat-layout:not(.has-chat) .chat-main{display:none}
+  .chat-back{display:grid}.chat-page .chat-title{padding:0 12px;gap:9px}
+  .chat-page .chat-messages{min-height:calc(100vh - 360px);max-height:calc(100vh - 300px)}
+  .chat-contact-list{max-height:none}.chat-compose textarea{font-size:16px}
+}
+/* ---- Ride share (F11) ---- */
+.ride-page .page-heading p{font-size:14px;line-height:1.5}
+.ride-page .rides-hero b{font-size:16px}.ride-page .rides-hero p{font-size:13.5px;line-height:1.5;color:var(--fg-566d5e);max-width:520px}
+.ride-tabs{display:flex;gap:6px;border-bottom:1px solid var(--bd-e7ece8)}
+.ride-tabs button{display:inline-flex;align-items:center;gap:7px;border:0;background:none;padding:10px 12px;font:700 15px var(--font-head);color:var(--fg-718078);border-bottom:2px solid transparent;margin-bottom:-1px}
+.ride-tabs button.active{color:var(--fg-19865e);border-bottom-color:var(--bd-20875f)}.ride-tabs button:focus-visible{outline:2px solid var(--bd-20875f);outline-offset:2px}
+.ride-page .ride-toolbar{align-items:center;gap:14px}
+.ride-page .ride-search{width:280px;height:42px}.ride-page .ride-search input{font-size:14px;background:transparent;color:var(--fg-34483b)}
+.ride-search-clear{display:grid;place-items:center;border:0;background:none;color:var(--fg-718078);padding:4px}
+.ride-form-grid{flex-wrap:wrap}.ride-form-grid>.field{flex:1 1 200px;height:auto;min-height:58px}
+.ride-page .create-ride-form .field small{font-size:11px;letter-spacing:1px}.ride-page .create-ride-form .field input,.ride-page .create-ride-form .field select{font-size:15px;padding:5px 0}
+.ride-page .form-head b{font-size:17px}.ride-page .form-head span{font-size:13px;color:var(--fg-566d5e)}
+.ride-form-field.invalid{border-color:var(--bd-f3d7d2)!important;background:var(--bg-fff0ed)}.ride-form-field em{font-style:normal;font-size:12px;color:var(--fg-a95548);font-weight:600}
+.ride-form-error{font-size:13px;color:var(--fg-a95548);background:var(--bg-fff0ed);border:1px solid var(--bd-f3d7d2);border-radius:6px;padding:9px 12px;margin-bottom:12px}
+.ride-page .ride-card{padding:17px 18px;display:grid;gap:2px}.ride-page .ride-card.completed{background:var(--bg-fbfcfb)}
+.ride-page .ride-card-top{font-size:12px;gap:8px;flex-wrap:wrap}.ride-page .ride-seats{font-size:12px}
+.ride-preference{font-size:11.5px;font-weight:700;color:var(--fg-986f25);background:var(--bg-fff3dc);border-radius:20px;padding:3px 9px}
+.ride-status-done{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;color:var(--fg-247248);background:var(--bg-e4f4e8);border-radius:20px;padding:3px 9px}
+.ride-page .ride-route b{font-size:15px;color:var(--fg-233b30);overflow-wrap:anywhere}
+.ride-page .host-avatar{width:36px;height:36px;font-size:14px}.ride-page .host-info{display:grid;gap:3px;flex:1;min-width:0}
+.ride-page .host-info b{display:inline-flex;align-items:center;gap:4px;font-size:14px;color:var(--fg-34483b)}.ride-page .host-info b svg{color:var(--fg-19865e)}.ride-you{font-weight:600;color:var(--fg-19865e)}
+.ride-page .host-info small{font-size:12px;color:var(--fg-718078)}
+.ride-page .button-small{font-size:12.5px}
+.ride-page .ride-owner-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}.ride-page .ride-request-list{flex-basis:100%}
+.ride-page .ride-request-row b{font-size:13px}.ride-page .ride-request-row small,.ride-page .ride-request-error{font-size:12px}
+.ride-delete{color:var(--fg-a95548)!important}
+.ride-page .empty-state b{font-size:16px}.ride-page .empty-state span{font-size:13.5px;line-height:1.5}
+@media(max-width:700px){.ride-page .ride-toolbar{display:grid}.ride-page .ride-search{width:100%}.ride-page .ride-search input,.ride-page .create-ride-form .field input,.ride-page .create-ride-form .field select{font-size:16px}.ride-page .ride-grid{grid-template-columns:1fr}.ride-page .ride-owner-actions .button{flex:1}.ride-tabs button{flex:1;justify-content:center}}
+/* ---- Ride join requests (F12) ---- */
+.ride-page .ride-request-row{display:flex;align-items:center;gap:9px;flex-wrap:wrap}.ride-page .ride-request-row>span:nth-child(2){display:grid;gap:3px;flex:1;min-width:140px}
+.ride-page .ride-request-row b{display:inline-flex;align-items:center;gap:4px}.ride-page .ride-request-row b svg{color:var(--fg-19865e)}
+.ride-request-summary{margin:4px 0 6px;font-size:13px;font-weight:600;color:var(--fg-28734f);background:var(--bg-edf7ef);border-radius:6px;padding:7px 10px}
+.ride-request-summary.full{color:var(--fg-986f25);background:var(--bg-fff3dc)}
+.ride-request-status{font-size:12px;font-weight:700;border-radius:20px;padding:4px 10px}
+.ride-request-status.accepted{color:var(--fg-247248);background:var(--bg-e4f4e8)}.ride-request-status.rejected{color:var(--fg-a95548);background:var(--bg-fff0ed)}
+.ride-join-state{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:700;color:var(--fg-247248);background:var(--bg-e4f4e8);border-radius:20px;padding:6px 11px;white-space:nowrap}
+.ride-join-note{margin:8px 0 0;font-size:12.5px;color:var(--fg-986f25)}

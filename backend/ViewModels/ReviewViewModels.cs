@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 using SmartCommute.Server.Models;
 
 namespace SmartCommute.Server.ViewModels;
@@ -12,24 +13,52 @@ public class FavoriteBusViewModel : EntityViewModel
     public string? Operator { get; init; }
     public DateTime CreatedAt { get; init; }
 
-    public static FavoriteBusViewModel From(FavoriteBus f) => new()
+    // Current details of the bus, filled in from the route list when it is known; the name, route number and
+    // operator above are the copy saved with the favourite.
+    public string? BusType { get; init; }
+    public string? Frequency { get; init; }
+
+    [JsonPropertyName("base_fare")]
+    public decimal? BaseFare { get; init; }
+
+    [JsonPropertyName("per_km_fare")]
+    public decimal? PerKmFare { get; init; }
+
+    public int? StopCount { get; init; }
+    public string? FirstStop { get; init; }
+    public string? LastStop { get; init; }
+
+    public static FavoriteBusViewModel From(FavoriteBus f, BusViewModel? bus = null) => new()
     {
         Id = f.Id.ToString(),
         UserId = f.UserId.ToString(),
         BusId = f.BusId.ToString(),
-        BusName = f.BusName,
-        RouteNumber = f.RouteNumber,
-        Operator = f.Operator,
+        BusName = bus?.BusName ?? f.BusName,
+        RouteNumber = bus?.RouteNumber ?? f.RouteNumber,
+        Operator = bus?.Operator ?? f.Operator,
         CreatedAt = f.CreatedAt,
+        BusType = bus?.BusType,
+        Frequency = bus?.Frequency,
+        BaseFare = bus?.BaseFare,
+        PerKmFare = bus?.PerKmFare,
+        StopCount = bus?.Stops.Count,
+        FirstStop = bus?.Stops.FirstOrDefault()?.Name,
+        LastStop = bus?.Stops.LastOrDefault()?.Name,
     };
 }
 
+// The bus is always the signed-in user's favourite; UserId is accepted from older clients but ignored.
 public class FavoriteBusRequest
 {
-    public Guid? UserId { get; set; }
+    public string? UserId { get; set; }
 
-    [Required]
-    public Guid? BusId { get; set; }
+    // Read as text so a malformed id gets a clear message instead of a JSON conversion error.
+    [Required(ErrorMessage = "busId is required.")]
+    [RegularExpression(@"^\s*[0-9a-fA-F]{8}(-[0-9a-fA-F]{4}){3}-[0-9a-fA-F]{12}\s*$", ErrorMessage = "busId is not a valid bus id.")]
+    public string? BusId { get; set; }
+
+    [JsonIgnore]
+    public Guid BusGuid => Guid.TryParse(BusId, out var id) ? id : Guid.Empty;
 
     [StringLength(100)]
     public string? BusName { get; set; }

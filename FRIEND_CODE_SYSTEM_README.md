@@ -1,124 +1,88 @@
-# Friend Code System
+# Friend Codes & Friend Requests (F09)
 
-## Overview
-This system replaces the old MongoDB ID-based friend search with a user-friendly 5-character friend code system.
+Every user gets a permanent 5-character friend code (A–Z, 0–9). Others search for that code, send a
+friend request, and the recipient accepts or declines it. The web page is **More → Friends** (`/friends`).
 
-## How It Works
+## Backend
 
-### 1. **Automatic Friend Code Generation**
-- When a user registers, a unique 5-character friend code is automatically generated
-- Friend codes are stored in a new `friends` collection
-- Codes are unique across all users
+| Piece | File |
+|---|---|
+| Code generation (crypto RNG, format checks) | `backend/Services/FriendCodeGenerator.cs` |
+| Request / accept / reject / list rules | `backend/Services/FriendService.cs` |
+| `/friends/*` endpoints | `backend/Controllers/FriendsController.cs` |
+| `/auth/friend-code`, `/auth/search-friend` | `backend/Controllers/AuthController.cs` |
+| Entities | `backend/Models/Friend.cs`, `backend/Models/User.cs` |
 
-### 2. **Friend Code Format**
-- **5 characters long**
-- **Uppercase letters and numbers only** (A-Z, 0-9)
-- **Examples**: `A1B2C`, `XYZ12`, `12345`
+The signed-in user always comes from the JWT. The client never sends a sender or owner id.
 
-### 3. **Profile Display**
-- User's friend code is displayed under their name in the profile
-- **Old**: `id: 507f1f77bcf86cd799439011`
-- **New**: `Friend Code: A1B2C`
+### Endpoints (all need `Authorization: Bearer <token>`)
 
-### 4. **Friend Search**
-- Users can search for friends using the 5-character code
-- No more long MongoDB IDs to remember
-- Clean, user-friendly interface
+| Method | Path | Result |
+|---|---|---|
+| GET | `/auth/friend-code` | `{ friendCode }` |
+| GET | `/auth/search-friend?code=R7K2M` | `{ user, relationship, requestId }`. 400 for a bad format, 404 for an unknown code. Limited to 30 searches per minute per user. |
+| POST | `/friends/request` body `{ "friendCode": "R7K2M" }` | 201 `{ data: request }`. 400 for yourself, 404 for an unknown code, 409 if you are already friends or a request is already pending. |
+| GET | `/friends/requests/incoming` | Pending requests sent to you |
+| GET | `/friends/requests/sent` | Your pending requests |
+| POST | `/friends/requests/{id}/accept` | 200. 403 if you are not the recipient, 404 if there is no such request, 409 if it was already handled. |
+| POST | `/friends/requests/{id}/reject` | Same rules as accept |
+| GET | `/friends` | Your friends, ordered by name |
 
-## Database Changes
+The list endpoints take `?page=1&pageSize=50` (at most 100). They return `{ page, pageSize, total, totalPages, data }`.
 
-### New Collection: `friends`
-```javascript
-{
-  userId: ObjectId,        // Reference to User
-  friendCode: String,      // 5-character unique code
-  createdAt: Date          // When code was generated
-}
-```
+`relationship` is one of `none`, `self`, `friends`, `request_sent` or `request_received`. If someone has
+already sent you a request, sending one back gives a 409 that asks you to accept theirs instead.
 
-### New API Endpoints
-- `GET /auth/friend-code` - Get current user's friend code
-- `GET /auth/search-friend/:friendCode` - Search user by friend code
+Search results and request lists show only a person's public profile: `id`, `name`, `friendCode`, `bio`,
+`verified` and `memberSince`. They never include an email address, phone number or password hash.
 
-## Setup Instructions
+The older Flutter endpoints still work and use the same rules: `/auth/send-friend-request`,
+`/auth/pending-friend-requests`, `/auth/accept|reject-friend-request/{id}`, `/auth/friends`,
+`/auth/search-friend/{code}`, `/api/friends` and `/api/friends/add`. There are two changes:
+`/api/friends/add` now sends a request instead of adding the friend directly, and duplicate requests now
+return 409 instead of 400.
 
-### 1. **For New Users**
-- Friend codes are automatically generated during registration
-- No additional setup required
+## Database rules (migration `AddFriendRequestFlow`)
 
-### 2. **For Existing Users**
-Run the migration script to generate friend codes for existing users:
+- `users.friend_code` must be unique (`ix_users_friend_code`) and must match `^[A-Z0-9]{5}$` (`ck_users_friend_code_format`).
+- Each friendship is one row in `friendships (user1id, user2id)`, with the smaller id first (`ck_friendships_ordered_pair`). The primary key on that pair stops a duplicate friendship. Each user's friend list reads the row from either side.
+- `friend_requests` has an `updated_at` column. A user cannot send a request to themselves (`ck_friend_requests_not_self`). The status must be `pending`, `accepted` or `rejected`. `ix_friend_requests_one_pending_per_pair` allows only one pending request per pair, in either direction.
+- Accepting a request runs in one transaction: the request changes only if it is still pending, and the friendship insert uses `ON CONFLICT DO NOTHING`. Two accepts sent at the same time cannot create two friendships.
+- At sign-up, if another user takes the same friend code at the same moment, the unique index rejects the insert and the server retries with a new code.
+
+### What the migration does to existing data
+
+1. Friendships stored as two rows, (A,B) and (B,A), are merged into one ordered row.
+2. Requests to yourself are deleted. A pending request between users who are already friends is marked `accepted`. If a pair has several pending requests, the oldest stays pending and the others become `rejected`. `updated_at` is set to `created_at`.
+3. Any user with a missing or malformed friend code gets a new unique one.
+
+No users, friendships or pending requests are lost.
+
+### Applying and rolling back
+
+The server applies pending migrations when it starts. To apply them by hand:
 
 ```bash
-cd server
-node generateFriendCodes.js
+cd backend
+dotnet tool restore
+dotnet ef database update
 ```
 
-This will:
-- Connect to your MongoDB database
-- Find all existing users
-- Generate unique friend codes for each user
-- Save them to the `friends` collection
+To roll back to the migration before this one, run:
 
-### 3. **Verify Setup**
-- Check that the `friends` collection exists in your database
-- Verify that each user has a unique friend code
-- Test the search functionality
+```bash
+dotnet ef database update AddWalletLedgerBalancesAndChecks
+```
 
-## Usage
+This restores two rows per friendship and drops the new constraints, indexes and `updated_at`. Back up
+the database before you roll back a production database.
 
-### **Finding Your Friend Code**
-1. Go to Profile screen
-2. Your friend code is displayed under your name
-3. Share this code with friends
+## Tests
 
-### **Adding Friends**
-1. Go to Friends screen
-2. Enter the 5-character friend code
-3. Click Search
-4. If found, the user's information will be displayed
-
-### **Input Validation**
-- Only allows A-Z and 0-9 characters
-- Automatically converts to uppercase
-- Limits input to exactly 5 characters
-- Shows helper text for guidance
-
-## Benefits
-
-✅ **User-Friendly**: Easy to remember 5-character codes
-✅ **Unique**: No duplicate codes across users
-✅ **Automatic**: Codes generated during registration
-✅ **Secure**: Still requires authentication
-✅ **Clean UI**: Modern, intuitive interface
-
-## Troubleshooting
-
-### **Friend Code Not Showing**
-- Check if user exists in `friends` collection
-- Run migration script for existing users
-- Verify authentication is working
-
-### **Search Not Working**
-- Ensure friend code is exactly 5 characters
-- Check server logs for errors
-- Verify the `friends` collection exists
-
-### **Migration Issues**
-- Check MongoDB connection
-- Ensure models are properly imported
-- Check for duplicate friend codes
-
-## Testing
-
-1. **Register a new user** - Should automatically get a friend code
-2. **Check profile** - Friend code should be visible
-3. **Search by friend code** - Should find the user
-4. **Test invalid codes** - Should show "not found" message
-
-## Security Notes
-
-- Friend codes are public information
-- Users can only search, not access private data
-- All searches require valid JWT authentication
-- No sensitive information exposed through friend codes
+```bash
+# backend: unit tests always run; integration tests need a PostgreSQL login that can create databases
+cd tests/SmartCommute.Tests
+SMARTCOMMUTE_TEST_DB="Host=localhost;Username=postgres;Password=..." dotnet test
+# frontend
+cd frontend && npm test
+```

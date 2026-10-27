@@ -84,7 +84,7 @@ public class GpayController(AppDbContext db, WalletService wallets) : ApiControl
         account.Balance -= request.Amount;
         account.UpdatedAt = DateTime.UtcNow;
         var wallet = await wallets.GetOrCreateAsync(CurrentUserId);
-        wallets.Credit(wallet, request.Amount, "recharge", "Recharge from GPay");
+        wallets.Credit(wallet, request.Amount, WalletTransactionTypes.Recharge, "Recharge from GPay");
         await db.SaveChangesAsync();
 
         return Ok(new

@@ -17,6 +17,7 @@ public class AuthController(
     AppDbContext db,
     JwtTokenService tokens,
     FriendCodeGenerator friendCodes,
+    FriendService friends,
     NotificationService notifications) : ApiControllerBase
 {
     private static readonly PasswordHasher<User> Hasher = new();
@@ -62,15 +63,25 @@ public class AuthController(
         user.PasswordHash = Hasher.HashPassword(user, request.Password);
         db.Users.Add(user);
         db.Wallets.Add(new Wallet { User = user });
-        try
+        // The user, wallet and friend code are saved together. If a simultaneous sign-up took the same friend
+        // code first, the unique index rejects the insert and it is retried with a new code.
+        for (var attempt = 1; ; attempt++)
         {
-            await db.SaveChangesAsync();
-        }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg
-                                           && pg.ConstraintName?.Contains("email") == true)
-        {
-            // Another sign-up with the same email won the race between the check above and the insert.
-            return Error(StatusCodes.Status409Conflict, "An account with this email already exists.");
+            try
+            {
+                await db.SaveChangesAsync();
+                break;
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg
+                                               && pg.ConstraintName?.Contains("email") == true)
+            {
+                // Another sign-up with the same email won the race between the check above and the insert.
+                return Error(StatusCodes.Status409Conflict, "An account with this email already exists.");
+            }
+            catch (DbUpdateException ex) when (FriendCodeGenerator.IsCodeClash(ex) && attempt < 5)
+            {
+                user.FriendCode = await friendCodes.GenerateUniqueAsync();
+            }
         }
 
         // Sign the new user straight in so the client does not need a second login call.
@@ -262,6 +273,7 @@ public class AuthController(
         return Ok(new { success = true, message = "Password updated." });
     }
 
+    // The code is created once at sign-up and never changes; this only reads it.
     [Authorize]
     [HttpGet("friend-code")]
     public async Task<IActionResult> GetFriendCode()
@@ -274,13 +286,39 @@ public class AuthController(
         return Ok(new { success = true, friendCode = user.FriendCode });
     }
 
-    // Returns the user object itself (not wrapped) because the Flutter client parses the body as a User.
+    // Looks a person up by their exact friend code: ?code=R7K2M. Returns their public profile and how the caller
+    // is already connected to them ("none", "self", "friends", "request_sent" or "request_received").
     [Authorize]
+    [EnableRateLimiting("friend-search")]
+    [HttpGet("search-friend")]
+    public async Task<IActionResult> SearchFriendByQuery([FromQuery] string? code)
+    {
+        if (FriendCodeGenerator.Normalize(code) is not { } normalized)
+        {
+            return BadRequestError("A friend code is exactly 5 letters or digits.");
+        }
+        var user = await friends.FindByCodeAsync(normalized);
+        if (user is null)
+        {
+            return NotFoundError("User not found.");
+        }
+        var (relationship, requestId) = await friends.RelationshipAsync(CurrentUserId, user.Id);
+        return Ok(new { success = true, user = FriendProfileViewModel.From(user), relationship, requestId });
+    }
+
+    // ---- Older friend endpoints used by the Flutter client. They share FriendService with /friends. ----
+
+    // Returns the profile itself (not wrapped) because the Flutter client parses the body as a User.
+    [Authorize]
+    [EnableRateLimiting("friend-search")]
     [HttpGet("search-friend/{friendCode}")]
     public async Task<IActionResult> SearchFriend(string friendCode)
     {
-        var code = friendCode.Trim().ToUpperInvariant();
-        var user = await db.Users.FirstOrDefaultAsync(u => u.FriendCode == code);
+        if (FriendCodeGenerator.Normalize(friendCode) is not { } code)
+        {
+            return BadRequestError("A friend code is exactly 5 letters or digits.");
+        }
+        var user = await friends.FindByCodeAsync(code);
         if (user is null)
         {
             return NotFoundError("No user found with that friend code.");
@@ -289,119 +327,41 @@ public class AuthController(
         {
             return BadRequestError("That is your own friend code.");
         }
-        return Ok(UserViewModel.From(user));
+        return Ok(FriendProfileViewModel.From(user));
     }
 
     [Authorize]
     [HttpPost("send-friend-request")]
-    public async Task<IActionResult> SendFriendRequest(SendFriendRequestRequest request)
-    {
-        var me = CurrentUserId;
-        var toUserId = request.ToUserId!.Value;
-        if (toUserId == me)
-        {
-            return BadRequestError("You cannot add yourself.");
-        }
-
-        var target = await db.Users.FindAsync(toUserId);
-        var sender = await db.Users.FindAsync(me);
-        if (target is null || sender is null)
-        {
-            return NotFoundError("User not found.");
-        }
-        if (await db.Friendships.AnyAsync(f => f.UserId == me && f.FriendId == toUserId))
-        {
-            return BadRequestError("You are already friends.");
-        }
-
-        var pending = await db.FriendRequests.FirstOrDefaultAsync(r =>
-            r.Status == FriendRequestStatus.Pending &&
-            ((r.FromUserId == me && r.ToUserId == toUserId) || (r.FromUserId == toUserId && r.ToUserId == me)));
-        if (pending is not null)
-        {
-            return BadRequestError(pending.FromUserId == me
-                ? "Friend request already sent."
-                : "This person already sent you a request. Accept it from your pending requests.");
-        }
-
-        db.FriendRequests.Add(new FriendRequest { FromUserId = me, ToUserId = toUserId });
-        notifications.Notify(toUserId, "New friend request", $"{sender.Name} wants to add you as a friend.");
-        await db.SaveChangesAsync();
-        return Ok(new { success = true, message = "Friend request sent." });
-    }
+    public async Task<IActionResult> SendFriendRequest(SendFriendRequestRequest request) =>
+        LegacyResult(await friends.SendRequestAsync(CurrentUserId, request.ToUserId!.Value));
 
     [Authorize]
     [HttpGet("pending-friend-requests")]
     public async Task<IActionResult> PendingFriendRequests()
     {
-        var requests = await db.FriendRequests
-            .Include(r => r.FromUser)
-            .Where(r => r.ToUserId == CurrentUserId && r.Status == FriendRequestStatus.Pending)
-            .OrderByDescending(r => r.CreatedAt)
-            .ToListAsync();
+        var requests = await friends.Incoming(CurrentUserId).ToListAsync();
         return Ok(new { success = true, requests = requests.Select(FriendRequestViewModel.From) });
     }
 
     [Authorize]
     [HttpPut("accept-friend-request/{requestId:guid}")]
-    public async Task<IActionResult> AcceptFriendRequest(Guid requestId)
-    {
-        var request = await db.FriendRequests.Include(r => r.ToUser).FirstOrDefaultAsync(r => r.Id == requestId);
-        if (request is null || request.ToUserId != CurrentUserId)
-        {
-            return NotFoundError("Friend request not found.");
-        }
-        if (request.Status != FriendRequestStatus.Pending)
-        {
-            return BadRequestError("This request was already handled.");
-        }
-
-        request.Status = FriendRequestStatus.Accepted;
-        if (!await db.Friendships.AnyAsync(f => f.UserId == request.FromUserId && f.FriendId == request.ToUserId))
-        {
-            db.Friendships.Add(new Friendship { UserId = request.FromUserId, FriendId = request.ToUserId });
-            db.Friendships.Add(new Friendship { UserId = request.ToUserId, FriendId = request.FromUserId });
-        }
-        notifications.Notify(request.FromUserId, "Friend request accepted",
-            $"{request.ToUser!.Name} accepted your friend request.", NotificationTypes.Success);
-        await db.SaveChangesAsync();
-        return Ok(new { success = true, message = "Friend request accepted." });
-    }
+    public async Task<IActionResult> AcceptFriendRequest(Guid requestId) =>
+        LegacyResult(await friends.AcceptAsync(CurrentUserId, requestId));
 
     [Authorize]
     [HttpPut("reject-friend-request/{requestId:guid}")]
-    public async Task<IActionResult> RejectFriendRequest(Guid requestId)
-    {
-        var request = await db.FriendRequests.FindAsync(requestId);
-        if (request is null || request.ToUserId != CurrentUserId)
-        {
-            return NotFoundError("Friend request not found.");
-        }
-        if (request.Status != FriendRequestStatus.Pending)
-        {
-            return BadRequestError("This request was already handled.");
-        }
-
-        request.Status = FriendRequestStatus.Rejected;
-        await db.SaveChangesAsync();
-        return Ok(new { success = true, message = "Friend request declined." });
-    }
+    public async Task<IActionResult> RejectFriendRequest(Guid requestId) =>
+        LegacyResult(await friends.RejectAsync(CurrentUserId, requestId));
 
     [Authorize]
     [HttpGet("friends")]
     public async Task<IActionResult> Friends()
     {
-        var friends = await FriendsQuery.ForUser(db, CurrentUserId);
-        return Ok(new { success = true, friends = friends.Select(UserViewModel.From) });
+        var list = await friends.FriendsOfAsync(CurrentUserId);
+        return Ok(new { success = true, friends = list.Select(UserViewModel.From) });
     }
-}
 
-internal static class FriendsQuery
-{
-    public static Task<List<User>> ForUser(AppDbContext db, Guid userId) =>
-        db.Friendships
-            .Where(f => f.UserId == userId)
-            .Select(f => f.Friend!)
-            .OrderBy(u => u.Name)
-            .ToListAsync();
+    private IActionResult LegacyResult(FriendResult result) => result.Succeeded
+        ? Ok(new { success = true, message = result.Message })
+        : Error(result.StatusCode, result.Message);
 }

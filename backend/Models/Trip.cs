@@ -67,6 +67,12 @@ public class FareRecord
     public double Distance { get; set; }
     public decimal Fare { get; set; }
 
+    // The Rewards:FarePerKm rate the fare was worked out with; null for records saved before it was stored.
+    public decimal? FarePerKm { get; set; }
+
+    // True when the road router was unreachable and Distance is a straight-line estimate.
+    public bool DistanceEstimated { get; set; }
+
     public double? SourceLat { get; set; }
     public double? SourceLon { get; set; }
     public double? DestinationLat { get; set; }

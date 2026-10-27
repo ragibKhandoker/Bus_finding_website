@@ -35,6 +35,8 @@ public class Notification
 }
 
 // A one-to-one conversation. User1Id is always the smaller id so each pair has exactly one chat.
+// A private conversation between two users, stored once per pair with the smaller id first (the same order as
+// Friendship.Order), so the unique index on the pair stops a second conversation being created.
 public class Chat
 {
     public Guid Id { get; set; }
@@ -48,6 +50,7 @@ public class Chat
     public List<ChatMessage> Messages { get; set; } = [];
 
     public Guid OtherParticipant(Guid userId) => User1Id == userId ? User2Id : User1Id;
+    public User? OtherUser(Guid userId) => User1Id == userId ? User2 : User1;
     public bool HasParticipant(Guid userId) => User1Id == userId || User2Id == userId;
 }
 
@@ -59,10 +62,14 @@ public class ChatMessage
     public Guid SenderId { get; set; }
     public User? Sender { get; set; }
 
-    [MaxLength(2000)]
+    public const int MaxLength = 2000;
+
+    [MaxLength(MaxLength)]
     public string Text { get; set; } = "";
 
+    // Read receipts are per message: set by the recipient (never the sender) through POST /api/chat/{id}/read.
     public bool Read { get; set; }
+    public DateTime? ReadAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 

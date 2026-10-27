@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import {
-  ArrowDownUp, ArrowLeft, ArrowRight, ArrowUpRight, BadgeCheck, BusFront, CalendarDays, Check, ChevronDown,
-  CircleAlert, CircleHelp, Clock3, Compass, Copy, CreditCard, Eye, EyeOff, Gift, GraduationCap, Heart, History, Home, KeyRound, Languages, Lock, LogOut,
+  ArrowDownLeft, ArrowDownUp, ArrowLeft, ArrowRight, ArrowUpRight, BadgeCheck, BusFront, CalendarDays, Check, ChevronDown,
+  CircleAlert, CircleHelp, Clock3, Compass, Copy, CreditCard, Eye, EyeOff, Gift, GraduationCap, History, Home, KeyRound, Languages, Lock, LogOut,
   Mail, Map as MapIcon, MapPin, Menu, MessageCircle, Moon, MoonStar, Pencil, Phone, Plus, Route, Search, ShieldCheck, Smartphone, Sparkles, Sun, UserRound, Users, Wallet, X,
 } from 'lucide-react'
 import './theme.css'
@@ -12,9 +12,13 @@ import './profile.css'
 import './admin.css'
 import GoogleMapView, { mapsConfigured } from './GoogleMapView'
 import { ActiveTripPanel, TripRow, useActiveTrip, useBoardControls, useTripChanges } from './Trips'
-import { BusReviews, ChatPage, FriendsPage, GpayPage, MapPage, NotificationsPage, OffersPage, VerificationPage } from './MorePages'
+import { BusReviews, GpayPage, MapPage, NotificationsPage, OffersPage, VerificationPage } from './MorePages'
+import { FriendsPage } from './Friends'
+import { ChatPage } from './Chat'
+import { RidePage } from './RideShare'
+import { FavoriteButton, FavoritesPage, useFavoriteBuses, useFavoriteStatus } from './Favorites'
 import { API_BASE, UNAUTHORIZED_EVENT, apiRequest as request, isTokenExpired, tokenExpiry } from './api'
-import { formatDate, formatNumber, getLang, setLang, t, toEnglish } from './i18n'
+import { formatDate, formatDateTime, formatNumber, getLang, setLang, t, toEnglish } from './i18n'
 import { getTheme, setTheme, syncThemeColor } from './theme'
 
 const money = (value) => `৳${formatNumber(value)}`
@@ -26,7 +30,7 @@ const getStops = (bus) => Array.isArray(bus.stops) ? bus.stops.map((stop) => typ
 const PAGE_PATHS = {
   'Home': '/', 'Find a bus': '/find-a-bus', 'Bus routes': '/bus-routes', 'Ride share': '/ride-share', 'My trips': '/my-trips', 'Wallet': '/wallet',
   'Profile': '/profile', 'Friends': '/friends', 'Messages': '/messages', 'Notifications': '/notifications', 'Offers': '/offers',
-  'Map': '/map', 'GPay': '/gpay', 'Verification': '/verification', 'Admin': '/admin',
+  'Map': '/map', 'Favourites': '/favourites', 'GPay': '/gpay', 'Verification': '/verification', 'Admin': '/admin',
 }
 // Each route also has its own page, e.g. /bus-routes/DBR-12.
 const busPath = (routeNumber) => `/bus-routes/${encodeURIComponent(routeNumber)}`
@@ -162,8 +166,8 @@ function App() {
             <button key={item} className={page === item || (item === 'Bus routes' && page === 'Bus details') ? 'nav-link active' : 'nav-link'} onClick={() => navigate(item)}>{t(item)}</button>
           ))}
           <div className="more-nav-wrap">
-            <button className={['Friends', 'Messages', 'Notifications', 'Offers', 'Map', 'GPay', 'Verification', 'Admin'].includes(page) ? 'nav-link active' : 'nav-link'} aria-expanded={moreMenu} onClick={() => setMoreMenu(!moreMenu)}>{t('More')} <ChevronDown size={13} /></button>
-            {moreMenu && <div className="more-nav-menu">{[['Friends','Friends'],['Messages','Messages'],['Notifications','Notifications'],['Offers','Offers & rewards'],['Map','Explore map'],['GPay','GPay & recharge'],['Verification','Student verification'], ...(isAdmin ? [['Admin', 'Admin · Users']] : [])].map(([target,label]) => <button key={target} className={page === target ? 'current' : ''} onClick={() => navigate(target)}>{t(label)}<ArrowRight size={13} /></button>)}</div>}
+            <button className={['Friends', 'Messages', 'Notifications', 'Offers', 'Map', 'Favourites', 'Wallet', 'GPay', 'Verification', 'Admin'].includes(page) ? 'nav-link active' : 'nav-link'} aria-expanded={moreMenu} onClick={() => setMoreMenu(!moreMenu)}>{t('More')} <ChevronDown size={13} /></button>
+            {moreMenu && <div className="more-nav-menu">{[['Friends','Friends'],['Messages','Messages'],['Notifications','Notifications'],['Offers','Offers & rewards'],['Map','Map & fare calculator'],['Favourites','Favourite buses'],['Wallet','My wallet'],['GPay','GPay & recharge'],['Verification','Student verification'], ...(isAdmin ? [['Admin', 'Admin · Users']] : [])].map(([target,label]) => <button key={target} className={page === target ? 'current' : ''} onClick={() => navigate(target)}>{t(label)}<ArrowRight size={13} /></button>)}</div>}
           </div>
         </nav>
         <div className="top-actions">
@@ -187,15 +191,16 @@ function App() {
         {page === 'Home' && <HomePage user={user} token={token} signedIn={signedIn} navigate={navigate} openAuth={() => setAuthMode('login')} />}
         {page === 'Find a bus' && <BusPage token={token} signedIn={signedIn} user={user} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
         {page === 'Bus routes' && <BusRoutesPage navigate={navigate} />}
-        {page === 'Bus details' && <BusDetailPage key={routeNumber} routeNumber={routeNumber} user={user} signedIn={signedIn} notify={notify} navigate={navigate} />}
+        {page === 'Bus details' && <BusDetailPage key={routeNumber} routeNumber={routeNumber} token={token} user={user} signedIn={signedIn} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
         {page === 'Ride share' && <RidePage token={token} user={user} signedIn={signedIn} notify={notify} openAuth={() => setAuthMode('login')} />}
         {page === 'My trips' && <TripsPage token={token} signedIn={signedIn} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
-        {page === 'Wallet' && <WalletPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} />}
+        {page === 'Wallet' && <WalletPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Profile' && <ProfilePage user={user} token={token} signedIn={signedIn} updateUser={setUser} signOut={signOut} openAuth={() => setAuthMode('login')} notify={notify} />}
-        {page === 'Friends' && <FriendsPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} onChat={(friend) => { sessionStorage.setItem('chat_contact_id', friend.id || friend._id); navigate('Messages') }} notify={notify} />}
-        {page === 'Messages' && <ChatPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
+        {page === 'Friends' && <FriendsPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} onChat={(friend) => { navigate('Messages'); window.history.replaceState({ page: 'Messages' }, '', `/messages?with=${encodeURIComponent(friend.id || friend._id)}`) }} notify={notify} />}
+        {page === 'Messages' && <ChatPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} onFindFriends={() => navigate('Friends')} />}
         {page === 'Notifications' && <NotificationsPage user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Offers' && <OffersPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
+        {page === 'Favourites' && <FavoritesPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} navigate={navigate} />}
         {page === 'Map' && <MapPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'GPay' && <GpayPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Verification' && <VerificationPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
@@ -210,7 +215,7 @@ function App() {
             <button onClick={() => navigate('Profile')}><CircleHelp size={14} /> {t('Help & account')}</button>
           </div>
           {[
-            ['Commute', [['Find a bus', 'Find a bus'], ['Ride share', 'Ride share'], ['Map', 'Explore map'], ['My trips', 'My trips']]],
+            ['Commute', [['Find a bus', 'Find a bus'], ['Ride share', 'Ride share'], ['Map', 'Map & fare calculator'], ['Favourites', 'Favourite buses'], ['My trips', 'My trips']]],
             ['Payments', [['Wallet', 'Travel wallet'], ['GPay', 'GPay & recharge'], ['Offers', 'Offers & rewards']]],
             ['Community', [['Friends', 'Friends'], ['Messages', 'Messages'], ['Notifications', 'Notifications'], ['Verification', 'Student verification']]],
           ].map(([heading, links]) => <nav key={heading} className="site-footer-col" aria-label={t(heading)}><b>{t(heading)}</b>{links.map(([target, label]) => <button key={target} onClick={() => navigate(target)}>{t(label)}</button>)}</nav>)}
@@ -267,7 +272,7 @@ function ThemeMenu({ theme, onChange }) {
 
 // Secondary tools listed on the home page; each opens its own page, which handles sign-in itself.
 const HOME_TOOLS = [
-  { target: 'Map', icon: MapIcon, title: 'Explore map', text: 'See stops and places around you.' },
+  { target: 'Map', icon: MapIcon, title: 'Map & fare calculator', text: 'Road distance and fare between any two places.' },
   { target: 'Offers', icon: Gift, title: 'Offers & rewards', text: 'Discounts and points on every ride.' },
   { target: 'GPay', icon: Smartphone, title: 'GPay & recharge', text: 'Top up your travel balance in seconds.' },
   { target: 'Verification', icon: GraduationCap, title: 'Student verification', text: 'Unlock student fares with your ID.' },
@@ -417,7 +422,7 @@ function BusRoutesPage({ navigate }) {
 }
 
 // One route's own page: what it is, the fare, and every stop in order with its location.
-function BusDetailPage({ routeNumber, user, signedIn, notify, navigate }) {
+function BusDetailPage({ routeNumber, token, user, signedIn, notify, navigate, openAuth }) {
   // A route already in the shared list shows at once; otherwise only this route is fetched.
   const [state, setState] = useState(() => findCachedRoute(routeNumber) ? { status: 'ready', bus: findCachedRoute(routeNumber) } : { status: 'loading' })
   const load = useCallback(() => {
@@ -428,6 +433,7 @@ function BusDetailPage({ routeNumber, user, signedIn, notify, navigate }) {
       .catch((error) => { if (!findCachedRoute(routeNumber)) setState({ status: 'error', message: errorText(error) }) })
   }, [routeNumber])
   useEffect(() => { load() }, [load])
+  const favorite = useFavoriteStatus({ busId: state.bus?._id, token, signedIn, notify, openAuth })
   const back = <button className="route-back" onClick={() => navigate('Bus routes')}><ArrowLeft size={15} /> {t('All bus routes')}</button>
   if (state.status !== 'ready') {
     return <div className="page inner-page">{back}
@@ -450,6 +456,7 @@ function BusDetailPage({ routeNumber, user, signedIn, notify, navigate }) {
           <h1>{t(bus.busName)}</h1>
           <p>{[bus.operator, bus.busType, bus.frequency].filter(Boolean).map((text) => t(text)).join(' · ')}</p>
         </div>
+        <FavoriteButton active={favorite.favorite} pending={favorite.pending} onClick={favorite.toggle} withLabel className="route-hero-favorite" />
       </div>
       {first && <div className="hp-route-ends route-hero-ends"><span><i className="start" />{t(first.name)}</span><ArrowRight size={16} /><span><i className="end" />{t(last.name)}</span></div>}
       <div className="route-facts">
@@ -752,18 +759,13 @@ function BusPage({ token, signedIn, user, notify, navigate, openAuth }) {
   const [loading, setLoading] = useState(false)
   const [searched, setSearched] = useState(null) // the search shown: { mode, from, to, name }
   const [error, setError] = useState('')
-  const [favorites, setFavorites] = useState([])
   const [trip, setTrip] = useState(null) // { start, end }: the stops the searched places resolved to
   const [estimate, setEstimate] = useState({ status: 'idle' })
   const [selectedId, setSelectedId] = useState(null)
   const activeTrip = useActiveTrip(token, signedIn).trip
 
-  useEffect(() => {
-    if (!signedIn || !user?.id) return
-    request(`/api/favbus/user/${encodeURIComponent(user.id)}`, { token })
-      .then((data) => setFavorites((data.data || []).map((favorite) => String(favorite.busId))))
-      .catch(() => {})
-  }, [signedIn, token, user?.id])
+  // One request for the whole list of favourites, so each card knows its heart state without asking the server.
+  const favorites = useFavoriteBuses({ token, user, signedIn, notify, openAuth })
 
   // Road distance and time from Google, through the backend, which holds the server key.
   const loadEstimate = useCallback((start, end) => {
@@ -813,15 +815,6 @@ function BusPage({ token, signedIn, user, notify, navigate, openAuth }) {
       notify(t('Trip added to your history.'))
     } catch (e) { notify(errorText(e)) }
   }
-  const toggleFavorite = async (bus) => {
-    if (!signedIn) return openAuth()
-    const isSaved = favorites.includes(bus._id)
-    try {
-      await request(isSaved ? '/api/favbus/remove' : '/api/favbus/add', { token, method: isSaved ? 'DELETE' : 'POST', body: JSON.stringify({ userId: user.id, busId: bus._id, busName: bus.busName, routeNumber: bus.routeNumber, operator: bus.operator }) })
-      setFavorites((current) => isSaved ? current.filter((id) => id !== bus._id) : [...current, bus._id])
-      notify(isSaved ? t('Removed from saved buses.') : t('Bus saved to favorites.'))
-    } catch (e) { notify(errorText(e)) }
-  }
 
   // The selected bus on the map: its whole route in travel direction, and the stops ridden.
   const selected = buses.find((bus) => bus._id === selectedId)
@@ -856,7 +849,7 @@ function BusPage({ token, signedIn, user, notify, navigate, openAuth }) {
         <div className="results-heading"><div><div className="eyebrow">{searched.mode === 'route' ? t('YOUR ROUTE') : t('BUS SEARCH')}</div><h2>{searched.mode === 'route' ? t('{from} to {to}', { from: t(trip?.start.name || searched.from), to: t(trip?.end.name || searched.to) }) : t('Buses matching “{name}”', { name: searched.name })}</h2></div>{!loading && !error && <span className="result-count">{buses.length === 1 ? t('{count} bus found', { count: 1 }) : t('{count} buses found', { count: buses.length })}</span>}</div>
         {loading ? <BusSearchLoader mode={searched.mode} />
           : error ? <div className="empty-state"><span className="empty-icon"><CircleAlert size={23} /></span><b>{t('Search could not be completed')}</b><span>{error}</span></div>
-          : buses.length ? <div className="bus-list">{buses.map((bus) => <BusCard key={bus._id} bus={bus} user={user} signedIn={signedIn} selected={bus._id === selectedId} onSelect={() => setSelectedId(bus._id)} favorite={favorites.includes(bus._id)} onFavorite={() => toggleFavorite(bus)} onAddTrip={() => saveTrip(bus)} boarding={{ token, signedIn, openAuth, notify, activeTrip }} onDetails={bus.routeNumber ? () => navigate('Bus details', { route: bus.routeNumber }) : null} notify={notify} />)}</div>
+          : buses.length ? <div className="bus-list">{buses.map((bus) => <BusCard key={bus._id} bus={bus} user={user} signedIn={signedIn} selected={bus._id === selectedId} onSelect={() => setSelectedId(bus._id)} favorite={favorites.isFavorite(bus)} favoritePending={favorites.isPending(bus)} onFavorite={() => favorites.toggle(bus)} onAddTrip={() => saveTrip(bus)} boarding={{ token, signedIn, openAuth, notify, activeTrip }} onDetails={bus.routeNumber ? () => navigate('Bus details', { route: bus.routeNumber }) : null} notify={notify} />)}</div>
           : <div className="empty-state"><span className="empty-icon"><BusFront size={23} /></span><b>{t('No buses found just yet')}</b><span>{searched.mode === 'route' ? t('No bus in the database stops at both places. Try a nearby stop.') : t('Try another bus name or route number.')}</span></div>}
       </div>
       {showMap && <aside className="results-map">
@@ -904,7 +897,7 @@ function BusSearchLoader({ mode }) {
 }
 
 // One search result: name, route number and stops, and for a route search where to board and get off.
-function BusCard({ bus, user, signedIn, selected, onSelect, favorite, onFavorite, onAddTrip, boarding, onDetails, notify }) {
+function BusCard({ bus, user, signedIn, selected, onSelect, favorite, favoritePending, onFavorite, onAddTrip, boarding, onDetails, notify }) {
   const board = useBoardControls({ bus, ...boarding })
   const stops = getStops(bus)
   const match = bus.match
@@ -921,73 +914,8 @@ function BusCard({ bus, user, signedIn, selected, onSelect, favorite, onFavorite
         <button className={selected ? 'bus-map-toggle active' : 'bus-map-toggle'} onClick={onSelect} aria-pressed={selected}><MapIcon size={13} /> {selected ? t('Shown on map') : t('Show on map')}</button>
         {onDetails && <button className="bus-details-link" onClick={onDetails}>{t('View details')} <ArrowRight size={12} /></button>}
       </div>
-    </div><div className="bus-result-side"><button className={favorite ? 'favorite saved' : 'favorite'} onClick={onFavorite} title={t('Save bus')}><Heart size={17} fill={favorite ? 'currentColor' : 'none'} /></button><span className="fare-label">{t('STARTS FROM')}</span><b>{money(bus.base_fare)}</b><small>{t('per ride')}</small>{board.button}<button className="button button-outline button-small" onClick={onAddTrip} title={t('Add a trip you already took to your history')}>{t('Log trip')}</button></div>{board.form}<BusReviews bus={bus} user={user} signedIn={signedIn} notify={notify} />
+    </div><div className="bus-result-side"><FavoriteButton active={favorite} pending={favoritePending} onClick={onFavorite} /><span className="fare-label">{t('STARTS FROM')}</span><b>{money(bus.base_fare)}</b><small>{t('per ride')}</small>{board.button}<button className="button button-outline button-small" onClick={onAddTrip} title={t('Add a trip you already took to your history')}>{t('Log trip')}</button></div>{board.form}<BusReviews bus={bus} user={user} signedIn={signedIn} notify={notify} />
   </article>
-}
-
-function RidePage({ token, user, signedIn, notify, openAuth }) {
-  const [rides, setRides] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [showForm, setShowForm] = useState(false)
-  const [search, setSearch] = useState('')
-  const [form, setForm] = useState({ source: '', destination: '', maxParticipants: 4 })
-  const load = useCallback(async () => {
-    setLoading(true)
-    try { const data = await request('/api/rideshare'); setRides(data.ridePosts || data.data || data || []); setError('') }
-    catch (e) { setRides([]); setError(errorText(e)) } finally { setLoading(false) }
-  }, [])
-  useEffect(() => { load() }, [load])
-  const createRide = async (event) => {
-    event.preventDefault()
-    if (!signedIn) return openAuth()
-    try {
-      await request('/api/rideshare', { method: 'POST', body: JSON.stringify({ ...form, maxParticipants: Number(form.maxParticipants), userId: user.id, userName: user.name, gender: user.gender || 'Prefer not to say' }) })
-      setShowForm(false); setForm({ source: '', destination: '', maxParticipants: 4 }); notify(t('Your ride share is live.')); load()
-    } catch (e) { notify(errorText(e)) }
-  }
-  const requestRide = async (ride) => {
-    if (!signedIn) return openAuth()
-    try {
-      await request('/api/riderequests/send', { method: 'POST', body: JSON.stringify({ ridePostId: ride._id, requesterId: user.id, requesterName: user.name, requesterGender: user.gender || 'Prefer not to say' }) })
-      notify(t('Your request has been sent.'))
-      return true
-    } catch (e) { notify(errorText(e)); return false }
-  }
-  const filtered = rides.filter((ride) => `${ride.source} ${ride.destination} ${ride.userName}`.toLowerCase().includes(search.toLowerCase()))
-  return <div className="page inner-page">
-    <PageHeading eyebrow={t('GOOD COMPANY, BETTER RIDES')} title={t('Share the journey.')} description={t('Find people heading your way. Split the ride, share the road.')} icon={Users} />
-    <section className="rides-hero"><span className="rides-hero-icon"><Users size={22} /></span><div><b>{t('Going the same way?')}</b><p>{t('Join a fellow commuter or post your ride so others can come along.')}</p></div><button className="button button-dark" onClick={() => signedIn ? setShowForm(!showForm) : openAuth()}><Plus size={16} /> {t('Post a ride')}</button><div className="rides-hero-shape" /></section>
-    {showForm && <form className="panel create-ride-form" onSubmit={createRide}><div className="form-head"><div><b>{t('Post a ride share')}</b><span>{t('Tell other commuters where you are going.')}</span></div><button className="icon-button" type="button" onClick={() => setShowForm(false)} aria-label={t('Close')}><X size={18} /></button></div><div className="form-fields"><label className="field"><small>{t('FROM')}</small><input required value={form.source} onChange={(e) => setForm({ ...form, source: e.target.value })} placeholder={t('Starting point')} /></label><label className="field"><small>{t('TO')}</small><input required value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} placeholder={t('Destination')} /></label><label className="field participant-field"><small>{t('MAX PEOPLE')}</small><select value={form.maxParticipants} onChange={(e) => setForm({ ...form, maxParticipants: e.target.value })}>{[2, 3, 4, 5, 6, 7, 8, 9].map((number) => <option key={number} value={number}>{t('{count} people', { count: number })}</option>)}</select></label></div><button className="button button-green" type="submit">{t('Publish ride')} <ArrowRight size={15} /></button></form>}
-    <div className="ride-toolbar"><div><div className="eyebrow">{t('COMMUNITY RIDES')}</div><h2>{t('Rides around Dhaka')} <span className="count-bubble">{formatNumber(rides.length)}</span></h2></div><label className="ride-search"><Search size={15} /><input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t('Search a destination')} /></label></div>
-    {loading ? <div className="empty-state"><span className="spinner" /> {t('Finding available rides…')}</div> : filtered.length ? <div className="ride-grid">{filtered.map((ride) => <RideCard key={ride._id} ride={ride} token={token} user={user} signedIn={signedIn} onRequest={() => requestRide(ride)} notify={notify} onRefresh={load} />)}</div> : <div className="empty-state panel"><span className="empty-icon"><Users size={22} /></span><b>{error ? t('Could not load rides') : t('No rides on this route yet')}</b><span>{error || (rides.length ? t('Try searching for another destination.') : t('Be the first to post a ride and find your travel crew.'))}</span>{error ? <button className="button button-outline button-small" onClick={load}>{t('Try again')}</button> : !showForm && <button className="button button-green button-small" onClick={() => signedIn ? setShowForm(true) : openAuth()}><Plus size={14} /> {t('Post the first ride')}</button>}</div>}
-  </div>
-}
-
-function RideCard({ ride, token, user, signedIn, onRequest, notify, onRefresh }) {
-  const isMine = user?.id === ride.userId || user?.id === ride.userId?._id
-  const [requestSent, setRequestSent] = useState(false)
-  const [showRequests, setShowRequests] = useState(false)
-  const [requests, setRequests] = useState([])
-  const [requestError, setRequestError] = useState('')
-  const viewRequests = async () => {
-    setShowRequests(!showRequests)
-    if (showRequests) return
-    try { const data = await request(`/api/riderequests/ride/${ride._id}`, { token }); setRequests(data.data || []) }
-    catch (e) { setRequestError(errorText(e)) }
-  }
-  const resolveRequest = async (item, accepted) => {
-    try {
-      await request(`/api/riderequests/${accepted ? 'accept' : 'reject'}/${item._id}`, { token, method: 'PUT', ...(accepted ? { body: JSON.stringify({ ridePostId: ride._id }) } : {}) })
-      notify(accepted ? t('Ride request accepted.') : t('Ride request declined.'))
-      const data = await request(`/api/riderequests/ride/${ride._id}`, { token })
-      setRequests(data.data || [])
-      onRefresh()
-    } catch (e) { setRequestError(errorText(e)) }
-  }
-  return <><article className="ride-card panel"><div className="ride-card-top"><span className="ride-pulse"><span /></span><span>{ride.status ? t(ride.status) : t('Open ride')}</span><span className="ride-seats"><Users size={13} /> {t('Up to {count}', { count: ride.maxParticipants || 4 })}</span></div><div className="ride-route"><div><span className="route-origin" /><b>{t(ride.source)}</b></div><span className="route-connector" /><div><span className="route-destination" /><b>{t(ride.destination)}</b></div></div><div className="ride-card-footer"><span className="host-avatar">{ride.userName?.[0]?.toUpperCase() || 'R'}</span><span className="host-info"><b>{ride.userName || t('Dhaka commuter')}</b><small>{ride.gender ? `${t(ride.gender)} · ` : ''}{t('Ride host')}</small></span>{isMine ? <button className="button button-outline button-small" onClick={async () => { try { await request(`/api/rideshare/${ride._id}`, { method: 'DELETE' }); notify(t('Ride post removed.')); onRefresh() } catch (e) { notify(errorText(e)) } }}>{t('Your post')}</button> : <button className="button button-dark button-small" disabled={requestSent} onClick={async () => { const sent = await onRequest(); if (sent) setRequestSent(true) }}>{requestSent ? <><Check size={14} /> {t('Requested')}</> : <>{t('Join ride')} <ArrowRight size={14} /></>}</button>}</div></article>
-    {isMine && <div className="ride-owner-actions"><button className="button button-outline button-small" onClick={viewRequests}>{showRequests ? t('Hide requests') : t('View ride requests')} <ArrowRight size={13} /></button>{showRequests && <div className="ride-request-list">{requestError && <small className="ride-request-error">{requestError}</small>}{requests.length ? requests.map((item) => <div className="ride-request-row" key={item._id}><span><b>{item.requesterName || t('Commuter')}</b><small>{item.requesterGender ? t(item.requesterGender) : ''} · {t(item.status || 'pending')}</small></span>{item.status === 'pending' && <><button className="button button-green button-small" onClick={() => resolveRequest(item, true)}>{t('Accept')}</button><button className="button button-outline button-small" onClick={() => resolveRequest(item, false)}>{t('Decline')}</button></>}</div>) : !requestError && <small className="ride-request-error">{t('No requests yet.')}</small>}</div>}</div>}
-  </>
 }
 
 function TripsPage({ token, signedIn, openAuth, notify, navigate }) {
@@ -1025,19 +953,123 @@ function TripsPage({ token, signedIn, openAuth, notify, navigate }) {
   </div>
 }
 
-function WalletPage({ token, signedIn, openAuth }) {
+// How each ledger type is shown. Anything else (e.g. a type added later) falls back to the raw type.
+const TRANSACTION_TYPES = {
+  'fare': 'Fare payment',
+  'recharge': 'Recharge from GPay',
+  'gems-earned': 'Gems earned',
+  'gems-converted': 'Gems converted to taka',
+  'cashback': 'Cashback',
+  'coupon': 'Coupon',
+}
+const TRANSACTIONS_PER_PAGE = 10
+const signedMoney = (value) => `${value > 0 ? '+' : value < 0 ? '−' : ''}৳${formatNumber(Math.abs(value), { maximumFractionDigits: 2 })}`
+const signedGems = (value) => `${value > 0 ? '+' : '−'}${formatNumber(Math.abs(value))}`
+
+// The signed-in user's wallet: balances, gems-to-taka conversion and the ledger. Every number comes from the
+// server; after a change the page loads the balances again instead of working them out itself.
+function WalletPage({ token, signedIn, openAuth, notify }) {
   const [wallet, setWallet] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(signedIn)
-  const load = useCallback(() => {
+  const [history, setHistory] = useState({ items: [], page: 0, totalPages: 0, total: 0, status: 'idle' })
+  const [gemsInput, setGemsInput] = useState('')
+  const [converting, setConverting] = useState(false)
+  const [convertMessage, setConvertMessage] = useState({ error: '', success: '' })
+
+  const loadBalance = useCallback(async () => {
     if (!signedIn) return
-    setLoading(true)
-    request('/wallet/balance', { token }).then((data) => setWallet(data.wallet || data.data || data)).catch((e) => setError(errorText(e))).finally(() => setLoading(false))
+    setLoading(true); setError('')
+    try { setWallet(await request('/wallet/balance', { token })) }
+    catch (e) { setError(errorText(e)) }
+    finally { setLoading(false) }
   }, [signedIn, token])
+  // page 1 replaces the list; later pages are added below it.
+  const loadHistory = useCallback(async (page = 1) => {
+    if (!signedIn) return
+    setHistory((current) => ({ ...current, status: 'loading' }))
+    try {
+      const data = await request(`/wallet/transactions?${new URLSearchParams({ page, pageSize: TRANSACTIONS_PER_PAGE })}`, { token })
+      setHistory((current) => ({ items: page === 1 ? data.data : [...current.items, ...data.data], page: data.page, totalPages: data.totalPages, total: data.total, status: 'ready' }))
+    } catch (e) { setHistory((current) => ({ ...current, status: errorText(e) })) }
+  }, [signedIn, token])
+  const load = useCallback(() => { loadBalance(); loadHistory(1) }, [loadBalance, loadHistory])
   useTripChanges(load)
-  const balance = wallet?.balance ?? wallet?.wallet?.balance ?? 0
-  return <div className="page inner-page"><PageHeading eyebrow={t('YOUR COMMUTE COMPANION')} title={t('Travel wallet.')} description={t('Keep your travel balance and recent journeys close at hand.')} icon={Wallet} />
-    {!signedIn ? <SignInPrompt openAuth={openAuth} message={t('Sign in to check your SmartCommute wallet.')} /> : loading ? <div className="empty-state"><span className="spinner" /> {t('Checking your balance…')}</div> : error ? <div className="empty-state panel"><span className="empty-icon"><Wallet size={22} /></span><b>{t('Wallet unavailable')}</b><span>{error}</span><button className="button button-outline button-small" onClick={load}>{t('Try again')}</button></div> : <><section className="wallet-overview"><div className="wallet-card-large"><div className="wallet-card-head"><span className="wallet-mark"><BusFront size={18} /></span><span>{t('SMARTCOMMUTE WALLET')}</span><CreditCard size={20} /></div><div className="balance-caption">{t('AVAILABLE BALANCE')}</div><div className="balance-amount">{money(balance)}</div><div className="wallet-card-foot"><span>{t('BDT · Bangladeshi Taka')}</span><span>•••• {String(wallet?._id || '4829').slice(-4)}</span></div><div className="wallet-card-orb" /></div><div className="wallet-note panel wallet-gems"><span className="service-icon mint"><Sparkles size={19} /></span><small>{t('GEMS')}</small><b className="wallet-gems-count">{formatNumber(wallet?.gems ?? 0)}</b><p>{t('You earn gems for every trip you complete. End a trip at your stop to collect them.')}</p></div></section><div className="wallet-hint"><Clock3 size={16} /><span><b>{t('Easy to keep track.')}</b> {t('Your trip history keeps a record of each commute you log.')}</span></div></>}
+
+  const gems = wallet?.gemsBalance ?? 0
+  const rate = wallet?.conversion?.gemsPerTaka ?? 0
+  // The gems field starts empty, meaning "convert as many as possible".
+  const wanted = gemsInput.trim() === '' ? gems : Number(gemsInput)
+  const inputProblem = gemsInput.trim() === '' ? ''
+    : !Number.isInteger(wanted) || wanted <= 0 ? t('Enter a whole number of gems greater than zero.')
+    : wanted > gems ? t('You only have {gems} gems.', { gems })
+    : ''
+  const blocks = rate > 0 && !inputProblem ? Math.floor(wanted / rate) : 0
+  const preview = { taka: blocks, used: blocks * rate, left: gems - blocks * rate }
+  const canConvert = !converting && rate > 0 && !inputProblem && blocks > 0
+
+  const convert = async (event) => {
+    event.preventDefault()
+    if (!canConvert) return
+    setConverting(true); setConvertMessage({ error: '', success: '' })
+    try {
+      const body = gemsInput.trim() === '' ? {} : { gems: wanted }
+      const data = await request('/wallet/convert-gems', { token, method: 'POST', body: JSON.stringify(body) })
+      const success = t('Converted {gems} gems to ৳{taka}. {left} gems left.', { gems: data.gemsUsed, taka: data.convertedAmount, left: data.gemsRemaining })
+      setConvertMessage({ error: '', success }); setGemsInput(''); notify?.(success)
+      load()
+    } catch (e) { setConvertMessage({ error: errorText(e), success: '' }) }
+    finally { setConverting(false) }
+  }
+
+  const heading = <PageHeading eyebrow={t('YOUR COMMUTE COMPANION')} title={t('My wallet.')} description={t('Your taka balance, your gems, and every change to them.')} icon={Wallet} />
+  if (!signedIn) return <div className="page inner-page">{heading}<SignInPrompt openAuth={openAuth} message={t('Sign in to check your SmartCommute wallet.')} /></div>
+  if (loading && !wallet) return <div className="page inner-page">{heading}<div className="empty-state"><span className="spinner" /> {t('Checking your balance…')}</div></div>
+  if (error && !wallet) return <div className="page inner-page">{heading}<div className="empty-state panel"><span className="empty-icon"><Wallet size={22} /></span><b>{t('Wallet unavailable')}</b><span>{error}</span><button className="button button-outline button-small" onClick={load}>{t('Try again')}</button></div></div>
+
+  return <div className="page inner-page">{heading}
+    {error && <div className="wallet-inline-error"><CircleAlert size={15} /> {error}</div>}
+    <section className="wallet-overview">
+      <div className="wallet-card-large"><div className="wallet-card-head"><span className="wallet-mark"><BusFront size={18} /></span><span>{t('SMARTCOMMUTE WALLET')}</span><CreditCard size={20} /></div><div className="balance-caption">{t('AVAILABLE BALANCE')}</div><div className="balance-amount">{money(wallet.takaBalance)}</div><div className="wallet-card-foot"><span>{t('BDT · Bangladeshi Taka')}</span><span>{t('Updated {time}', { time: formatDateTime(wallet.wallet?.updatedAt) })}</span></div><div className="wallet-card-orb" /></div>
+      <div className="wallet-note panel wallet-gems"><span className="service-icon mint"><Sparkles size={19} /></span><small>{t('GEMS')}</small><b className="wallet-gems-count">{formatNumber(gems)}</b><p>{rate > 0 ? t('{rate} gems = ৳1. You earn gems for every trip you complete.', { rate }) : t('You earn gems for every trip you complete. End a trip at your stop to collect them.')}</p></div>
+    </section>
+
+    <section className="panel wallet-convert">
+      <div className="wallet-section-head"><div><div className="eyebrow">{t('GEMS TO TAKA')}</div><h2>{t('Convert your gems')}</h2></div>{rate > 0 && <span className="wallet-rate">{t('{rate} gems = ৳1', { rate })}</span>}</div>
+      {rate <= 0 ? <p className="wallet-muted">{t('Gem conversion is not available right now.')}</p> : <form className="wallet-convert-form" onSubmit={convert} noValidate>
+        <label htmlFor="convert-gems">{t('Gems to convert')}</label>
+        <div className="wallet-convert-row">
+          <input id="convert-gems" type="number" inputMode="numeric" min={rate} max={gems} step={rate} value={gemsInput} placeholder={t('All {gems} gems', { gems })} onChange={(e) => { setGemsInput(e.target.value); setConvertMessage({ error: '', success: '' }) }} disabled={converting} />
+          <button className="button button-green" disabled={!canConvert}>{converting ? <><span className="button-spinner" /> {t('Converting…')}</> : t('Convert')}</button>
+        </div>
+        {inputProblem ? <p className="wallet-field-error">{inputProblem}</p>
+          : blocks > 0 ? <p className="wallet-preview">{t('You get ৳{taka} for {used} gems. {left} gems stay in your wallet.', { taka: preview.taka, used: preview.used, left: preview.left })}</p>
+          : <p className="wallet-muted">{t('You need at least {rate} gems to convert. Only whole blocks of {rate} gems are converted; the rest stay as gems.', { rate })}</p>}
+        {convertMessage.error && <p className="wallet-field-error">{convertMessage.error}</p>}
+        {convertMessage.success && <p className="wallet-success"><Check size={14} /> {convertMessage.success}</p>}
+      </form>}
+    </section>
+
+    <section className="panel wallet-history">
+      <div className="wallet-section-head"><div><div className="eyebrow">{t('TRANSACTION HISTORY')}</div><h2>{t('Every change to your wallet')}</h2></div>{history.total > 0 && <span className="result-count">{history.total === 1 ? t('1 transaction') : t('{count} transactions', { count: history.total })}</span>}</div>
+      {history.status === 'loading' && !history.items.length ? <div className="empty-state"><span className="spinner" /> {t('Loading transactions…')}</div>
+        : history.status !== 'ready' && history.status !== 'loading' && !history.items.length ? <div className="empty-state"><span className="empty-icon"><CircleAlert size={22} /></span><b>{t('Transactions could not be loaded')}</b><span>{history.status}</span><button className="button button-outline button-small" onClick={() => loadHistory(1)}>{t('Try again')}</button></div>
+        : !history.items.length ? <div className="empty-state"><span className="empty-icon"><History size={22} /></span><b>{t('No transactions yet')}</b><span>{t('Complete a trip to earn gems, or recharge from GPay. Each change will be listed here.')}</span></div>
+        : <><ul className="wallet-ledger">{history.items.map((item) => {
+            const credit = item.amount > 0 || (item.amount === 0 && item.gemsChange > 0)
+            return <li key={item._id} className={credit ? 'credit' : 'debit'}>
+              <span className="wallet-ledger-icon">{item.amount === 0 ? <Sparkles size={16} /> : credit ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}</span>
+              <div className="wallet-ledger-main"><b>{t(TRANSACTION_TYPES[item.type] || item.type)}</b><span>{t(item.description)}</span><small>{formatDateTime(item.createdAt)}</small></div>
+              <div className="wallet-ledger-amounts">
+                {item.amount !== 0 && <b className={item.amount > 0 ? 'plus' : 'minus'}>{signedMoney(item.amount)}</b>}
+                {item.gemsChange !== 0 && <span className={item.gemsChange > 0 ? 'plus' : 'minus'}>{t('{gems} gems', { gems: signedGems(item.gemsChange) })}</span>}
+                {item.balanceAfter != null && <small>{t('Balance after: {balance} · {gems} gems', { balance: money(item.balanceAfter), gems: formatNumber(item.gemsAfter) })}</small>}
+              </div>
+            </li>
+          })}</ul>
+          {history.status !== 'ready' && history.status !== 'loading' && <p className="wallet-field-error">{history.status}</p>}
+          {history.page < history.totalPages && <button className="button button-outline button-small wallet-more" disabled={history.status === 'loading'} onClick={() => loadHistory(history.page + 1)}>{history.status === 'loading' ? t('Loading…') : t('Show older transactions')}</button>}</>}
+    </section>
   </div>
 }
 

@@ -190,7 +190,10 @@ namespace SmartCommute.Server.Data.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_chats_user1id_user2id");
 
-                    b.ToTable("chats", (string)null);
+                    b.ToTable("chats", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_chats_ordered_pair", "user1id < user2id");
+                        });
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.ChatMessage", b =>
@@ -212,6 +215,10 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("read");
 
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("read_at");
+
                     b.Property<Guid>("SenderId")
                         .HasColumnType("uuid")
                         .HasColumnName("sender_id");
@@ -231,7 +238,14 @@ namespace SmartCommute.Server.Data.Migrations
                     b.HasIndex("ChatId", "CreatedAt")
                         .HasDatabaseName("ix_chat_messages_chat_id_created_at");
 
-                    b.ToTable("chat_messages", (string)null);
+                    b.HasIndex("ChatId", "SenderId")
+                        .HasDatabaseName("ix_chat_messages_unread")
+                        .HasFilter("read = false");
+
+                    b.ToTable("chat_messages", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_chat_messages_text_not_blank", "text ~ '\\S'");
+                        });
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.FareRecord", b =>
@@ -263,10 +277,19 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("double precision")
                         .HasColumnName("distance");
 
+                    b.Property<bool>("DistanceEstimated")
+                        .HasColumnType("boolean")
+                        .HasColumnName("distance_estimated");
+
                     b.Property<decimal>("Fare")
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)")
                         .HasColumnName("fare");
+
+                    b.Property<decimal?>("FarePerKm")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("fare_per_km");
 
                     b.Property<string>("Source")
                         .IsRequired()
@@ -289,11 +312,11 @@ namespace SmartCommute.Server.Data.Migrations
                     b.HasKey("Id")
                         .HasName("pk_fares");
 
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_fares_user_id");
-
                     b.HasIndex("Source", "Destination")
                         .HasDatabaseName("ix_fares_source_destination");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_fares_user_id_created_at");
 
                     b.ToTable("fares", (string)null);
                 });
@@ -371,39 +394,51 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("to_user_id");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
                     b.HasKey("Id")
                         .HasName("pk_friend_requests");
 
-                    b.HasIndex("FromUserId")
-                        .HasDatabaseName("ix_friend_requests_from_user_id");
+                    b.HasIndex("FromUserId", "Status")
+                        .HasDatabaseName("ix_friend_requests_from_user_id_status");
 
                     b.HasIndex("ToUserId", "Status")
                         .HasDatabaseName("ix_friend_requests_to_user_id_status");
 
-                    b.ToTable("friend_requests", (string)null);
+                    b.ToTable("friend_requests", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_friend_requests_not_self", "from_user_id <> to_user_id");
+
+                            t.HasCheckConstraint("ck_friend_requests_status", "status IN ('pending', 'accepted', 'rejected')");
+                        });
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.Friendship", b =>
                 {
-                    b.Property<Guid>("UserId")
+                    b.Property<Guid>("User1Id")
                         .HasColumnType("uuid")
-                        .HasColumnName("user_id");
+                        .HasColumnName("user1id");
 
-                    b.Property<Guid>("FriendId")
+                    b.Property<Guid>("User2Id")
                         .HasColumnType("uuid")
-                        .HasColumnName("friend_id");
+                        .HasColumnName("user2id");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
-                    b.HasKey("UserId", "FriendId")
+                    b.HasKey("User1Id", "User2Id")
                         .HasName("pk_friendships");
 
-                    b.HasIndex("FriendId")
-                        .HasDatabaseName("ix_friendships_friend_id");
+                    b.HasIndex("User2Id")
+                        .HasDatabaseName("ix_friendships_user2id");
 
-                    b.ToTable("friendships", (string)null);
+                    b.ToTable("friendships", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_friendships_ordered_pair", "user1id < user2id");
+                        });
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.GpayAccount", b =>
@@ -807,9 +842,17 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
 
                     b.Property<string>("Destination")
                         .IsRequired()
@@ -832,6 +875,12 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("gender");
 
+                    b.Property<string>("GenderPreference")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("gender_preference");
+
                     b.Property<int>("MaxParticipants")
                         .HasColumnType("integer")
                         .HasColumnName("max_participants");
@@ -848,6 +897,10 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("status");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
@@ -861,13 +914,26 @@ namespace SmartCommute.Server.Data.Migrations
                     b.HasKey("Id")
                         .HasName("pk_ride_posts");
 
-                    b.HasIndex("UserId")
-                        .HasDatabaseName("ix_ride_posts_user_id");
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_ride_posts_open")
+                        .HasFilter("status = 'active' AND deleted_at IS NULL");
 
                     b.HasIndex("Status", "CreatedAt")
                         .HasDatabaseName("ix_ride_posts_status_created_at");
 
-                    b.ToTable("ride_posts", (string)null);
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_ride_posts_user_id_created_at");
+
+                    b.ToTable("ride_posts", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_ride_posts_gender_preference", "gender_preference IN ('Any', 'Male', 'Female')");
+
+                            t.HasCheckConstraint("ck_ride_posts_max_participants", "max_participants BETWEEN 2 AND 20");
+
+                            t.HasCheckConstraint("ck_ride_posts_places_not_blank", "source ~ '\\S' AND destination ~ '\\S'");
+
+                            t.HasCheckConstraint("ck_ride_posts_status", "status IN ('active', 'completed')");
+                        });
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.RideRequest", b =>
@@ -907,16 +973,25 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("status");
 
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
                     b.HasKey("Id")
                         .HasName("pk_ride_requests");
 
-                    b.HasIndex("RequesterId")
-                        .HasDatabaseName("ix_ride_requests_requester_id");
+                    b.HasIndex("RequesterId", "CreatedAt")
+                        .HasDatabaseName("ix_ride_requests_requester_id_created_at");
 
                     b.HasIndex("RidePostId", "RequesterId")
-                        .HasDatabaseName("ix_ride_requests_ride_post_id_requester_id");
+                        .IsUnique()
+                        .HasDatabaseName("ix_ride_requests_one_live_per_rider")
+                        .HasFilter("status <> 'rejected'");
 
-                    b.ToTable("ride_requests", (string)null);
+                    b.ToTable("ride_requests", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_ride_requests_status", "status IN ('pending', 'accepted', 'rejected')");
+                        });
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.Trip", b =>
@@ -1099,6 +1174,8 @@ namespace SmartCommute.Server.Data.Migrations
 
                     b.ToTable("users", null, t =>
                         {
+                            t.HasCheckConstraint("ck_users_friend_code_format", "friend_code ~ '^[A-Z0-9]{5}$'");
+
                             t.HasCheckConstraint("ck_users_role", "role IN ('commuter', 'driver', 'admin')");
                         });
                 });
@@ -1265,7 +1342,12 @@ namespace SmartCommute.Server.Data.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_wallets_user_id");
 
-                    b.ToTable("wallets", (string)null);
+                    b.ToTable("wallets", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_wallets_balance_not_negative", "balance >= 0");
+
+                            t.HasCheckConstraint("ck_wallets_gems_not_negative", "gems >= 0");
+                        });
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.WalletTransaction", b =>
@@ -1280,6 +1362,11 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("numeric(12,2)")
                         .HasColumnName("amount");
 
+                    b.Property<decimal?>("BalanceAfter")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("balance_after");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
@@ -1289,6 +1376,10 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("description");
+
+                    b.Property<int?>("GemsAfter")
+                        .HasColumnType("integer")
+                        .HasColumnName("gems_after");
 
                     b.Property<int>("GemsChange")
                         .HasColumnType("integer")
@@ -1451,23 +1542,23 @@ namespace SmartCommute.Server.Data.Migrations
 
             modelBuilder.Entity("SmartCommute.Server.Models.Friendship", b =>
                 {
-                    b.HasOne("SmartCommute.Server.Models.User", "Friend")
+                    b.HasOne("SmartCommute.Server.Models.User", "User1")
                         .WithMany()
-                        .HasForeignKey("FriendId")
+                        .HasForeignKey("User1Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_friendships_users_friend_id");
+                        .HasConstraintName("fk_friendships_users_user1id");
 
-                    b.HasOne("SmartCommute.Server.Models.User", "User")
+                    b.HasOne("SmartCommute.Server.Models.User", "User2")
                         .WithMany()
-                        .HasForeignKey("UserId")
+                        .HasForeignKey("User2Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
-                        .HasConstraintName("fk_friendships_users_user_id");
+                        .HasConstraintName("fk_friendships_users_user2id");
 
-                    b.Navigation("Friend");
+                    b.Navigation("User1");
 
-                    b.Navigation("User");
+                    b.Navigation("User2");
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.GpayAccount", b =>

@@ -1,4 +1,6 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using SmartCommute.Server.Data;
 using SmartCommute.Server.Extensions;
@@ -8,20 +10,28 @@ using SmartCommute.Server.ViewModels;
 
 namespace SmartCommute.Server.Controllers;
 
+// Place search goes to OpenStreetMap Nominatim, whose usage policy forbids search-as-you-type: clients call
+// search when the user submits a query, and use /api/stops/search (our own database) for live suggestions.
 [Route("api/geocoding")]
-public class GeocodingController(GeoService geo, WalletService wallets, ILogger<GeocodingController> logger) : ApiControllerBase
+[EnableRateLimiting("maps")]
+public class GeocodingController(GeoService geo, FareService fares, ILogger<GeocodingController> logger) : ApiControllerBase
 {
+    // dhaka=true keeps results inside greater Dhaka; lang=en|bn picks the language of the place names.
     [HttpGet("search")]
     public async Task<IActionResult> Search([FromQuery] string? q, [FromQuery] int limit = 5,
-        [FromQuery] string countrycodes = "bd", CancellationToken ct = default)
+        [FromQuery] string countrycodes = "bd", [FromQuery] bool dhaka = false, [FromQuery] string? lang = null, CancellationToken ct = default)
     {
         if (string.IsNullOrWhiteSpace(q))
         {
             return BadRequestError("q is required.");
         }
+        if (q.Trim().Length < 2 || q.Length > 200)
+        {
+            return BadRequestError("Type between 2 and 200 characters to search.");
+        }
         try
         {
-            var places = await geo.SearchAsync(q, limit, countrycodes, ct);
+            var places = await geo.SearchAsync(q, limit, countrycodes, ct, dhaka, lang);
             return Ok(new { success = true, data = places.Select(ToJson) });
         }
         catch (HttpRequestException ex)
@@ -57,7 +67,7 @@ public class GeocodingController(GeoService geo, WalletService wallets, ILogger<
     public async Task<IActionResult> Distance([FromQuery] double sourceLat, [FromQuery] double sourceLon,
         [FromQuery] double destLat, [FromQuery] double destLon, CancellationToken ct = default)
     {
-        if (Math.Abs(sourceLat) > 90 || Math.Abs(destLat) > 90 || Math.Abs(sourceLon) > 180 || Math.Abs(destLon) > 180)
+        if (!ValidPoint(sourceLat, sourceLon) || !ValidPoint(destLat, destLon))
         {
             return BadRequestError("Invalid coordinates.");
         }
@@ -70,18 +80,51 @@ public class GeocodingController(GeoService geo, WalletService wallets, ILogger<
             {
                 distance = road.DistanceKm,
                 duration = road.DurationMinutes,
-                fare = Math.Round((decimal)road.DistanceKm * wallets.Rewards.FarePerKm, 2),
+                fare = fares.FareFor(road.DistanceKm),
+                farePerKm = fares.FarePerKm,
                 estimated = road.Estimated,
             },
         });
     }
 
+    private static bool ValidPoint(double lat, double lon) =>
+        double.IsFinite(lat) && double.IsFinite(lon) && Math.Abs(lat) <= 90 && Math.Abs(lon) <= 180;
+
     private static object ToJson(GeoPlace p) => new { display_name = p.DisplayName, lat = p.Lat, lon = p.Lon, place_id = p.PlaceId };
 }
 
 [Route("api/stops")]
-public class StopsController(AppDbContext db) : ApiControllerBase
+public class StopsController(AppDbContext db, BusRouteCache routes) : ApiControllerBase
 {
+    // Every bus stop once, by name, with its coordinates. A stop served by several routes is stored once per route,
+    // so its position is the average of those rows.
+    [HttpGet("")]
+    public async Task<IActionResult> All(CancellationToken ct)
+    {
+        var stops = await DistinctStopsAsync(ct);
+        return Ok(new { success = true, count = stops.Count, data = stops.Select(s => new { name = s.Name, lat = s.Lat, lng = s.Lng }) });
+    }
+
+    // Bus stops closest to a point, nearest first, with the straight-line distance to each.
+    [HttpGet("nearby")]
+    public async Task<IActionResult> Nearby([FromQuery] double? lat, [FromQuery] double? lng,
+        [FromQuery] double radiusKm = 1.5, [FromQuery] int limit = 5, CancellationToken ct = default)
+    {
+        if (lat is not { } la || lng is not { } ln || !double.IsFinite(la) || !double.IsFinite(ln) || Math.Abs(la) > 90 || Math.Abs(ln) > 180)
+        {
+            return BadRequestError("lat and lng are required and must be valid coordinates.");
+        }
+
+        var radius = Math.Clamp(radiusKm, 0.1, 10);
+        var stops = (await DistinctStopsAsync(ct))
+            .Select(s => new { name = s.Name, lat = s.Lat, lng = s.Lng, distanceKm = Math.Round(GeoService.HaversineKm(la, ln, s.Lat, s.Lng), 2) })
+            .Where(s => s.distanceKm <= radius)
+            .OrderBy(s => s.distanceKm)
+            .Take(Math.Clamp(limit, 1, 20))
+            .ToList();
+        return Ok(new { success = true, count = stops.Count, data = stops });
+    }
+
     [HttpGet("search")]
     public async Task<IActionResult> Search([FromQuery] string? q)
     {
@@ -122,11 +165,76 @@ public class StopsController(AppDbContext db) : ApiControllerBase
             ? Ok(new { success = false, message = "Stop not found.", data = (object?)null })
             : Ok(new { success = true, data = new { name = stop.Name, lat = stop.Lat, lng = stop.Lng } });
     }
+
+    private async Task<List<(string Name, double Lat, double Lng)>> DistinctStopsAsync(CancellationToken ct) =>
+        (await routes.AllAsync(ct))
+            .SelectMany(r => r.Stops)
+            .GroupBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
+            .Select(g => (Name: g.First().Name, Lat: g.Average(s => s.Lat), Lng: g.Average(s => s.Lng)))
+            .OrderBy(s => s.Name)
+            .ToList();
 }
 
 [Route("api/fares")]
-public class FaresController(AppDbContext db, WalletService wallets) : ApiControllerBase
+public class FaresController(AppDbContext db, FareService fares) : ApiControllerBase
 {
+    private const string NotConfigured = "Fare calculation is unavailable: the fare rate (Rewards:FarePerKm) is not configured.";
+
+    // The configured fare rate, so the calculator can show it before anything is calculated.
+    [HttpGet("rate")]
+    public IActionResult Rate() => Ok(new
+    {
+        success = true,
+        data = new { farePerKm = fares.FarePerKm, currency = "BDT", configured = fares.IsConfigured },
+    });
+
+    // Road distance between two places times the configured fare rate. Every successful calculation is saved
+    // (to the caller's history when signed in); an identical one sent again within a minute is not saved twice.
+    [EnableRateLimiting("maps")]
+    [HttpPost("calculate")]
+    public async Task<IActionResult> Calculate(CalculateFareRequest request, CancellationToken ct)
+    {
+        if (!fares.IsConfigured)
+        {
+            return Error(StatusCodes.Status503ServiceUnavailable, NotConfigured);
+        }
+        if (string.IsNullOrWhiteSpace(request.Source) || string.IsNullOrWhiteSpace(request.Destination))
+        {
+            return BadRequestError("Choose both a starting point and a destination.");
+        }
+        var from = request.SourceCoordinates!;
+        var to = request.DestinationCoordinates!;
+        if (GeoService.HaversineKm(from.Lat, from.Lon, to.Lat, to.Lon) < 0.05)
+        {
+            return BadRequestError("The starting point and destination are the same place.");
+        }
+
+        var userId = IsSignedIn ? CurrentUserId : (Guid?)null;
+        var (record, road, created) = await fares.CalculateAndSaveAsync(userId, request, ct);
+        var body = new
+        {
+            success = true,
+            message = created ? "Fare calculated and saved." : "Fare calculated (already saved).",
+            data = new
+            {
+                fare = FareViewModel.From(record),
+                duration = road.DurationMinutes,
+                path = road.Path,
+                saved = created,
+            },
+        };
+        return created ? Created201(body) : Ok(body);
+    }
+
+    // The signed-in user's saved fare calculations, newest first.
+    [Authorize]
+    [HttpGet("history")]
+    public async Task<IActionResult> History([FromQuery] int limit = 20, CancellationToken ct = default)
+    {
+        var history = await fares.HistoryAsync(CurrentUserId, limit, ct);
+        return Ok(new { success = true, count = history.Count, data = history.Select(FareViewModel.From) });
+    }
+
     [HttpPost("")]
     public async Task<IActionResult> Save(SaveFareRequest request)
     {
@@ -141,6 +249,10 @@ public class FaresController(AppDbContext db, WalletService wallets) : ApiContro
                 return ForbiddenError();
             }
         }
+        if (!fares.IsConfigured)
+        {
+            return Error(StatusCodes.Status503ServiceUnavailable, NotConfigured);
+        }
 
         var fare = new FareRecord
         {
@@ -148,7 +260,8 @@ public class FaresController(AppDbContext db, WalletService wallets) : ApiContro
             Source = request.Source.Trim(),
             Destination = request.Destination.Trim(),
             Distance = Math.Round(request.Distance, 2),
-            Fare = Math.Round((decimal)request.Distance * wallets.Rewards.FarePerKm, 2),
+            FarePerKm = fares.FarePerKm,
+            Fare = fares.FareFor(request.Distance),
             SourceLat = request.SourceCoordinates?.Lat,
             SourceLon = request.SourceCoordinates?.Lon,
             DestinationLat = request.DestinationCoordinates?.Lat,
@@ -179,15 +292,20 @@ public class FaresController(AppDbContext db, WalletService wallets) : ApiContro
             : Ok(new { success = true, data = FareViewModel.From(fare) });
     }
 
+    // A signed-in user may only list their own fares (admins excepted).
     [HttpGet("user/{userId:guid}")]
     public async Task<IActionResult> ForUser(Guid userId)
     {
-        var fares = await db.Fares
+        if (!CanActAs(userId))
+        {
+            return ForbiddenError();
+        }
+        var records = await db.Fares
             .Where(f => f.UserId == userId)
             .OrderByDescending(f => f.CreatedAt)
             .Take(100)
             .AsNoTracking()
             .ToListAsync();
-        return Ok(new { success = true, count = fares.Count, data = fares.Select(FareViewModel.From) });
+        return Ok(new { success = true, count = records.Count, data = records.Select(FareViewModel.From) });
     }
 }

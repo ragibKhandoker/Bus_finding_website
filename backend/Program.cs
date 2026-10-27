@@ -52,6 +52,7 @@ if (jwt.Secret.Length < 32)
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<RewardOptions>(builder.Configuration.GetSection("Rewards"));
 builder.Services.Configure<GeoOptions>(builder.Configuration.GetSection("Geo"));
+builder.Services.Configure<RideShareOptions>(builder.Configuration.GetSection("RideShare"));
 builder.Services.Configure<GoogleMapsOptions>(builder.Configuration.GetSection("GoogleMaps"));
 
 builder.Services
@@ -123,6 +124,14 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy("maps", context => RateLimitPartition.GetFixedWindowLimiter(
         context.User.FindFirst("id")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1) }));
+    // Chat messages: generous for a conversation, but stops a script flooding someone's inbox.
+    options.AddPolicy("chat-send", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst("id")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 60, Window = TimeSpan.FromMinutes(1) }));
+    // Friend codes are short, so searches are limited per user to stop anyone walking through every code.
+    options.AddPolicy("friend-search", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst("id")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1) }));
 });
 
 // ---- CORS for the web client ----
@@ -171,8 +180,13 @@ builder.Services.AddHttpClient<GeoService>((services, client) =>
 });
 builder.Services.AddScoped<JwtTokenService>();
 builder.Services.AddScoped<FriendCodeGenerator>();
+builder.Services.AddScoped<FriendService>();
+builder.Services.AddScoped<ChatService>();
+builder.Services.AddScoped<RideShareService>();
+builder.Services.AddScoped<RideRequestService>();
 builder.Services.AddScoped<WalletService>();
 builder.Services.AddScoped<TripService>();
+builder.Services.AddScoped<FareService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<ImageStorageService>();
 builder.Services.AddSingleton<BusRouteCache>();
@@ -255,6 +269,12 @@ using (var scope = app.Services.CreateScope())
 
         step = "seed";
         await DbSeeder.SeedAsync(scope.ServiceProvider, app.Configuration, app.Logger);
+        // Every user has a wallet: sign-up creates one, and this fills in any account made before that.
+        var walletsCreated = await scope.ServiceProvider.GetRequiredService<WalletService>().CreateMissingWalletsAsync();
+        if (walletsCreated > 0)
+        {
+            Console.WriteLine($"✅ Created {walletsCreated} missing wallet(s).");
+        }
         // Load the routes into memory now, so the first visitor does not wait for the database.
         step = "cache";
         var routes = await app.Services.GetRequiredService<BusRouteCache>().AllAsync();
@@ -295,3 +315,6 @@ catch (IOException ex) when (ex.InnerException is Microsoft.AspNetCore.Connectio
     Console.WriteLine("   Stop it with Ctrl+C in its terminal, or find it with: netstat -ano | findstr :3000");
     Environment.ExitCode = 1;
 }
+
+// Lets the integration tests (tests/SmartCommute.Tests) start the app with WebApplicationFactory<Program>.
+public partial class Program;

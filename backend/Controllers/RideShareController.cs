@@ -1,252 +1,134 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using SmartCommute.Server.Data;
 using SmartCommute.Server.Models;
 using SmartCommute.Server.Services;
 using SmartCommute.Server.ViewModels;
 
 namespace SmartCommute.Server.Controllers;
 
-// The existing clients call these without a token, so they identify the user by the id in the body.
-// When a token is sent it must match that id (see CanActAs).
+// Ride share posts. Anyone may browse open rides; creating, deleting and completing need a signed-in user, who
+// is always taken from the token (never from a userId in the body). Only the host may delete or complete a post.
 [Route("api/rideshare")]
-public class RideShareController(AppDbContext db, WalletService wallets, NotificationService notifications) : ApiControllerBase
+public class RideShareController(RideShareService rides) : ApiControllerBase
 {
+    // Open rides, newest first: ?destination=Dhanmondi&page=1&pageSize=50 (pageSize at most 100).
     [HttpGet("")]
-    public async Task<IActionResult> List()
+    public Task<IActionResult> List([FromQuery] string? destination, [FromQuery] int page = 1, [FromQuery] int pageSize = 50)
     {
-        var posts = await db.RidePosts
-            .Include(p => p.Requests)
-            .Where(p => p.Status == RideStatus.Active)
-            .OrderByDescending(p => p.CreatedAt)
-            .AsNoTracking()
-            .ToListAsync();
-        return Ok(new { success = true, count = posts.Count, data = posts.Select(RidePostViewModel.From) });
+        if (destination?.Trim().Length > RideShareService.MaxPlaceLength)
+        {
+            return Task.FromResult<IActionResult>(BadRequestError("The destination filter can be at most 200 characters."));
+        }
+        return Paged(rides.Open(destination), page, pageSize);
     }
 
+    [Authorize]
     [HttpPost("")]
     public async Task<IActionResult> Create(CreateRidePostRequest request)
     {
-        var user = await db.Users.FindAsync(request.UserId);
-        if (user is null)
+        var result = await rides.CreateAsync(CurrentUserId,
+            new NewRide(request.Source, request.Destination, request.MaxParticipants, request.GenderPreference));
+        if (!result.Succeeded)
         {
-            return NotFoundError("User not found.");
+            return Error(result.StatusCode, result.Message);
         }
-        if (!CanActAs(user.Id))
-        {
-            return ForbiddenError();
-        }
-
-        var post = new RidePost
-        {
-            UserId = user.Id,
-            UserName = string.IsNullOrWhiteSpace(request.UserName) ? user.Name : request.UserName.Trim(),
-            Gender = string.IsNullOrWhiteSpace(request.Gender) ? user.Gender : request.Gender.Trim(),
-            Source = request.Source.Trim(),
-            Destination = request.Destination.Trim(),
-            MaxParticipants = request.MaxParticipants,
-            Distance = request.Distance,
-            Fare = request.Fare,
-        };
-        db.RidePosts.Add(post);
-        await db.SaveChangesAsync();
-        return Created201(new { success = true, message = "Ride post created.", ridePost = RidePostViewModel.From(post) });
+        var post = RidePostViewModel.From(result.Post!);
+        return Created201(new { success = true, message = result.Message, ridePost = post, data = post });
     }
 
+    // A host's posts. The host themselves gets open and completed posts (their "My rides"); everyone else gets only
+    // that host's open posts, the same ones the public list shows.
     [HttpGet("user/{userId:guid}")]
-    public async Task<IActionResult> UserRides(Guid userId)
-    {
-        var posts = await db.RidePosts
-            .Include(p => p.Requests)
-            .Where(p => p.UserId == userId)
-            .OrderByDescending(p => p.CreatedAt)
-            .AsNoTracking()
-            .ToListAsync();
-        return Ok(new { success = true, count = posts.Count, data = posts.Select(RidePostViewModel.From) });
-    }
+    public Task<IActionResult> UserRides(Guid userId, [FromQuery] int page = 1, [FromQuery] int pageSize = 50) =>
+        Paged(rides.ByHost(userId, includeCompleted: IsSignedIn && CurrentUserId == userId), page, pageSize);
 
+    [Authorize]
     [HttpDelete("{postId:guid}")]
     public async Task<IActionResult> Delete(Guid postId)
     {
-        var post = await db.RidePosts.Include(p => p.Requests).FirstOrDefaultAsync(p => p.Id == postId);
-        if (post is null)
-        {
-            return NotFoundError("Ride post not found.");
-        }
-        if (!CanActAs(post.UserId))
-        {
-            return ForbiddenError("Only the host can delete this ride.");
-        }
-
-        foreach (var request in post.Requests.Where(r => r.Status != RideRequestStatus.Rejected))
-        {
-            notifications.Notify(request.RequesterId, "Ride cancelled",
-                $"The ride from {post.Source} to {post.Destination} was cancelled by the host.", NotificationTypes.Warning);
-        }
-        db.RidePosts.Remove(post);
-        await db.SaveChangesAsync();
-        return Ok(new { success = true, message = "Ride post deleted." });
+        var result = await rides.DeleteAsync(CurrentUserId, postId);
+        return result.Succeeded ? Ok(new { success = true, message = result.Message }) : Error(result.StatusCode, result.Message);
     }
 
-    // Marks the ride as finished and rewards the host and accepted riders with gems.
+    // Marks the host's ride as completed. Completing it again returns the completed post without changing anything.
+    [Authorize]
     [HttpPost("complete")]
     public async Task<IActionResult> Complete(CompleteRideRequest request)
     {
-        var post = await db.RidePosts.Include(p => p.Requests).FirstOrDefaultAsync(p => p.Id == request.PostId);
-        if (post is null)
-        {
-            return NotFoundError("Ride post not found.");
-        }
+        var result = await rides.CompleteAsync(CurrentUserId, request.PostId!.Value);
+        return result.Succeeded
+            ? Ok(new { success = true, message = result.Message, data = RidePostViewModel.From(result.Post!) })
+            : Error(result.StatusCode, result.Message);
+    }
 
-        var riders = post.Requests.Where(r => r.Status == RideRequestStatus.Accepted).Select(r => r.RequesterId).ToList();
-        var caller = IsSignedIn ? CurrentUserId : request.UserId ?? Guid.Empty;
-        if (caller != post.UserId && !riders.Contains(caller) && !IsAdmin)
+    private async Task<IActionResult> Paged(IQueryable<RidePost> query, int page, int pageSize)
+    {
+        page = Math.Max(1, page);
+        pageSize = Math.Clamp(pageSize, 1, 100);
+        var total = await query.CountAsync();
+        var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync();
+        return Ok(new
         {
-            return ForbiddenError("Only people on this ride can complete it.");
-        }
-        if (post.Status == RideStatus.Completed)
-        {
-            return Ok(new { success = true, message = "Ride already completed." });
-        }
-
-        post.Status = RideStatus.Completed;
-        foreach (var userId in riders.Append(post.UserId))
-        {
-            var wallet = await wallets.GetOrCreateAsync(userId);
-            wallets.AddGems(wallet, wallets.Rewards.GemsPerTrip, $"Ride share {post.Source} to {post.Destination}");
-        }
-        await db.SaveChangesAsync();
-        return Ok(new { success = true, message = $"Ride completed. Everyone earned {wallets.Rewards.GemsPerTrip} gems." });
+            success = true,
+            count = items.Count,
+            total,
+            page,
+            pageSize,
+            totalPages = (int)Math.Ceiling(total / (double)pageSize),
+            data = items.Select(RidePostViewModel.From),
+        });
     }
 }
 
+// Requests to join a ride (F12). Every call needs a signed-in user: the rider asking, or the host answering. The user
+// always comes from the token; ids in the body are not trusted.
+[Authorize]
 [Route("api/riderequests")]
-public class RideRequestController(AppDbContext db, NotificationService notifications) : ApiControllerBase
+public class RideRequestController(RideRequestService requests) : ApiControllerBase
 {
+    // POST /api/riderequests with { "ridePostId": "…" }. /send is the older path for the same thing.
+    [HttpPost("")]
     [HttpPost("send")]
     public async Task<IActionResult> Send(SendRideRequestRequest request)
     {
-        var post = await db.RidePosts.Include(p => p.Requests).FirstOrDefaultAsync(p => p.Id == request.RidePostId);
-        var requester = await db.Users.FindAsync(request.RequesterId);
-        if (post is null || requester is null)
-        {
-            return NotFoundError(post is null ? "Ride post not found." : "User not found.");
-        }
-        if (!CanActAs(requester.Id))
-        {
-            return ForbiddenError();
-        }
-        if (post.Status != RideStatus.Active)
-        {
-            return BadRequestError("This ride is no longer open.");
-        }
-        if (post.UserId == requester.Id)
-        {
-            return BadRequestError("You cannot join your own ride.");
-        }
-        if (post.Requests.Any(r => r.RequesterId == requester.Id && r.Status != RideRequestStatus.Rejected))
-        {
-            return BadRequestError("You have already requested to join this ride.");
-        }
-        if (IsFull(post))
-        {
-            return BadRequestError("This ride is full.");
-        }
-
-        var rideRequest = new RideRequest
-        {
-            RidePostId = post.Id,
-            RequesterId = requester.Id,
-            RequesterName = string.IsNullOrWhiteSpace(request.RequesterName) ? requester.Name : request.RequesterName.Trim(),
-            RequesterGender = string.IsNullOrWhiteSpace(request.RequesterGender) ? requester.Gender : request.RequesterGender.Trim(),
-        };
-        db.RideRequests.Add(rideRequest);
-        notifications.Notify(post.UserId, "New ride request",
-            $"{rideRequest.RequesterName} wants to join your ride from {post.Source} to {post.Destination}.");
-        await db.SaveChangesAsync();
-        return Created201(new { success = true, message = "Ride request sent.", data = RideRequestViewModel.From(rideRequest) });
+        var result = await requests.SendAsync(CurrentUserId, request.RidePostId!.Value);
+        return result.Succeeded
+            ? Created201(new { success = true, message = result.Message, data = RideRequestViewModel.From(result.Request!) })
+            : Error(result.StatusCode, result.Message);
     }
 
+    // The requests for a ride, for its host only, with how many places are left.
     [HttpGet("ride/{ridePostId:guid}")]
     public async Task<IActionResult> ForRide(Guid ridePostId)
     {
-        var requests = await db.RideRequests
-            .Where(r => r.RidePostId == ridePostId)
-            .OrderByDescending(r => r.CreatedAt)
-            .AsNoTracking()
-            .ToListAsync();
-        return Ok(new { success = true, count = requests.Count, data = requests.Select(RideRequestViewModel.From) });
+        var (ride, list, problem) = await requests.ForRideAsync(CurrentUserId, ridePostId);
+        if (problem is not null)
+        {
+            return Error(problem.StatusCode, problem.Message);
+        }
+        return Ok(new { success = true, count = list.Count, ride = RidePostSummary.From(ride!), data = list.Select(RideRequestViewModel.From) });
     }
 
+    // The caller's own requests, each with the ride it is for. Nobody can read someone else's.
     [HttpGet("user/{userId:guid}")]
     public async Task<IActionResult> ForUser(Guid userId)
     {
-        var requests = await db.RideRequests
-            .Include(r => r.RidePost)
-            .Where(r => r.RequesterId == userId)
-            .OrderByDescending(r => r.CreatedAt)
-            .AsNoTracking()
-            .ToListAsync();
-        return Ok(new { success = true, count = requests.Count, data = requests.Select(RideRequestViewModel.From) });
+        if (userId != CurrentUserId)
+        {
+            return ForbiddenError("You can only see your own ride requests.");
+        }
+        var list = await requests.ForRequesterAsync(userId);
+        return Ok(new { success = true, count = list.Count, data = list.Select(RideRequestViewModel.From) });
     }
 
     [HttpPut("accept/{requestId:guid}")]
-    public async Task<IActionResult> Accept(Guid requestId)
-    {
-        var rideRequest = await db.RideRequests
-            .Include(r => r.RidePost).ThenInclude(p => p!.Requests)
-            .FirstOrDefaultAsync(r => r.Id == requestId);
-        if (rideRequest is null)
-        {
-            return NotFoundError("Ride request not found.");
-        }
-        var post = rideRequest.RidePost!;
-        if (!CanActAs(post.UserId))
-        {
-            return ForbiddenError("Only the host can accept requests.");
-        }
-        if (rideRequest.Status != RideRequestStatus.Pending)
-        {
-            return BadRequestError("This request was already handled.");
-        }
-        if (IsFull(post))
-        {
-            return BadRequestError("This ride is already full.");
-        }
-
-        rideRequest.Status = RideRequestStatus.Accepted;
-        notifications.Notify(rideRequest.RequesterId, "Ride request accepted",
-            $"You're in! {post.UserName} accepted your request for {post.Source} to {post.Destination}.", NotificationTypes.Success);
-        await db.SaveChangesAsync();
-        return Ok(new { success = true, message = "Ride request accepted.", data = RideRequestViewModel.From(rideRequest) });
-    }
+    public async Task<IActionResult> Accept(Guid requestId) => Decided(await requests.AcceptAsync(CurrentUserId, requestId));
 
     [HttpPut("reject/{requestId:guid}")]
-    public async Task<IActionResult> Reject(Guid requestId)
-    {
-        var rideRequest = await db.RideRequests.Include(r => r.RidePost).FirstOrDefaultAsync(r => r.Id == requestId);
-        if (rideRequest is null)
-        {
-            return NotFoundError("Ride request not found.");
-        }
-        var post = rideRequest.RidePost!;
-        if (!CanActAs(post.UserId))
-        {
-            return ForbiddenError("Only the host can decline requests.");
-        }
-        if (rideRequest.Status != RideRequestStatus.Pending)
-        {
-            return BadRequestError("This request was already handled.");
-        }
+    public async Task<IActionResult> Reject(Guid requestId) => Decided(await requests.RejectAsync(CurrentUserId, requestId));
 
-        rideRequest.Status = RideRequestStatus.Rejected;
-        notifications.Notify(rideRequest.RequesterId, "Ride request declined",
-            $"Your request for {post.Source} to {post.Destination} was declined.", NotificationTypes.Warning);
-        await db.SaveChangesAsync();
-        return Ok(new { success = true, message = "Ride request declined.", data = RideRequestViewModel.From(rideRequest) });
-    }
-
-    // MaxParticipants counts the host.
-    private static bool IsFull(RidePost post) =>
-        post.Requests.Count(r => r.Status == RideRequestStatus.Accepted) + 1 >= post.MaxParticipants;
+    private IActionResult Decided(RideRequestResult result) => result.Succeeded
+        ? Ok(new { success = true, message = result.Message, data = RideRequestViewModel.From(result.Request!), ride = RidePostSummary.From(result.Ride!) })
+        : Error(result.StatusCode, result.Message);
 }

@@ -23,6 +23,7 @@
   --bd-d5e6da:#d5e6da;
   --bd-d7eadb:#d7eadb;
   --bd-d9e2dc:#d9e2dc;
+  --bd-db786d:#db786d;
   --bd-dbe5de:#dbe5de;
   --bd-dce8df:#dce8df;
   --bd-dfe8df:#dfe8df;
@@ -51,6 +52,7 @@
   --bd-f0d9d4:#f0d9d4;
   --bd-f1cfc7:#f1cfc7;
   --bd-f1d5ce:#f1d5ce;
+  --bd-f1e1bd:#f1e1bd;
   --bd-f3d7d2:#f3d7d2;
   --bd-f4d8d3:#f4d8d3;
   --bd-ffffff:#ffffff;
@@ -155,6 +157,7 @@
   --bg-fbfcfb:#fbfcfb;
   --bg-fdecea:#fdecea;
   --bg-fdeee5:#fdeee5;
+  --bg-fdf0ee:#fdf0ee;
   --bg-ffefeb:#ffefeb;
   --bg-fff0e8:#fff0e8;
   --bg-fff0ed:#fff0ed;
@@ -163,6 +166,7 @@
   --bg-fff3e6:#fff3e6;
   --bg-fff4f1:#fff4f1;
   --bg-fff5e8:#fff5e8;
+  --bg-fff7e8:#fff7e8;
   --bg-fff7f5:#fff7f5;
   --bg-fff8f6:#fff8f6;
   --bg-fffaf9:#fffaf9;
@@ -224,11 +228,13 @@
   --fg-4a8765:#4a8765;
   --fg-4b5d54:#4b5d54;
   --fg-4b6b5c:#4b6b5c;
+  --fg-56695e:#56695e;
   --fg-566d5e:#566d5e;
   --fg-56896b:#56896b;
   --fg-579174:#579174;
   --fg-58846b:#58846b;
   --fg-5a7766:#5a7766;
+  --fg-5b6b62:#5b6b62;
   --fg-5c7766:#5c7766;
   --fg-5e816a:#5e816a;
   --fg-5f6f66:#5f6f66;
@@ -270,6 +276,7 @@
   --fg-87a494:#87a494;
   --fg-88958e:#88958e;
   --fg-89948d:#89948d;
+  --fg-8a6418:#8a6418;
   --fg-8a958e:#8a958e;
   --fg-8a958f:#8a958f;
   --fg-8a9a91:#8a9a91;
@@ -311,6 +318,7 @@
   --fg-c4683f:#c4683f;
   --fg-c5dfce:#c5dfce;
   --fg-c77957:#c77957;
+  --fg-c95f53:#c95f53;
   --fg-cadace:#cadace;
   --fg-cfe8db:#cfe8db;
   --fg-d3e4d8:#d3e4d8;
@@ -344,6 +352,7 @@ html[data-theme="dark"]{
   --bd-d5e6da:#2f4e38;
   --bd-d7eadb:#2e4d34;
   --bd-d9e2dc:#3a443f;
+  --bd-db786d:#6f4742;
   --bd-dbe5de:#39423e;
   --bd-dce8df:#38413d;
   --bd-dfe8df:#37413c;
@@ -372,6 +381,7 @@ html[data-theme="dark"]{
   --bd-f0d9d4:#4c332d;
   --bd-f1cfc7:#4f362f;
   --bd-f1d5ce:#4d342e;
+  --bd-f1e1bd:#524831;
   --bd-f3d7d2:#4b322d;
   --bd-f4d8d3:#4b312d;
   --bd-ffffff:#2f3733;
@@ -476,6 +486,7 @@ html[data-theme="dark"]{
   --bg-fbfcfb:#1a1e1c;
   --bg-fdecea:#271816;
   --bg-fdeee5:#291e17;
+  --bg-fdf0ee:#1b1f1d;
   --bg-ffefeb:#261915;
   --bg-fff0e8:#271c16;
   --bg-fff0ed:#251715;
@@ -484,6 +495,7 @@ html[data-theme="dark"]{
   --bg-fff3e6:#281f16;
   --bg-fff4f1:#1a1e1c;
   --bg-fff5e8:#271f16;
+  --bg-fff7e8:#272116;
   --bg-fff7f5:#1a1e1c;
   --bg-fff8f6:#1a1e1c;
   --bg-fffaf9:#1a1e1c;
@@ -545,11 +557,13 @@ html[data-theme="dark"]{
   --fg-4a8765:#94c4a9;
   --fg-4b5d54:#b1c0b8;
   --fg-4b6b5c:#a7c1b5;
+  --fg-56695e:#aab9b0;
   --fg-566d5e:#a7b9ad;
   --fg-56896b:#94bca4;
   --fg-579174:#8fbca5;
   --fg-58846b:#97baa6;
   --fg-5a7766:#a0b7aa;
+  --fg-5b6b62:#a9b6ae;
   --fg-5c7766:#a1b6a9;
   --fg-5e816a:#9ab5a3;
   --fg-5f6f66:#a6b3ac;
@@ -591,6 +605,7 @@ html[data-theme="dark"]{
   --fg-87a494:#82a08f;
   --fg-88958e:#8f9b95;
   --fg-89948d:#909a94;
+  --fg-8a6418:#ebca89;
   --fg-8a958e:#8f9a93;
   --fg-8a958f:#8f9a94;
   --fg-8a9a91:#8b9b92;
@@ -632,6 +647,7 @@ html[data-theme="dark"]{
   --fg-c4683f:#d18969;
   --fg-c5dfce:#c5dfce;
   --fg-c77957:#ca8060;
+  --fg-c95f53:#cd695e;
   --fg-cadace:#cadace;
   --fg-cfe8db:#cfe8db;
   --fg-d3e4d8:#d3e4d8;
@@ -665,6 +681,7 @@ html[data-theme="night"]{
   --bd-d5e6da:#2f4e38;
   --bd-d7eadb:#2e4d34;
   --bd-d9e2dc:#2d3550;
+  --bd-db786d:#6f4742;
   --bd-dbe5de:#2c344f;
   --bd-dce8df:#2c344e;
   --bd-dfe8df:#2b334d;
@@ -693,6 +710,7 @@ html[data-theme="night"]{
   --bd-f0d9d4:#4c332d;
   --bd-f1cfc7:#4f362f;
   --bd-f1d5ce:#4d342e;
+  --bd-f1e1bd:#524831;
   --bd-f3d7d2:#4b322d;
   --bd-f4d8d3:#4b312d;
   --bd-ffffff:#252b41;
@@ -797,6 +815,7 @@ html[data-theme="night"]{
   --bg-fbfcfb:#0d111e;
   --bg-fdecea:#1f1311;
   --bg-fdeee5:#211812;
+  --bg-fdf0ee:#0e121f;
   --bg-ffefeb:#1e1311;
   --bg-fff0e8:#1f1611;
   --bg-fff0ed:#1d1210;
@@ -805,6 +824,7 @@ html[data-theme="night"]{
   --bg-fff3e6:#1f1912;
   --bg-fff4f1:#0d111e;
   --bg-fff5e8:#1f1911;
+  --bg-fff7e8:#1f1a11;
   --bg-fff7f5:#0d111e;
   --bg-fff8f6:#0d111e;
   --bg-fffaf9:#0d111e;
@@ -866,11 +886,13 @@ html[data-theme="night"]{
   --fg-4a8765:#8bb99f;
   --fg-4b5d54:#c8b794;
   --fg-4b6b5c:#9db7ab;
+  --fg-56695e:#c3b08b;
   --fg-566d5e:#c2af89;
   --fg-56896b:#8bb09a;
   --fg-579174:#86b09b;
   --fg-58846b:#8eaf9c;
   --fg-5a7766:#97ada0;
+  --fg-5b6b62:#c2af88;
   --fg-5c7766:#97ab9e;
   --fg-5e816a:#90ab99;
   --fg-5f6f66:#c0ac85;
@@ -912,6 +934,7 @@ html[data-theme="night"]{
   --fg-87a494:#799585;
   --fg-88958e:#b09766;
   --fg-89948d:#b09766;
+  --fg-8a6418:#dfc080;
   --fg-8a958e:#b09765;
   --fg-8a958f:#b09765;
   --fg-8a9a91:#af9563;
@@ -953,6 +976,7 @@ html[data-theme="night"]{
   --fg-c4683f:#c38062;
   --fg-c5dfce:#c5dfce;
   --fg-c77957:#bc7759;
+  --fg-c95f53:#bf6258;
   --fg-cadace:#cadace;
   --fg-cfe8db:#cfe8db;
   --fg-d3e4d8:#d3e4d8;

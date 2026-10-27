@@ -114,6 +114,22 @@ public class SaveFareRequest
     public Coordinates? DestinationCoordinates { get; set; }
 }
 
+// The map's fare calculator: two named places with coordinates. The server works out the distance and fare.
+public class CalculateFareRequest
+{
+    [Required(ErrorMessage = "Choose a starting point."), StringLength(200)]
+    public string Source { get; set; } = "";
+
+    [Required(ErrorMessage = "Choose a destination."), StringLength(200)]
+    public string Destination { get; set; } = "";
+
+    [Required(ErrorMessage = "The starting point has no coordinates. Pick it from the suggestions.")]
+    public Coordinates? SourceCoordinates { get; set; }
+
+    [Required(ErrorMessage = "The destination has no coordinates. Pick it from the suggestions.")]
+    public Coordinates? DestinationCoordinates { get; set; }
+}
+
 public class FareViewModel : EntityViewModel
 {
     public string? UserId { get; init; }
@@ -121,6 +137,9 @@ public class FareViewModel : EntityViewModel
     public string Destination { get; init; } = "";
     public double Distance { get; init; }
     public decimal Fare { get; init; }
+    public decimal? FarePerKm { get; init; }
+    public bool DistanceEstimated { get; init; }
+    public string Currency => "BDT";
     public Coordinates? SourceCoordinates { get; init; }
     public Coordinates? DestinationCoordinates { get; init; }
     public DateTime CreatedAt { get; init; }
@@ -133,6 +152,8 @@ public class FareViewModel : EntityViewModel
         Destination = f.Destination,
         Distance = f.Distance,
         Fare = f.Fare,
+        FarePerKm = f.FarePerKm,
+        DistanceEstimated = f.DistanceEstimated,
         SourceCoordinates = f.SourceLat is { } sLat && f.SourceLon is { } sLon ? new Coordinates { Lat = sLat, Lon = sLon } : null,
         DestinationCoordinates = f.DestinationLat is { } dLat && f.DestinationLon is { } dLon ? new Coordinates { Lat = dLat, Lon = dLon } : null,
         CreatedAt = f.CreatedAt,

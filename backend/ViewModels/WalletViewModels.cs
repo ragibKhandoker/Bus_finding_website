@@ -26,6 +26,37 @@ public class WalletViewModel : EntityViewModel
     };
 }
 
+// One ledger entry. Amount is taka (+ added, - taken); GemsChange is gems (+ earned, - converted).
+public class WalletTransactionViewModel : EntityViewModel
+{
+    public string Type { get; init; } = "";
+    public decimal Amount { get; init; }
+    public int GemsChange { get; init; }
+    public decimal? BalanceAfter { get; init; }
+    public int? GemsAfter { get; init; }
+    public string Description { get; init; } = "";
+    public DateTime CreatedAt { get; init; }
+
+    public static WalletTransactionViewModel From(WalletTransaction t) => new()
+    {
+        Id = t.Id.ToString(),
+        Type = t.Type,
+        Amount = t.Amount,
+        GemsChange = t.GemsChange,
+        BalanceAfter = t.BalanceAfter,
+        GemsAfter = t.GemsAfter,
+        Description = t.Description,
+        CreatedAt = t.CreatedAt,
+    };
+}
+
+// gems: how many gems to convert; leave it out to convert as many as possible.
+public class ConvertGemsRequest
+{
+    [Range(1, int.MaxValue, ErrorMessage = "Enter a number of gems greater than zero.")]
+    public int? Gems { get; set; }
+}
+
 public class OfferViewModel : EntityViewModel
 {
     public string UserId { get; init; } = "";

@@ -1,155 +1,121 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SmartCommute.Server.Data;
+using Microsoft.AspNetCore.RateLimiting;
 using SmartCommute.Server.Models;
+using SmartCommute.Server.Services;
 using SmartCommute.Server.ViewModels;
 
 namespace SmartCommute.Server.Controllers;
 
+// One-to-one chat between friends. The signed-in user always comes from the token. Reading messages never marks
+// them read; the client calls POST /api/chat/{chatId}/read for the messages it has shown.
 [Authorize]
 [Route("api/chat")]
-public class ChatController(AppDbContext db) : ApiControllerBase
+public class ChatController(ChatService chats) : ApiControllerBase
 {
     // Conversation list for the signed-in user, newest activity first.
     [HttpGet("")]
     public async Task<IActionResult> List()
     {
         var me = CurrentUserId;
-        var chats = await db.Chats
-            .Include(c => c.User1)
-            .Include(c => c.User2)
-            .Where(c => c.User1Id == me || c.User2Id == me)
-            .OrderByDescending(c => c.LastMessageAt ?? c.CreatedAt)
-            .AsNoTracking()
-            .ToListAsync();
+        var list = await chats.ListAsync(me);
+        var lastMessages = await chats.LastMessagesAsync(list.Select(c => c.Id).ToList());
+        var unread = (await chats.UnreadCountsAsync(me)).ToDictionary(u => u.ChatId, u => u.Count);
 
-        var chatIds = chats.Select(c => c.Id).ToList();
-        var lastMessages = await db.ChatMessages
-            .Where(m => chatIds.Contains(m.ChatId))
-            .GroupBy(m => m.ChatId)
-            .Select(g => g.OrderByDescending(m => m.CreatedAt).First())
-            .ToDictionaryAsync(m => m.ChatId);
-        var unread = await db.ChatMessages
-            .Where(m => chatIds.Contains(m.ChatId) && m.SenderId != me && !m.Read)
-            .GroupBy(m => m.ChatId)
-            .Select(g => new { ChatId = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(x => x.ChatId, x => x.Count);
-
-        var summaries = chats.Select(c => new ChatSummaryViewModel
+        var summaries = list.Select(c => new ChatSummaryViewModel
         {
             Id = c.Id.ToString(),
-            OtherParticipant = PersonViewModel.From(c.User1Id == me ? c.User2! : c.User1!),
+            OtherParticipant = FriendProfileViewModel.From(c.OtherUser(me)!),
             LastMessage = lastMessages.TryGetValue(c.Id, out var last) ? ChatMessageViewModel.From(last) : null,
             UnreadCount = unread.GetValueOrDefault(c.Id),
             LastMessageAt = c.LastMessageAt,
+            CreatedAt = c.CreatedAt,
         });
         return Ok(new { success = true, chats = summaries });
     }
 
-    // Unread message counts keyed by the other person's user id.
+    // Unread counts per conversation and in total. unreadCounts (keyed by the other person's user id) is kept for
+    // older clients.
     [HttpGet("unread-counts")]
     public async Task<IActionResult> UnreadCounts()
     {
-        var me = CurrentUserId;
-        var counts = await db.ChatMessages
-            .Where(m => (m.Chat!.User1Id == me || m.Chat.User2Id == me) && m.SenderId != me && !m.Read)
-            .GroupBy(m => m.SenderId)
-            .Select(g => new { UserId = g.Key, Count = g.Count() })
-            .ToListAsync();
-        return Ok(new { success = true, unreadCounts = counts.ToDictionary(c => c.UserId.ToString(), c => c.Count) });
-    }
-
-    [HttpGet("messages/{chatId:guid}")]
-    public async Task<IActionResult> Messages(Guid chatId)
-    {
-        var me = CurrentUserId;
-        var chat = await db.Chats.FindAsync(chatId);
-        if (chat is null || !chat.HasParticipant(me))
-        {
-            return NotFoundError("Chat not found.");
-        }
-
-        await db.ChatMessages
-            .Where(m => m.ChatId == chatId && m.SenderId != me && !m.Read)
-            .ExecuteUpdateAsync(s => s.SetProperty(m => m.Read, true));
-
-        var messages = await db.ChatMessages
-            .Where(m => m.ChatId == chatId)
-            .OrderBy(m => m.CreatedAt)
-            .AsNoTracking()
-            .ToListAsync();
-        return Ok(new { success = true, messages = messages.Select(ChatMessageViewModel.From) });
-    }
-
-    [HttpPost("send")]
-    public async Task<IActionResult> Send(SendMessageRequest request)
-    {
-        var me = CurrentUserId;
-        var chat = await db.Chats.FindAsync(request.ChatId);
-        if (chat is null || !chat.HasParticipant(me))
-        {
-            return NotFoundError("Chat not found.");
-        }
-
-        var message = new ChatMessage { ChatId = chat.Id, SenderId = me, Text = request.Text.Trim() };
-        db.ChatMessages.Add(message);
-        chat.LastMessageAt = message.CreatedAt;
-        await db.SaveChangesAsync();
-        return Created201(new { success = true, message = ChatMessageViewModel.From(message) });
-    }
-
-    // Gets (or starts) the conversation with another user.
-    [HttpGet("{otherUserId:guid}")]
-    public async Task<IActionResult> GetOrCreate(Guid otherUserId)
-    {
-        var me = CurrentUserId;
-        if (otherUserId == me)
-        {
-            return BadRequestError("You cannot chat with yourself.");
-        }
-
-        var users = await db.Users.Where(u => u.Id == me || u.Id == otherUserId).ToDictionaryAsync(u => u.Id);
-        if (!users.ContainsKey(otherUserId) || !users.ContainsKey(me))
-        {
-            return NotFoundError("User not found.");
-        }
-
-        var (user1, user2) = me.CompareTo(otherUserId) < 0 ? (me, otherUserId) : (otherUserId, me);
-        var chat = await db.Chats.FirstOrDefaultAsync(c => c.User1Id == user1 && c.User2Id == user2);
-        if (chat is null)
-        {
-            chat = new Chat { User1Id = user1, User2Id = user2 };
-            db.Chats.Add(chat);
-            try
-            {
-                await db.SaveChangesAsync();
-            }
-            catch (DbUpdateException)
-            {
-                // Both users opened the chat at the same moment; use the row the other request created.
-                db.Entry(chat).State = EntityState.Detached;
-                chat = await db.Chats.FirstAsync(c => c.User1Id == user1 && c.User2Id == user2);
-            }
-        }
-
-        var messages = await db.ChatMessages
-            .Where(m => m.ChatId == chat.Id)
-            .OrderBy(m => m.CreatedAt)
-            .AsNoTracking()
-            .ToListAsync();
-
+        var counts = await chats.UnreadCountsAsync(CurrentUserId);
         return Ok(new
         {
             success = true,
+            total = counts.Sum(c => c.Count),
+            conversations = counts.Select(c => new { chatId = c.ChatId.ToString(), otherUserId = c.OtherUserId.ToString(), unreadCount = c.Count }),
+            unreadCounts = counts.ToDictionary(c => c.OtherUserId.ToString(), c => c.Count),
+        });
+    }
+
+    // A page of messages, oldest first: the latest page by default, ?before={messageId} for older ones,
+    // ?after={messageId} for newer ones. ?limit= sets the page size (default 50, at most 100).
+    [HttpGet("messages/{chatId:guid}")]
+    public async Task<IActionResult> Messages(Guid chatId, [FromQuery] Guid? before, [FromQuery] Guid? after, [FromQuery] int limit = ChatService.DefaultPageSize)
+    {
+        var result = await chats.MessagesAsync(CurrentUserId, chatId, before, after, limit);
+        if (!result.Succeeded)
+        {
+            return Error(result.StatusCode, result.Message);
+        }
+        return Ok(new { success = true, messages = result.Value!.Messages.Select(ChatMessageViewModel.From), hasMore = result.Value.HasMore });
+    }
+
+    [EnableRateLimiting("chat-send")]
+    [HttpPost("send")]
+    public async Task<IActionResult> Send(SendMessageRequest request)
+    {
+        var result = await chats.SendAsync(CurrentUserId, request.ChatId!.Value, request.Content ?? request.Text);
+        if (!result.Succeeded)
+        {
+            return Error(result.StatusCode, result.Message);
+        }
+        return Created201(new { success = true, message = ChatMessageViewModel.From(result.Value!) });
+    }
+
+    // Marks the other person's messages in this chat as read: all of them, or up to ?upTo={messageId}.
+    [HttpPost("{chatId:guid}/read")]
+    public async Task<IActionResult> MarkRead(Guid chatId, [FromQuery] Guid? upTo)
+    {
+        var result = await chats.MarkReadAsync(CurrentUserId, chatId, upTo);
+        if (!result.Succeeded)
+        {
+            return Error(result.StatusCode, result.Message);
+        }
+        return Ok(new { success = true, marked = result.Value });
+    }
+
+    // Opens the conversation with a friend: the existing one if there is one (200), otherwise a new one (201).
+    // The response includes the latest page of messages.
+    [HttpGet("{otherUserId:guid}")]
+    public async Task<IActionResult> Open(Guid otherUserId)
+    {
+        var me = CurrentUserId;
+        var result = await chats.OpenAsync(me, otherUserId);
+        if (!result.Succeeded)
+        {
+            return Error(result.StatusCode, result.Message);
+        }
+        var (chat, created) = result.Value;
+        var page = (await chats.MessagesAsync(me, chat.Id, null, null, ChatService.DefaultPageSize)).Value!;
+        var unread = (await chats.UnreadCountsAsync(me)).Where(u => u.ChatId == chat.Id).Sum(u => u.Count);
+        var body = new
+        {
+            success = true,
+            created,
             chat = new ChatViewModel
             {
                 Id = chat.Id.ToString(),
-                Participants = [PersonViewModel.From(users[user1]), PersonViewModel.From(users[user2])],
-                Messages = messages.Select(ChatMessageViewModel.From).ToList(),
+                Participants = [FriendProfileViewModel.From(chat.User1!), FriendProfileViewModel.From(chat.User2!)],
+                OtherParticipant = FriendProfileViewModel.From(chat.OtherUser(me)!),
+                Messages = page.Messages.Select(ChatMessageViewModel.From).ToList(),
+                HasMoreMessages = page.HasMore,
+                UnreadCount = unread,
                 LastMessageAt = chat.LastMessageAt,
                 CreatedAt = chat.CreatedAt,
             },
-        });
+        };
+        return created ? Created201(body) : Ok(body);
     }
 }
