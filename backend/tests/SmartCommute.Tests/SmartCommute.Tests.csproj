@@ -12,7 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\backend\SmartCommute.Server.csproj" />
+    <ProjectReference Include="..\..\SmartCommute.Server.csproj" />
   </ItemGroup>
 
   <ItemGroup>

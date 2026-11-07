@@ -19,6 +19,14 @@
   </ItemGroup>
 
   <ItemGroup>
+    <!-- The test project lives in tests/ and is built on its own; keep its files out of the server. -->
+    <Compile Remove="tests/**" />
+    <Content Remove="tests/**" />
+    <None Remove="tests/**" />
+    <EmbeddedResource Remove="tests/**" />
+  </ItemGroup>
+
+  <ItemGroup>
     <!-- Bus routes the seeder adds to a fresh database (see Data/SeedData.cs). -->
     <EmbeddedResource Include="Data\dhaka-bus-routes.json" LogicalName="SmartCommute.Server.Data.dhaka-bus-routes.json" />
   </ItemGroup>
