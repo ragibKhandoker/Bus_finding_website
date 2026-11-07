@@ -16,6 +16,7 @@ export default {
   'Student verification': 'স্টুডেন্ট ভেরিফিকেশন',
   'Admin · Users': 'অ্যাডমিন · ইউজার',
   'My wallet': 'আমার ওয়ালেট',
+  'Opening {page}…': '{page} খোলা হচ্ছে…',
   'Account': 'অ্যাকাউন্ট',
   'Sign in': 'সাইন ইন',
   'Sign out': 'সাইন আউট',

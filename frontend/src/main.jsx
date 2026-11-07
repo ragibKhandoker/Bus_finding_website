@@ -10,6 +10,7 @@ import './style.css'
 import './home.css'
 import './profile.css'
 import './admin.css'
+import './polish.css'
 import GoogleMapView, { mapsConfigured } from './GoogleMapView'
 import { ActiveTripPanel, TripRow, useActiveTrip, useBoardControls, useTripChanges } from './Trips'
 import { MapPage } from './MorePages'
@@ -50,6 +51,30 @@ const pageFromPath = (path) => {
   if (routeFromPath(path)) return 'Bus details'
   const clean = path.replace(/\/+$/, '').toLowerCase() || '/'
   return Object.keys(PAGE_PATHS).find((page) => PAGE_PATHS[page] === clean) || 'Home'
+}
+
+// How long the page-change loading screen stays up.
+const PAGE_LOADER_MS = 550
+// The name shown while a page loads, using the wording from the menus.
+const PAGE_LOADER_NAMES = {
+  'Bus details': 'Bus routes', 'Wallet': 'My wallet', 'Profile': 'Account', 'Offers': 'Offers & rewards', 'Map': 'Map & fare calculator',
+  'Favourites': 'Favourite buses', 'GPay': 'GPay & recharge', 'Verification': 'Account verification', 'Admin': 'Admin · Users',
+}
+
+function PageLoader({ page }) {
+  return (
+    <div className="page-loader" role="status" aria-live="polite">
+      <div className="page-loader-bar" aria-hidden="true" />
+      <div className="page-loader-card">
+        <div className="page-loader-scene" aria-hidden="true">
+          <span className="page-loader-bus"><BusFront size={22} strokeWidth={2.4} /></span>
+          <span className="page-loader-road" />
+        </div>
+        <b>{t('Opening {page}…', { page: t(PAGE_LOADER_NAMES[page] || page) })}</b>
+        <span className="page-loader-dots" aria-hidden="true"><i /><i /><i /></span>
+      </div>
+    </div>
+  )
 }
 
 function App() {
@@ -159,6 +184,17 @@ function App() {
     showPage(target, options)
     window.scrollTo(0, 0)
   }
+  // A short loading screen each time the page changes (tabs, links, back and forward), then the page fades in.
+  const pageKey = page === 'Bus details' ? `${page}:${routeNumber}` : page
+  const [loadingPage, setLoadingPage] = useState('')
+  const shownKey = useRef(pageKey)
+  useEffect(() => {
+    if (shownKey.current === pageKey) return
+    shownKey.current = pageKey
+    setLoadingPage(page)
+    const timer = window.setTimeout(() => setLoadingPage(''), PAGE_LOADER_MS)
+    return () => window.clearTimeout(timer)
+  }, [pageKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="app-shell">
@@ -197,7 +233,8 @@ function App() {
         </div>
       </header>
 
-      <main>
+      {loadingPage && <PageLoader page={loadingPage} />}
+      <main key={pageKey} className={loadingPage ? 'page-view is-loading' : 'page-view'}>
         {page === 'Home' && <HomePage user={user} token={token} signedIn={signedIn} navigate={navigate} openAuth={() => setAuthMode('login')} />}
         {page === 'Find a bus' && <BusPage token={token} signedIn={signedIn} user={user} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
         {page === 'Bus routes' && <BusRoutesPage navigate={navigate} />}
@@ -1321,6 +1358,63 @@ function AuthField({ label, icon: Icon, hint, tone, children, action }) {
   </label>
 }
 
+// A styled drop-down list in place of the browser's own <select>, so it matches the form.
+// options: [{ value, label, icon? }]. Keyboard: arrows/Home/End move, Enter/Space picks, Escape/Tab close.
+function SelectMenu({ value, options, onChange, labelledBy, icon: Icon }) {
+  const [open, setOpen] = useState(false)
+  const [active, setActive] = useState(0)
+  const root = useRef(null)
+  const list = useRef(null)
+  const listId = useRef(`select-${Math.random().toString(36).slice(2, 9)}`).current
+  const selectedIndex = Math.max(0, options.findIndex((option) => option.value === value))
+  const selected = options[selectedIndex]
+  const openMenu = () => { setActive(selectedIndex); setOpen(true) }
+  const choose = (index) => { onChange(options[index].value); setOpen(false); root.current?.querySelector('button')?.focus() }
+  // Close when clicking anywhere outside.
+  useEffect(() => {
+    if (!open) return
+    const onDown = (event) => { if (!root.current?.contains(event.target)) setOpen(false) }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [open])
+  // Keep the highlighted option in view.
+  useEffect(() => { if (open) list.current?.children[active]?.scrollIntoView?.({ block: 'nearest' }) }, [open, active])
+  const onKeyDown = (event) => {
+    const last = options.length - 1
+    const moves = { ArrowDown: Math.min(active + 1, last), ArrowUp: Math.max(active - 1, 0), Home: 0, End: last }
+    if (!open) {
+      if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(event.key)) { event.preventDefault(); openMenu() }
+      return
+    }
+    if (event.key in moves) { event.preventDefault(); setActive(moves[event.key]) }
+    else if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); choose(active) }
+    // Escape closes only the list, not the dialog around it.
+    else if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); setOpen(false) }
+    else if (event.key === 'Tab') setOpen(false)
+  }
+  return <div className={`select-menu${open ? ' is-open' : ''}`} ref={root}>
+    <button type="button" className="auth-input select-menu-button" aria-haspopup="listbox" aria-expanded={open} aria-controls={listId}
+      aria-labelledby={labelledBy} aria-activedescendant={open ? `${listId}-${active}` : undefined}
+      onClick={() => open ? setOpen(false) : openMenu()} onKeyDown={onKeyDown}>
+      {Icon && <Icon size={17} aria-hidden="true" />}
+      <span className="select-menu-value">{selected?.label}</span>
+      <ChevronDown size={16} className="select-menu-arrow" aria-hidden="true" />
+    </button>
+    {open && <ul className="select-menu-list" role="listbox" id={listId} ref={list} aria-labelledby={labelledBy}>
+      {options.map((option, index) => {
+        const OptionIcon = option.icon
+        return <li key={option.value} id={`${listId}-${index}`} role="option" aria-selected={index === selectedIndex}
+          className={`${index === active ? 'is-active' : ''}${index === selectedIndex ? ' is-selected' : ''}`}
+          onMouseEnter={() => setActive(index)} onMouseDown={(event) => event.preventDefault()} onClick={() => choose(index)}>
+          {OptionIcon && <span className="select-menu-icon"><OptionIcon size={15} /></span>}
+          <span>{option.label}</span>
+          {index === selectedIndex && <Check size={16} className="select-menu-check" aria-hidden="true" />}
+        </li>
+      })}
+    </ul>}
+  </div>
+}
+
 // text is shown as a tooltip on the role toggle.
 const ROLE_OPTIONS = [
   { value: 'commuter', title: 'Commuter', text: 'I travel by bus around the city' },
@@ -1403,10 +1497,11 @@ function AuthModal({ mode, onMode, onClose, onSuccess }) {
                 {option.value === 'driver' ? <BusFront size={16} /> : <Users size={16} />}<b>{t(option.title)}</b>
               </label>)}</div>
             </fieldset>
-            <AuthField label={t('Gender')}>
-              <select value={form.gender} onChange={set('gender')}>{GENDERS.map((gender) => <option key={gender} value={gender}>{t(gender)}</option>)}</select>
-              <ChevronDown size={16} className="auth-select-arrow" aria-hidden="true" />
-            </AuthField>
+            <div className="auth-field">
+              <span className="auth-label" id="auth-gender-label">{t('Gender')}</span>
+              <SelectMenu labelledBy="auth-gender-label" icon={UserRound} value={form.gender} onChange={(gender) => setForm((current) => ({ ...current, gender }))}
+                options={GENDERS.map((gender) => ({ value: gender, label: t(gender) }))} />
+            </div>
           </div>
         </>}
 
@@ -1443,3 +1538,19 @@ function AuthModal({ mode, onMode, onClose, onSuccess }) {
 }
 
 createRoot(document.getElementById('root')).render(<React.StrictMode><App /></React.StrictMode>)
+
+// Fade out the splash screen from index.html once the app has drawn. It stays at least a short moment
+// so it never just flickers, and waits for the web fonts (up to a limit) so the first view looks right.
+function hideSplash() {
+  const splash = document.getElementById('splash')
+  if (!splash) return
+  const MIN_VISIBLE_MS = 900
+  const fontsReady = document.fonts?.ready ? Promise.race([document.fonts.ready, new Promise((r) => setTimeout(r, 1500))]) : Promise.resolve()
+  fontsReady.then(() => {
+    setTimeout(() => {
+      splash.classList.add('splash-hide')
+      setTimeout(() => splash.remove(), 600)
+    }, Math.max(0, MIN_VISIBLE_MS - performance.now()))
+  })
+}
+requestAnimationFrame(() => requestAnimationFrame(hideSplash))

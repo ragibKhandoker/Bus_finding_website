@@ -1,0 +1,89 @@
+/* Light, soft finish on top of the base styles: rounder cards, gentle shadows and smoother hovers.
+   Colours come from theme.css variables only, so dark and night themes keep working. */
+
+/* Cards and panels: lift them off the page with a soft shadow instead of relying on the border alone. */
+.panel{border-radius:14px;box-shadow:0 1px 3px rgba(22,66,48,.07),0 8px 24px -12px rgba(22,66,48,.16);transition:box-shadow .2s,border-color .2s,transform .2s}
+.bus-result.panel:hover,.ride-card.panel:hover{border-color:var(--bd-cfe5d8);box-shadow:0 2px 4px rgba(22,66,48,.04),0 14px 30px -16px rgba(22,66,48,.2)}
+
+/* Home page cards get the same lift so they read as separate boxes on the page background. */
+.hp-steps-section,.hp-tool,.hp-route,.hp-hero-stats{box-shadow:0 1px 3px rgba(22,66,48,.07),0 8px 24px -12px rgba(22,66,48,.16)}
+.hp-tool:hover,.hp-route:hover{box-shadow:0 2px 4px rgba(22,66,48,.05),0 16px 32px -16px rgba(22,66,48,.24)}
+
+/* Buttons: rounder, with a soft glow on the brand button. */
+.button{border-radius:10px;transition:transform .18s,background .18s,border .18s,box-shadow .18s}
+.button-green{box-shadow:0 6px 16px -8px rgba(25,134,94,.55)}
+.button-green:hover{box-shadow:0 10px 22px -10px rgba(25,134,94,.6)}
+.button-dark{box-shadow:0 6px 16px -10px rgba(22,66,48,.5)}
+.button-outline{background:var(--bg-ffffff)}
+
+/* Inputs: rounder corners and a soft focus ring. */
+.bus-search-form .field,.form-fields>.field,.auth-modal .field,.ride-search,.wallet-convert-row input{border-radius:10px;transition:border-color .15s,box-shadow .15s}
+.bus-search-form .field:focus-within,.form-fields>.field:focus-within,.auth-modal .field:focus-within,.ride-search:focus-within{border-color:var(--bd-88c8a8);box-shadow:0 0 0 3px rgba(25,134,94,.1)}
+.auth-input{border-radius:10px}
+
+/* Icon tiles and badges: rounder, friendlier shapes. */
+.heading-icon,.service-icon,.bus-result-icon,.trip-icon,.auth-mark{border-radius:14px}
+.route-badge{border-radius:999px;padding:4px 8px}
+.segmented button{border-radius:8px}
+
+/* Larger surfaces. */
+.wallet-card-large,.rides-hero,.suggestion,.wallet-hint{border-radius:16px}
+.auth-modal{border-radius:18px;box-shadow:0 24px 60px -20px rgba(22,66,48,.28)}
+.modal-backdrop{-webkit-backdrop-filter:blur(4px);backdrop-filter:blur(4px)}
+.toast{border-radius:14px}
+
+/* Dark themes: shadows tuned for dark surfaces. */
+html[data-theme="dark"] :is(.panel,.hp-steps-section,.hp-tool,.hp-route,.hp-hero-stats),html[data-theme="night"] :is(.panel,.hp-steps-section,.hp-tool,.hp-route,.hp-hero-stats){box-shadow:0 1px 2px rgba(0,0,0,.2),0 8px 22px -14px rgba(0,0,0,.45)}
+html[data-theme="dark"] .button-green,html[data-theme="night"] .button-green{box-shadow:none}
+
+@media(prefers-reduced-motion:reduce){.panel,.button{transition:none}}
+
+/* ---- Page-change loading screen (see PageLoader in main.jsx) ---- */
+.page-loader{position:fixed;z-index:14;left:0;right:0;top:74px;bottom:0;display:grid;place-items:center;
+  background:color-mix(in srgb,var(--paper) 82%,transparent);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);animation:pl-fade .2s ease-out}
+.page-loader-bar{position:absolute;top:0;left:0;right:0;height:3px;overflow:hidden}
+.page-loader-bar:after{content:"";position:absolute;top:0;bottom:0;left:0;width:100%;border-radius:0 3px 3px 0;
+  background:linear-gradient(90deg,var(--green),#2bb07d);transform-origin:left;animation:pl-progress .55s cubic-bezier(.3,.7,.4,1) forwards;box-shadow:0 0 10px rgba(25,134,94,.5)}
+.page-loader-card{display:flex;flex-direction:column;align-items:center;gap:12px;padding:24px 30px 20px;border-radius:18px;
+  background:var(--surface);border:1px solid var(--line);box-shadow:0 18px 44px -18px rgba(22,66,48,.3);animation:pl-pop .25s cubic-bezier(.2,.9,.3,1.2)}
+.page-loader-card>b{font:700 14px var(--font-head);color:var(--ink);letter-spacing:-.2px}
+.page-loader-scene{position:relative;width:150px;height:48px;overflow:hidden}
+.page-loader-bus{position:absolute;bottom:9px;left:-44px;width:40px;height:36px;border-radius:11px;display:grid;place-items:center;
+  background:var(--green);color:#fff;box-shadow:0 8px 16px -6px rgba(25,134,94,.6);animation:pl-drive .55s cubic-bezier(.4,0,.2,1) forwards}
+.page-loader-road{position:absolute;left:0;right:0;bottom:3px;height:3px;border-radius:3px;
+  background:repeating-linear-gradient(90deg,var(--line) 0 12px,transparent 12px 20px)}
+.page-loader-dots{display:flex;gap:5px}
+.page-loader-dots i{width:6px;height:6px;border-radius:50%;background:var(--green);opacity:.3;animation:pl-dot .6s ease-in-out infinite}
+.page-loader-dots i:nth-child(2){animation-delay:.12s}.page-loader-dots i:nth-child(3){animation-delay:.24s}
+.page-view.is-loading{opacity:0}
+.page-view:not(.is-loading){animation:pl-page-in .4s ease-out}
+@keyframes pl-fade{from{opacity:0}}
+@keyframes pl-pop{from{opacity:0;transform:translateY(8px) scale(.96)}}
+@keyframes pl-progress{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+@keyframes pl-drive{0%{left:-44px}100%{left:55px}}
+@keyframes pl-dot{50%{opacity:1;transform:translateY(-3px)}}
+@keyframes pl-page-in{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+html[data-theme="dark"] .page-loader-card,html[data-theme="night"] .page-loader-card{box-shadow:0 18px 44px -18px rgba(0,0,0,.6)}
+@media(max-width:700px){.page-loader{top:64px}}
+@media(prefers-reduced-motion:reduce){.page-loader,.page-loader-card,.page-loader-bus,.page-loader-dots i,.page-view:not(.is-loading){animation:none}.page-loader-bus{left:55px}.page-loader-bar:after{animation:none}}
+
+/* ---- Styled drop-down list (SelectMenu in main.jsx) ---- */
+.select-menu{position:relative;min-width:0}
+.select-menu-button{width:100%;cursor:pointer;text-align:left;font:inherit}
+.select-menu-value{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:14px;font-weight:500;color:var(--ink)}
+.select-menu-arrow{flex:none;color:var(--muted);transition:transform .2s}
+.select-menu.is-open .select-menu-button{border-color:var(--green);background:var(--surface);box-shadow:0 0 0 3px rgba(25,134,94,.12);color:var(--green)}
+.select-menu.is-open .select-menu-arrow{transform:rotate(180deg);color:var(--green)}
+.select-menu-list{position:absolute;z-index:5;top:calc(100% + 6px);left:0;right:0;min-width:180px;max-height:240px;overflow-y:auto;margin:0;padding:6px;list-style:none;
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 18px 40px -14px rgba(22,66,48,.3),0 2px 6px rgba(22,66,48,.06);
+  animation:sm-open .16s cubic-bezier(.2,.9,.3,1.1);transform-origin:top}
+.select-menu-list li{display:flex;align-items:center;gap:10px;min-height:38px;padding:8px 10px;border-radius:8px;font-size:14px;font-weight:500;color:var(--ink);cursor:pointer;transition:background .12s,color .12s}
+.select-menu-list li.is-active{background:color-mix(in srgb,var(--green) 9%,transparent)}
+.select-menu-list li.is-selected{color:var(--green);font-weight:700}
+.select-menu-list li>span:not(.select-menu-icon){flex:1;min-width:0}
+.select-menu-icon{display:grid;place-items:center;width:26px;height:26px;border-radius:7px;background:color-mix(in srgb,var(--green) 10%,transparent);color:var(--green)}
+.select-menu-check{flex:none;color:var(--green)}
+@keyframes sm-open{from{opacity:0;transform:translateY(-4px) scaleY(.96)}}
+html[data-theme="dark"] .select-menu-list,html[data-theme="night"] .select-menu-list{box-shadow:0 18px 40px -14px rgba(0,0,0,.6)}
+@media(max-width:560px){.select-menu-value,.select-menu-list li{font-size:16px}.select-menu-list li{min-height:44px}}
+@media(prefers-reduced-motion:reduce){.select-menu-list{animation:none}.select-menu-arrow{transition:none}}
