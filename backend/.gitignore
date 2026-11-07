@@ -1,0 +1,18 @@
+# Build output (also covers tests/)
+bin/
+obj/
+
+# Local settings and secrets (never commit)
+appsettings.Local.json
+.env
+*.user
+
+# Runtime data
+App_Data/
+wwwroot/uploads/
+
+# Editors and OS
+.vs/
+.idea/
+.DS_Store
+Thumbs.db

@@ -1,0 +1,13 @@
+# Dependencies and build output
+node_modules/
+dist/
+
+# Local environment files (never commit)
+.env
+.env.local
+.env.*.local
+
+# Editors and OS
+.idea/
+.DS_Store
+Thumbs.db
