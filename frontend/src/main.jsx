@@ -1553,4 +1553,5 @@ function hideSplash() {
     }, Math.max(0, MIN_VISIBLE_MS - performance.now()))
   })
 }
-requestAnimationFrame(() => requestAnimationFrame(hideSplash))
+// Start at the top once the app has drawn, in case anything moved the page while it loaded.
+requestAnimationFrame(() => requestAnimationFrame(() => { window.scrollTo(0, 0); hideSplash() }))
