@@ -873,6 +873,79 @@ namespace SmartCommute.Server.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.PasswordResetRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AdminNote")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("admin_note");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("completed_at");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime?>("HandledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("handled_at");
+
+                    b.Property<Guid?>("HandledById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("handled_by_id");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
+
+                    b.Property<string>("SecretHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("secret_hash");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime?>("TemporaryPasswordExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("temporary_password_expires_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_password_reset_requests");
+
+                    b.HasIndex("HandledById")
+                        .HasDatabaseName("ix_password_reset_requests_handled_by_id");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_password_reset_requests_one_pending_per_user")
+                        .HasFilter("status = 'pending'");
+
+                    b.HasIndex("Status", "CreatedAt")
+                        .HasDatabaseName("ix_password_reset_requests_status_created_at");
+
+                    b.ToTable("password_reset_requests", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_password_reset_requests_status", "status IN ('pending', 'sent', 'completed', 'dismissed')");
+                        });
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.Rating", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1218,6 +1291,62 @@ namespace SmartCommute.Server.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.SupportMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("FromAdmin")
+                        .HasColumnType("boolean")
+                        .HasColumnName("from_admin");
+
+                    b.Property<bool>("IsEmergency")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_emergency");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("read_at");
+
+                    b.Property<Guid?>("SenderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sender_id");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("text");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_support_messages");
+
+                    b.HasIndex("SenderId")
+                        .HasDatabaseName("ix_support_messages_sender_id");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_support_messages_user_id_created_at");
+
+                    b.HasIndex("UserId", "FromAdmin")
+                        .HasDatabaseName("ix_support_messages_unread")
+                        .HasFilter("read_at IS NULL");
+
+                    b.ToTable("support_messages", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_support_messages_text_not_blank", "text ~ '\\S'");
+                        });
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.Trip", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1354,6 +1483,10 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_login_at");
 
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("boolean")
+                        .HasColumnName("must_change_password");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(100)
@@ -1379,6 +1512,10 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("role");
+
+                    b.Property<DateTime?>("TemporaryPasswordExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("temporary_password_expires_at");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1991,6 +2128,26 @@ namespace SmartCommute.Server.Data.Migrations
                     b.Navigation("WalletTransaction");
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.PasswordResetRequest", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.User", "HandledBy")
+                        .WithMany()
+                        .HasForeignKey("HandledById")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_password_reset_requests_users_handled_by_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_password_reset_requests_users_user_id");
+
+                    b.Navigation("HandledBy");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.Rating", b =>
                 {
                     b.HasOne("SmartCommute.Server.Models.Bus", "Bus")
@@ -2106,6 +2263,26 @@ namespace SmartCommute.Server.Data.Migrations
                     b.Navigation("Requester");
 
                     b.Navigation("RidePost");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.SupportMessage", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.User", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_support_messages_users_sender_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_support_messages_users_user_id");
+
+                    b.Navigation("Sender");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.Trip", b =>

@@ -1,82 +1,103 @@
-using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
-using SmartCommute.Server.Data;
+using Microsoft.AspNetCore.RateLimiting;
 using SmartCommute.Server.Models;
 using SmartCommute.Server.Services;
 using SmartCommute.Server.ViewModels;
 
 namespace SmartCommute.Server.Controllers;
 
-// Account management for admins: find users and reset a forgotten password.
+// Account management for admins: find users, approve forgotten-password requests and message users.
+// Admins never see any password: passwords exist only as bcrypt hashes. The rules live in AdminService, PasswordResetService and SupportService.
 [Authorize(Roles = UserRoles.Admin)]
 [Route("admin")]
-public class AdminController(AppDbContext db, NotificationService notifications) : ApiControllerBase
+public class AdminController(
+    AdminService admin,
+    PasswordResetService passwordResets,
+    SupportService support) : ApiControllerBase
 {
-    private static readonly PasswordHasher<User> Hasher = new();
-
-    // No look-alike characters (0/O, 1/l/I) so the password is easy to read out to the user.
-    private const string Letters = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ";
-    private const string Digits = "23456789";
+    // Counts for the admin dashboard and profile: who uses the app and what is waiting for an admin.
+    [HttpGet("overview")]
+    public async Task<IActionResult> Overview() => Ok(new { success = true, data = await admin.OverviewAsync() });
 
     [HttpGet("users")]
     public async Task<IActionResult> Users([FromQuery] string? search, [FromQuery] int limit = 50)
     {
-        var query = db.Users.AsNoTracking();
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var term = $"%{search.Trim().ToLowerInvariant()}%";
-            query = query.Where(u => EF.Functions.ILike(u.Name, term) || EF.Functions.ILike(u.Email, term));
-        }
-        var users = await query
-            .OrderByDescending(u => u.CreatedAt)
-            .Take(Math.Clamp(limit, 1, 200))
-            .ToListAsync();
+        var users = await admin.UsersAsync(search, limit);
         return Ok(new { success = true, count = users.Count, data = users.Select(AdminUserViewModel.From) });
     }
 
-    // Sets a new random password and signs the user out everywhere. The password is only shown in this response.
-    [HttpPost("users/{userId:guid}/reset-password")]
-    public async Task<IActionResult> ResetPassword(Guid userId)
+    // ---- Forgot-password requests ----
+
+    // status: pending (default), sent, completed, dismissed or all.
+    [HttpGet("password-requests")]
+    public async Task<IActionResult> PasswordRequests([FromQuery] string? status = PasswordResetStatuses.Pending)
     {
-        var user = await db.Users.FindAsync(userId);
+        var requests = await passwordResets.ListAsync(status);
+        var pending = await passwordResets.PendingCountAsync();
+        return Ok(new { success = true, pending, data = requests.Select(AdminResetRequestViewModel.From) });
+    }
+
+    // Approves a request. Admins never see a password: the user collects their temporary password from the
+    // sign-in form, where it is made and shown once. ("send" is the older name of the same action.)
+    [HttpPost("password-requests/{requestId:guid}/approve")]
+    [HttpPost("password-requests/{requestId:guid}/send")]
+    public async Task<IActionResult> ApprovePasswordRequest(Guid requestId)
+    {
+        var result = await passwordResets.ApproveAsync(requestId, CurrentUserId);
+        return result.Succeeded
+            ? Ok(new { success = true, message = result.Message, request = AdminResetRequestViewModel.From(result.Value!) })
+            : Error(result.StatusCode, result.Message);
+    }
+
+    [HttpPost("password-requests/{requestId:guid}/dismiss")]
+    public async Task<IActionResult> DismissPasswordRequest(Guid requestId, DismissResetRequest? request)
+    {
+        var result = await passwordResets.DismissAsync(requestId, CurrentUserId, request?.Reason);
+        return result.Succeeded
+            ? Ok(new { success = true, message = result.Message, request = AdminResetRequestViewModel.From(result.Value!) })
+            : Error(result.StatusCode, result.Message);
+    }
+
+    // ---- Messages with users ----
+
+    [HttpGet("support")]
+    public async Task<IActionResult> SupportThreads()
+    {
+        var threads = await support.ThreadsAsync();
+        return Ok(new
+        {
+            success = true,
+            unread = threads.Sum(t => t.Unread),
+            emergencyUnread = threads.Sum(t => t.EmergencyUnread),
+            data = threads.Select(SupportThreadViewModel.From),
+        });
+    }
+
+    [HttpGet("support/{userId:guid}")]
+    public async Task<IActionResult> SupportThread(Guid userId)
+    {
+        var user = await support.ThreadOwnerAsync(userId);
         if (user is null)
         {
             return NotFoundError("User not found.");
         }
-        if (user.Role == UserRoles.Admin)
-        {
-            return BadRequestError("Admin passwords are managed in the server configuration and cannot be reset here.");
-        }
-
-        var temporaryPassword = NewTemporaryPassword();
-        user.PasswordHash = Hasher.HashPassword(user, temporaryPassword);
-        user.UpdatedAt = DateTime.UtcNow;
-        notifications.Notify(user.Id, "Password reset",
-            "An admin reset your password. Please choose a new password from your profile.", NotificationTypes.Warning,
-            category: NotificationCategories.Account);
-        await db.SaveChangesAsync();
-
-        await db.UserSessions
-            .Where(s => s.UserId == user.Id && s.RevokedAt == null)
-            .ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, DateTime.UtcNow));
-
-        return Ok(new
-        {
-            success = true,
-            message = $"Password reset for {user.Email}.",
-            temporaryPassword,
-            user = AdminUserViewModel.From(user),
-        });
+        var messages = await support.ThreadAsync(userId);
+        return Ok(new { success = true, user = AdminUserViewModel.From(user), messages = messages.Select(SupportMessageViewModel.From) });
     }
 
-    // 10 characters with at least one letter and one digit, so it passes the normal password rules.
-    private static string NewTemporaryPassword()
+    // Writes to a user, starting the conversation if there is none yet.
+    [EnableRateLimiting("chat-send")]
+    [HttpPost("support/{userId:guid}")]
+    public async Task<IActionResult> SendSupportMessage(Guid userId, SupportMessageRequest request)
     {
-        var chars = (RandomNumberGenerator.GetString(Letters, 7) + RandomNumberGenerator.GetString(Digits, 3)).ToCharArray();
-        RandomNumberGenerator.Shuffle(chars.AsSpan());
-        return new string(chars);
+        var result = await support.SendAsync(userId, CurrentUserId, fromAdmin: true, request.Text, request.Emergency);
+        return result.Succeeded
+            ? Created201(new { success = true, message = SupportMessageViewModel.From(result.Value!) })
+            : Error(result.StatusCode, result.Message);
     }
+
+    [HttpPost("support/{userId:guid}/read")]
+    public async Task<IActionResult> MarkSupportRead(Guid userId) =>
+        Ok(new { success = true, marked = await support.MarkReadAsync(userId, readerIsAdmin: true) });
 }

@@ -9,8 +9,9 @@
 import fs from 'fs'
 import path from 'path'
 
-const SRC = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/(\w:)/, '$1')), '../src')
-const FILES = ['style.css', 'more.css', 'home.css', 'profile.css', 'admin.css']
+// The stylesheets (the view layer's styles) and the generated theme.css live in src/views/styles.
+const SRC = path.resolve(path.dirname(new URL(import.meta.url).pathname.replace(/^\/(\w:)/, '$1')), '../src/views/styles')
+const FILES = ['style.css', 'more.css', 'home.css', 'profile.css', 'admin.css', 'support.css']
 
 // Shared custom properties and the role their colour plays where they are used.
 const CUSTOM_ROLES = {
@@ -161,4 +162,4 @@ fs.writeFileSync(path.join(SRC, 'theme.css'), [
   block('html[data-theme="dark"]', (role, hex) => toHex(dark(role, toHsl(hex)))),
   block('html[data-theme="night"]', (role, hex) => toHex(night(role, toHsl(hex)))),
 ].join('\n'))
-console.log(`${replaced} colours replaced, ${names.length} theme variables written to src/theme.css`)
+console.log(`${replaced} colours replaced, ${names.length} theme variables written to src/views/styles/theme.css`)

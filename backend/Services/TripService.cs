@@ -23,6 +23,63 @@ public record TripResult(int Status, string Message, Trip? Trip = null, Wallet? 
 // Gems rule: every completed trip earns Rewards:GemsPerTrip gems (appsettings.json), once per trip.
 public class TripService(AppDbContext db, BusRouteCache routes, WalletService wallets)
 {
+    // Only this rider's own trips, newest first.
+    public Task<List<Trip>> HistoryAsync(Guid userId) => db.Trips
+        .Include(t => t.IndividualBus)
+        .Where(t => t.UserId == userId)
+        .OrderByDescending(t => t.CreatedAt)
+        .AsNoTracking()
+        .ToListAsync();
+
+    // Logs a finished trip straight into history (no boarding, no gems). Created: false when the same trip was
+    // just sent (a double click or a retry) and the earlier one is returned instead.
+    public async Task<ServiceResult<(Trip Trip, bool Created)>> LogAsync(Guid userId, AddTripRequest request)
+    {
+        var busId = request.BusId.Trim();
+        var source = request.Source?.Trim() ?? "";
+        var destination = request.Destination?.Trim() ?? "";
+        if (busId.Length == 0)
+        {
+            return ServiceResult<(Trip, bool)>.BadRequest("busId is required.");
+        }
+        if (source.Length == 0 || destination.Length == 0)
+        {
+            return ServiceResult<(Trip, bool)>.BadRequest("Enter where the trip started and ended.");
+        }
+        if (string.Equals(source, destination, StringComparison.OrdinalIgnoreCase))
+        {
+            return ServiceResult<(Trip, bool)>.BadRequest("The start and end of a trip cannot be the same place.");
+        }
+        if (await db.Trips.AnyAsync(t => t.UserId == userId && t.Status == TripStatus.Active && t.BusId == busId))
+        {
+            return ServiceResult<(Trip, bool)>.Conflict("You are on this bus right now. End the trip instead of logging it.");
+        }
+        // The same trip sent twice in a row is saved once.
+        var since = DateTime.UtcNow.AddMinutes(-2);
+        var duplicate = await db.Trips.FirstOrDefaultAsync(t => t.UserId == userId && t.BusId == busId && t.Source == source &&
+                                                              t.Destination == destination && t.CreatedAt > since);
+        if (duplicate is not null)
+        {
+            return ServiceResult<(Trip, bool)>.Ok((duplicate, false), "Trip already added.");
+        }
+
+        var trip = new Trip
+        {
+            UserId = userId,
+            BusId = busId,
+            BusName = string.IsNullOrWhiteSpace(request.BusName) ? "Bus" : request.BusName.Trim(),
+            Distance = request.Distance,
+            Fare = request.Fare,
+            Source = source,
+            Destination = destination,
+            Status = TripStatus.Completed,
+            EndedAt = DateTime.UtcNow,
+        };
+        db.Trips.Add(trip);
+        await db.SaveChangesAsync();
+        return ServiceResult<(Trip, bool)>.Created((trip, true), "Trip added.");
+    }
+
     public Task<Trip?> ActiveTripAsync(Guid userId) =>
         db.Trips.Include(t => t.IndividualBus).FirstOrDefaultAsync(t => t.UserId == userId && t.Status == TripStatus.Active);
 

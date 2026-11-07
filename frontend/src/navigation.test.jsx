@@ -10,8 +10,11 @@ const me = { id: 'u1', _id: 'u1', name: 'Test Rider', email: 'rider@test.local',
 
 beforeAll(async () => {
   document.body.innerHTML = '<div id="root"></div>'
-  localStorage.setItem('sc_token', token)
-  localStorage.setItem('sc_user', JSON.stringify(me))
+  // This tab's own sign-in (see session.js): the tab id in window.name matches the one in sessionStorage.
+  window.name = 'sc-tab-test'
+  sessionStorage.setItem('sc_tab_id', 'sc-tab-test')
+  sessionStorage.setItem('sc_token', token)
+  sessionStorage.setItem('sc_user', JSON.stringify(me))
   window.scrollTo = () => {}
   vi.stubGlobal('fetch', vi.fn((url) => {
     const { pathname } = new URL(url)
@@ -28,7 +31,7 @@ beforeAll(async () => {
     const body = responses[pathname] || { success: true, data: [] }
     return Promise.resolve(new Response(JSON.stringify(body), { status: 200, headers: { 'Content-Type': 'application/json' } }))
   }))
-  await import('./main.jsx')
+  await import('./main')
   await waitFor(() => expect(document.querySelector('nav.nav-links')).not.toBeNull())
 })
 

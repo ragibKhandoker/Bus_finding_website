@@ -68,6 +68,13 @@ public class User
     [MaxLength(5)]
     public string FriendCode { get; set; } = "";
 
+    // Set when an admin gives the user a temporary password. Until they choose a new password, the user can
+    // only change their password or sign out (see the check in Program.cs).
+    public bool MustChangePassword { get; set; }
+
+    // When the temporary password stops working, if the user has one.
+    public DateTime? TemporaryPasswordExpiresAt { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginAt { get; set; }

@@ -1,0 +1,217 @@
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowDownUp, ArrowRight, ArrowUpRight, BusFront, CircleAlert, Compass, Map as MapIcon, MapPin, Search, ShieldCheck } from 'lucide-react'
+import GoogleMapView, { mapsConfigured } from '../components/GoogleMapView'
+import { useActiveTrip } from '../../controllers/useTrips'
+import { ActiveTripPanel, useBoardControls } from '../components/Trips'
+import { BusReviews } from '../components/Reviews'
+import { useFavoriteBuses } from '../../controllers/useFavorites'
+import { FavoriteButton } from './Favorites'
+import { apiRequest as request } from '../../models/api'
+import { formatNumber, t, toEnglish } from '../../models/i18n'
+import { formatDuration, getStops, googleMapsDirections, money, sortedStops } from '../helpers'
+import { errorText } from '../../models/messages'
+import { PageHeading, StopSuggestions } from '../components/common'
+
+// Where the distance came from (route-estimate "source").
+export const ESTIMATE_SOURCES = {
+  'google-routes': 'By road, from Google Maps',
+  openstreetmap: 'By road, from OpenStreetMap',
+  approximate: 'Approximate: road service unavailable',
+}
+
+// The searched trip: both places, Google's road distance and travel time, and a link to Google Maps.
+// The distance is for the road between the two places, which is not the same as the bus's path or its stops.
+export function TripSummary({ trip, estimate, onRetry }) {
+  return <section className="panel trip-summary">
+    <div className="trip-places">
+      <span><i className="start" /><small>{t('Start')}</small><b>{t(trip.start.name)}</b></span>
+      <ArrowRight size={16} />
+      <span><i className="end" /><small>{t('Destination')}</small><b>{t(trip.end.name)}</b></span>
+    </div>
+    <div className="trip-figures">
+      {estimate.status === 'loading' && <span className="trip-figure"><small>{t('Estimated distance')}</small><b><i className="hp-stat-skeleton" aria-hidden="true" /></b></span>}
+      {estimate.status === 'ready' && <>
+        <span className="trip-figure"><small>{t('Estimated distance')}</small><b>{t('{km} km', { km: formatNumber(estimate.data.distanceKm, { maximumFractionDigits: 1 }) })}</b><em>{t(ESTIMATE_SOURCES[estimate.data.source] || ESTIMATE_SOURCES['google-routes'])}</em></span>
+        {estimate.data.durationMinutes > 0 && <span className="trip-figure"><small>{t('Estimated travel time')}</small><b>{formatDuration(estimate.data.durationMinutes)}</b><em>{estimate.data.source === 'google-routes'
+          ? (estimate.data.durationWithoutTrafficMinutes ? t('{time} without traffic', { time: formatDuration(estimate.data.durationWithoutTrafficMinutes) }) : t('Driving, with current traffic'))
+          : estimate.data.source === 'approximate' ? t('Rough estimate') : t('Driving, without traffic')}</em></span>}
+      </>}
+      {estimate.status === 'error' && <span className="trip-figure trip-unavailable"><small>{t('Estimated distance')}</small><b>{t('Temporarily unavailable')}</b><em>{estimate.message} <button type="button" onClick={onRetry}>{t('Try again')}</button></em></span>}
+      <a className="button button-outline button-small trip-gmaps" href={googleMapsDirections(trip.start.name, trip.end.name)} target="_blank" rel="noreferrer"><MapIcon size={14} /> {t('Open in Google Maps')} <ArrowUpRight size={13} /></a>
+    </div>
+  </section>
+}
+
+export function BusPage({ token, signedIn, user, notify, navigate, openAuth }) {
+  // A search started from another page (home or a route page); it runs once when the page opens.
+  const savedQuery = useMemo(() => {
+    try { return JSON.parse(sessionStorage.getItem('bus_query') || '{}') } catch { return {} }
+  }, [])
+  // Cleared after the first render, not while reading it: React's development mode runs that read twice.
+  useEffect(() => { sessionStorage.removeItem('bus_query') }, [])
+  const [from, setFrom] = useState(savedQuery.from || '')
+  const [to, setTo] = useState(savedQuery.to || '')
+  const [name, setName] = useState(savedQuery.name || '')
+  const [mode, setMode] = useState(savedQuery.mode === 'name' ? 'name' : 'route')
+  const [buses, setBuses] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [searched, setSearched] = useState(null) // the search shown: { mode, from, to, name }
+  const [error, setError] = useState('')
+  const [trip, setTrip] = useState(null) // { start, end }: the stops the searched places resolved to
+  const [estimate, setEstimate] = useState({ status: 'idle' })
+  const [selectedId, setSelectedId] = useState(null)
+  const activeTrip = useActiveTrip(token, signedIn).trip
+
+  // One request for the whole list of favourites, so each card knows its heart state without asking the server.
+  const favorites = useFavoriteBuses({ token, user, signedIn, notify, openAuth })
+
+  // Road distance and time from Google, through the backend, which holds the server key.
+  const loadEstimate = useCallback((start, end) => {
+    setEstimate({ status: 'loading' })
+    request(`/bus/route-estimate?${new URLSearchParams({ startLocation: start, endLocation: end })}`, { token })
+      .then((data) => setEstimate({ status: 'ready', data: data.data }))
+      .catch((e) => setEstimate({ status: 'error', message: errorText(e) }))
+  }, [token])
+
+  const search = async (event) => {
+    event?.preventDefault()
+    if (!signedIn) return openAuth()
+    const start = toEnglish(from.trim()), end = toEnglish(to.trim()), busName = toEnglish(name.trim())
+    if (mode === 'route' && !start) { setError(t('Enter your starting point.')); return }
+    if (mode === 'route' && !end) { setError(t('Enter your destination.')); return }
+    if (mode === 'name' && !busName) { setError(t('Enter a bus name to search.')); return }
+    setLoading(true); setError(''); setSearched({ mode, from: start, to: end, name: busName }); setSelectedId(null); setTrip(null)
+    const shownUntil = Date.now() + MIN_LOADER_MS
+    if (mode === 'route') loadEstimate(start, end); else setEstimate({ status: 'idle' })
+    try {
+      const result = await request(mode === 'route'
+        ? `/bus/search-by-route?${new URLSearchParams({ startLocation: start, endLocation: end })}`
+        : `/bus/search-by-name?${new URLSearchParams({ busName })}`, { token })
+      setBuses(result.data || [])
+      setSelectedId(result.data?.[0]?._id || null)
+      if (result.start && result.end) setTrip({ start: result.start, end: result.end })
+    } catch (e) {
+      setBuses([]); setError(errorText(e)); setEstimate({ status: 'idle' })
+    } finally {
+      await new Promise((resolve) => window.setTimeout(resolve, Math.max(0, shownUntil - Date.now())))
+      setLoading(false)
+    }
+  }
+  // Run a search handed over from another page, once signed in.
+  const autoSearched = useRef(false)
+  useEffect(() => {
+    if (autoSearched.current || !savedQuery.auto || !signedIn) return
+    autoSearched.current = true
+    search()
+  }, [signedIn]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const saveTrip = async (bus) => {
+    if (!signedIn) return openAuth()
+    const distance = estimate.status === 'ready' ? estimate.data.distanceKm : 0
+    try {
+      await request('/trip/add', { token, method: 'POST', body: JSON.stringify({ busId: bus._id, busName: bus.busName, distance, fare: Number(bus.base_fare || 0), source: bus.match?.boarding.name || from, destination: bus.match?.alighting.name || to }) })
+      notify(t('Trip added to your history.'))
+    } catch (e) { notify(errorText(e)) }
+  }
+
+  // The selected bus on the map: its whole route in travel direction, and the stops ridden.
+  const selected = buses.find((bus) => bus._id === selectedId)
+  const mapStops = useMemo(() => {
+    const stops = sortedStops(selected)
+    return selected?.match?.direction === 'return' ? stops.reverse() : stops
+  }, [selected])
+  const mapSegment = useMemo(() => selected?.match?.segment || [], [selected])
+  // The map stays mounted across searches: Google bills each new map load.
+  const showMap = Boolean(searched && !error && (searched.mode === 'route' || loading || buses.length))
+
+  return <div className="page inner-page bus-page">
+    <PageHeading eyebrow={t('GET THERE WITH EASE')} title={t('Find your bus.')} description={t('Search Dhaka bus routes by the places you are going—or by bus name.')} icon={BusFront} />
+    <section className="panel bus-search-panel">
+      <div className="segmented"><button className={mode === 'route' ? 'selected' : ''} onClick={() => { setMode('route'); setError('') }}><MapPin size={15} /> {t('Search by route')}</button><button className={mode === 'name' ? 'selected' : ''} onClick={() => { setMode('name'); setError('') }}><Search size={15} /> {t('Search by bus')}</button></div>
+      <StopSuggestions />
+      <form className="bus-search-form" onSubmit={search}>
+        {mode === 'route' ? <>
+          <label className="field"><small>{t('STARTING POINT')}</small><span><span className="input-dot" /><input value={from} onChange={(e) => setFrom(e.target.value)} placeholder={t('e.g. Uttara')} list="stop-suggestions" /></span></label>
+          <button type="button" className="swap-button" onClick={() => { setFrom(to); setTo(from) }} aria-label={t('Swap locations')}><ArrowDownUp size={15} /></button>
+          <label className="field"><small>{t('DESTINATION')}</small><span><MapPin size={16} /><input value={to} onChange={(e) => setTo(e.target.value)} placeholder={t('e.g. Motijheel')} list="stop-suggestions" /></span></label>
+        </> : <label className="field wide"><small>{t('BUS NAME')}</small><span><Search size={16} /><input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('e.g. BRTC, Raida')} /></span></label>}
+        <button className={`button button-green${loading ? ' is-loading' : ''}`} type="submit" disabled={loading} aria-busy={loading}>{loading ? <><span className="button-spinner" aria-hidden="true" /> {t('Searching…')}</> : <><Search size={16} /> {t('Search buses')}</>}</button>
+      </form>
+      {error && <div className="inline-error" role="alert">{error}</div>}
+      {!signedIn && <div className="signin-hint"><ShieldCheck size={15} /> {t('Bus search requires an account.')} <button onClick={openAuth}>{t('Sign in')}</button> {t('to find routes.')}</div>}
+    </section>
+    <ActiveTripPanel token={token} signedIn={signedIn} notify={notify} />
+    {searched?.mode === 'route' && trip && <TripSummary trip={trip} estimate={estimate} onRetry={() => loadEstimate(searched.from, searched.to)} />}
+    {searched && <section className={`results-area${showMap ? ' results-with-map' : ''}`}>
+      <div className="results-list">
+        <div className="results-heading"><div><div className="eyebrow">{searched.mode === 'route' ? t('YOUR ROUTE') : t('BUS SEARCH')}</div><h2>{searched.mode === 'route' ? t('{from} to {to}', { from: t(trip?.start.name || searched.from), to: t(trip?.end.name || searched.to) }) : t('Buses matching “{name}”', { name: searched.name })}</h2></div>{!loading && !error && <span className="result-count">{buses.length === 1 ? t('{count} bus found', { count: 1 }) : t('{count} buses found', { count: buses.length })}</span>}</div>
+        {loading ? <BusSearchLoader mode={searched.mode} />
+          : error ? <div className="empty-state"><span className="empty-icon"><CircleAlert size={23} /></span><b>{t('Search could not be completed')}</b><span>{error}</span></div>
+          : buses.length ? <div className="bus-list">{buses.map((bus) => <BusCard key={bus._id} bus={bus} user={user} token={token} signedIn={signedIn} openAuth={openAuth} selected={bus._id === selectedId} onSelect={() => setSelectedId(bus._id)} favorite={favorites.isFavorite(bus)} favoritePending={favorites.isPending(bus)} onFavorite={() => favorites.toggle(bus)} onAddTrip={() => saveTrip(bus)} boarding={{ token, signedIn, openAuth, notify, activeTrip }} onDetails={bus.routeNumber ? () => navigate('Bus details', { route: bus.routeNumber }) : null} notify={notify} />)}</div>
+          : <div className="empty-state"><span className="empty-icon"><BusFront size={23} /></span><b>{t('No buses found just yet')}</b><span>{searched.mode === 'route' ? t('No bus in the database stops at both places. Try a nearby stop.') : t('Try another bus name or route number.')}</span></div>}
+      </div>
+      {showMap && <aside className="results-map">
+        <GoogleMapView start={trip?.start} end={trip?.end} roadPath={estimate.status === 'ready' ? estimate.data.polyline : null} busStops={mapStops} segment={mapSegment} />
+        {mapsConfigured
+          ? <ul className="gmap-legend">
+            {trip && <li><i className="legend-road" /> {t('Google driving route (estimate)')}</li>}
+            {selected && <li><i className="legend-ride" /> {t('{bus}: stops you ride', { bus: t(selected.busName) })}</li>}
+            {selected && <li><i className="legend-bus" /> {t('Rest of the bus route')}</li>}
+          </ul>
+          : <p className="gmap-note">{trip ? t('Google Maps driving route between your places. A bus may take other roads; its stops are listed on each card.') : t('Google Maps route between the first and last stop of the selected bus.')}</p>}
+      </aside>}
+    </section>}
+    {!searched && <section className="suggestion"><span className="suggestion-icon"><Compass size={19} /></span><div><b>{t('Start with a familiar landmark')}</b><p>{t('Try popular Dhaka stops like Farmgate, Mohakhali, Gulistan, or Uttara.')}</p></div><span className="suggestion-pills"><button onClick={() => { setMode('route'); setFrom('Farmgate'); setTo('Uttara') }}>{t('Farmgate')}</button><button onClick={() => { setMode('route'); setFrom('Gulistan'); setTo('Uttara') }}>{t('Gulistan')}</button></span></section>}
+  </div>
+}
+
+// Shown while a search runs: a bus driving past stops that light up in turn, with a line saying what is
+// being checked. Purely visual; the steps are not tied to real progress.
+// Results usually come back from the server's memory in a few milliseconds; without a minimum the loader only
+// flickers, so it stays up at least this long.
+export const MIN_LOADER_MS = 1200
+
+export const LOADER_STEPS = {
+  route: ['Checking every bus route…', 'Matching your stops in order…', 'Working out distance and time…'],
+  name: ['Checking every bus route…', 'Matching the bus name…', 'Getting the stops ready…'],
+}
+
+export function BusSearchLoader({ mode }) {
+  const steps = LOADER_STEPS[mode] || LOADER_STEPS.route
+  const [step, setStep] = useState(0)
+  useEffect(() => {
+    const timer = window.setInterval(() => setStep((current) => (current + 1) % steps.length), 1100)
+    return () => window.clearInterval(timer)
+  }, [steps.length])
+  return <div className="bus-loader" role="status" aria-live="polite">
+    <div className="bus-loader-scene" aria-hidden="true">
+      <span className="bus-loader-road" />
+      <span className="bus-loader-stop" /><span className="bus-loader-stop" /><span className="bus-loader-stop" /><span className="bus-loader-stop" />
+      <span className="bus-loader-bus"><BusFront size={26} strokeWidth={2.2} /></span>
+    </div>
+    <b>{t('Finding your buses…')}</b>
+    <span className="bus-loader-step" key={step}>{t(steps[step])}</span>
+  </div>
+}
+
+// One search result: name, route number and stops, and for a route search where to board and get off.
+export function BusCard({ bus, user, token, signedIn, openAuth, selected, onSelect, favorite, favoritePending, onFavorite, onAddTrip, boarding, onDetails, notify }) {
+  const board = useBoardControls({ bus, ...boarding })
+  const stops = getStops(bus)
+  const match = bus.match
+  return <article className={`bus-result panel${selected ? ' selected' : ''}`}>
+    <span className="bus-result-icon"><BusFront size={20} /></span><div className="bus-result-main">
+      <div className="bus-title"><h3>{bus.busName ? t(bus.busName) : t('City bus')}</h3>{bus.routeNumber && <span className="route-badge">{bus.routeNumber}</span>}{match?.direction === 'return' && <span className="route-badge return-badge">{t('Return trip')}</span>}</div>
+      <div className="bus-details"><span>{bus.operator ? t(bus.operator) : t('Dhaka transit')}</span>{bus.busType && <><i /> <span>{t(bus.busType)}</span></>}{bus.frequency && <><i /> <span>{t(bus.frequency)}</span></>}</div>
+      {match
+        ? <><div className="stop-line"><span>{t(match.boarding.name)}</span><span className="stop-track" /><span>{t(match.alighting.name)}</span></div>
+          <div className="stop-count">{t('Board at {from}, get off at {to}', { from: t(match.boarding.name), to: t(match.alighting.name) })} · {match.stopsToRide === 1 ? t('1 stop to ride') : t('{count} stops to ride', { count: match.stopsToRide })} · {t('{count} stops on this route', { count: stops.length })}</div></>
+        : <>{stops.length > 0 && <div className="stop-line"><span>{t(stops[0])}</span><span className="stop-track" /><span>{t(stops[stops.length - 1])}</span></div>}
+          <div className="stop-count">{t('{count} stops on this route', { count: stops.length })}</div></>}
+      <div className="bus-card-actions">
+        <button className={selected ? 'bus-map-toggle active' : 'bus-map-toggle'} onClick={onSelect} aria-pressed={selected}><MapIcon size={13} /> {selected ? t('Shown on map') : t('Show on map')}</button>
+        {onDetails && <button className="bus-details-link" onClick={onDetails}>{t('View details')} <ArrowRight size={12} /></button>}
+      </div>
+    </div><div className="bus-result-side"><FavoriteButton active={favorite} pending={favoritePending} onClick={onFavorite} /><span className="fare-label">{t('STARTS FROM')}</span><b>{money(bus.base_fare)}</b><small>{t('per ride')}</small>{board.button}<button className="button button-outline button-small" onClick={onAddTrip} title={t('Add a trip you already took to your history')}>{t('Log trip')}</button></div>{board.form}<BusReviews bus={bus} user={user} token={token} signedIn={signedIn} notify={notify} openAuth={openAuth} />
+  </article>
+}

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using SmartCommute.Server.Data;
+using SmartCommute.Server.Extensions;
 using SmartCommute.Server.Models;
 using SmartCommute.Server.ViewModels;
 
@@ -71,4 +72,44 @@ public class FareService(AppDbContext db, GeoService geo, IOptions<RewardOptions
             .Take(Math.Clamp(limit, 1, 100))
             .AsNoTracking()
             .ToListAsync(ct);
+
+    public Task<bool> UserExistsAsync(Guid userId) => db.Users.AnyAsync(u => u.Id == userId);
+
+    // Saves a fare a client calculated itself (older clients). The fare is worked out here from the distance.
+    public async Task<FareRecord> SaveAsync(SaveFareRequest request)
+    {
+        var fare = new FareRecord
+        {
+            UserId = request.UserId,
+            Source = request.Source.Trim(),
+            Destination = request.Destination.Trim(),
+            Distance = Math.Round(request.Distance, 2),
+            FarePerKm = FarePerKm,
+            Fare = FareFor(request.Distance),
+            SourceLat = request.SourceCoordinates?.Lat,
+            SourceLon = request.SourceCoordinates?.Lon,
+            DestinationLat = request.DestinationCoordinates?.Lat,
+            DestinationLon = request.DestinationCoordinates?.Lon,
+        };
+        db.Fares.Add(fare);
+        await db.SaveChangesAsync();
+        return fare;
+    }
+
+    // The most recent saved fare for a route, preferring the user's own when a user is given.
+    public async Task<FareRecord?> LatestForRouteAsync(string source, string destination, Guid? userId)
+    {
+        var src = source.EscapeLike();
+        var dst = destination.EscapeLike();
+        var query = db.Fares.Where(f => EF.Functions.ILike(f.Source, src) && EF.Functions.ILike(f.Destination, dst));
+        return (userId is null ? null : await query.Where(f => f.UserId == userId).OrderByDescending(f => f.CreatedAt).FirstOrDefaultAsync())
+               ?? await query.OrderByDescending(f => f.CreatedAt).FirstOrDefaultAsync();
+    }
+
+    public Task<List<FareRecord>> ForUserAsync(Guid userId) => db.Fares
+        .Where(f => f.UserId == userId)
+        .OrderByDescending(f => f.CreatedAt)
+        .Take(100)
+        .AsNoTracking()
+        .ToListAsync();
 }

@@ -19,6 +19,8 @@ public class UserViewModel : EntityViewModel
     public string Bio { get; init; } = "";
     public string HomeArea { get; init; } = "";
     public string WorkArea { get; init; } = "";
+    // True after an admin issued a temporary password: the user must choose a new password before anything else.
+    public bool MustChangePassword { get; init; }
     public DateTime CreatedAt { get; init; }
     public DateTime UpdatedAt { get; init; }
 
@@ -36,6 +38,7 @@ public class UserViewModel : EntityViewModel
         Bio = u.Bio ?? "",
         HomeArea = u.HomeArea ?? "",
         WorkArea = u.WorkArea ?? "",
+        MustChangePassword = u.MustChangePassword,
         CreatedAt = u.CreatedAt,
         UpdatedAt = u.UpdatedAt,
     };
@@ -116,6 +119,11 @@ public class LoginRequest
 
     [Required(ErrorMessage = "Please enter your password.")]
     public string Password { get; set; } = "";
+
+    // The role the person chose on the sign-in form (commuter, driver or admin). When given, the account must
+    // have exactly that role: a commuter cannot sign in as a driver, a user cannot sign in as admin, and so on.
+    [RegularExpression("^\\s*(?i:commuter|driver|admin)\\s*$", ErrorMessage = "Choose commuter, driver or admin.")]
+    public string? Role { get; set; }
 }
 
 // A field left out (null) is not changed. For the optional details an empty string clears the value.

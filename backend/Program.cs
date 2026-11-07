@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using SmartCommute.Server.Data;
+using SmartCommute.Server.Extensions;
 using SmartCommute.Server.Services;
 using SmartCommute.Server.ViewModels;
 
@@ -87,10 +88,18 @@ builder.Services
                 }
                 var db = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
                 var now = DateTime.UtcNow;
-                var active = await db.UserSessions.AnyAsync(s => s.Id == sessionId && s.RevokedAt == null && s.ExpiresAt > now);
-                if (!active)
+                // Also read whether the user still has to replace a temporary password (see the check below).
+                var mustChangePassword = await db.UserSessions
+                    .Where(s => s.Id == sessionId && s.RevokedAt == null && s.ExpiresAt > now)
+                    .Select(s => (bool?)s.User!.MustChangePassword)
+                    .FirstOrDefaultAsync();
+                if (mustChangePassword is null)
                 {
                     context.Fail("Session has ended.");
+                }
+                else if (mustChangePassword == true)
+                {
+                    context.HttpContext.Items[MustChangePasswordGate.ItemKey] = true;
                 }
             },
             OnChallenge = async context =>
@@ -193,6 +202,15 @@ builder.Services.AddScoped<TripService>();
 builder.Services.AddScoped<FareService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<ImageStorageService>();
+builder.Services.AddScoped<PasswordResetService>();
+builder.Services.AddScoped<AccountService>();
+builder.Services.AddScoped<AdminService>();
+builder.Services.AddScoped<StatusService>();
+builder.Services.AddScoped<BusService>();
+builder.Services.AddScoped<FavoriteBusService>();
+builder.Services.AddScoped<StopService>();
+builder.Services.AddScoped<VerificationService>();
+builder.Services.AddScoped<SupportService>();
 builder.Services.AddSingleton<BusRouteCache>();
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<GoogleRoutesService>(client => client.Timeout = TimeSpan.FromSeconds(10));
@@ -240,6 +258,7 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
 app.UseCors();
 app.UseAuthentication();
 app.UseAuthorization();
+app.UseMiddleware<MustChangePasswordGate>();
 app.UseRateLimiter();
 
 app.MapControllers();

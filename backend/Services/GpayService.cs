@@ -83,7 +83,7 @@ public class GpayService(AppDbContext db, WalletService wallets, NotificationSer
         {
             return new(StatusCodes.Status404NotFound, "GPay account not found.");
         }
-        if (new PasswordHasher<User>().VerifyHashedPassword(user, user.PasswordHash, password) == PasswordVerificationResult.Failed)
+        if (PasswordHashing.Verify(user, password) == PasswordCheck.Failed)
         {
             return new(StatusCodes.Status400BadRequest, "Your account password is incorrect.");
         }

@@ -1,134 +1,35 @@
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
-using Npgsql;
-using SmartCommute.Server.Data;
-using SmartCommute.Server.Models;
 using SmartCommute.Server.Services;
 using SmartCommute.Server.ViewModels;
 
 namespace SmartCommute.Server.Controllers;
 
+// Sign-up, sign-in, the signed-in user's account, forgotten passwords and the older friend endpoints.
+// The rules live in AccountService, PasswordResetService and FriendService; this only maps them to HTTP.
 [Route("auth")]
 public class AuthController(
-    AppDbContext db,
-    JwtTokenService tokens,
-    FriendCodeGenerator friendCodes,
+    AccountService accounts,
     FriendService friends,
-    OfferService offers,
-    NotificationService notifications) : ApiControllerBase
+    PasswordResetService passwordResets) : ApiControllerBase
 {
-    private static readonly PasswordHasher<User> Hasher = new();
-
     [EnableRateLimiting("strict")]
     [HttpPost("signup")]
     public async Task<IActionResult> Signup(SignupRequest request)
     {
-        var name = request.Name.Trim();
-        if (name.Length < 2)
-        {
-            return BadRequestError("Name must be between 2 and 100 characters.");
-        }
-        if (request.Password.Trim().Length == 0)
-        {
-            return BadRequestError("Password cannot be only spaces.");
-        }
-
-        var role = string.IsNullOrWhiteSpace(request.Role) ? UserRoles.Commuter : request.Role.Trim().ToLowerInvariant();
-        if (!UserRoles.SelfAssignable.Contains(role))
-        {
-            return BadRequestError("Role must be commuter or driver.");
-        }
-        if (UserGenders.Normalize(request.Gender) is not { } gender)
-        {
-            return BadRequestError($"Gender must be one of: {string.Join(", ", UserGenders.All)}.");
-        }
-
-        var email = request.Email.Trim().ToLowerInvariant();
-        if (await db.Users.AnyAsync(u => u.Email == email))
-        {
-            return Error(StatusCodes.Status409Conflict, "An account with this email already exists.");
-        }
-
-        var user = new User
-        {
-            Name = name,
-            Email = email,
-            Gender = gender,
-            Role = role,
-            FriendCode = await friendCodes.GenerateUniqueAsync(),
-        };
-        user.PasswordHash = Hasher.HashPassword(user, request.Password);
-        db.Users.Add(user);
-        var wallet = new Wallet { User = user };
-        db.Wallets.Add(wallet);
-        // The welcome offer from the Rewards settings is saved in the same transaction as the account.
-        offers.AddWelcomeOffers(user, wallet);
-        // The user, wallet, offers and friend code are saved together. If a simultaneous sign-up took the same friend
-        // code first, the unique index rejects the insert and it is retried with a new code.
-        for (var attempt = 1; ; attempt++)
-        {
-            try
-            {
-                await db.SaveChangesAsync();
-                break;
-            }
-            catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg
-                                               && pg.ConstraintName?.Contains("email") == true)
-            {
-                // Another sign-up with the same email won the race between the check above and the insert.
-                return Error(StatusCodes.Status409Conflict, "An account with this email already exists.");
-            }
-            catch (DbUpdateException ex) when (FriendCodeGenerator.IsCodeClash(ex) && attempt < 5)
-            {
-                user.FriendCode = await friendCodes.GenerateUniqueAsync();
-            }
-        }
-
-        // Sign the new user straight in so the client does not need a second login call.
-        var session = await StartSessionAsync(user);
-        return Ok(new
-        {
-            success = true,
-            message = "Account created successfully.",
-            token = tokens.CreateToken(user, session),
-            expiresAt = session.ExpiresAt,
-            user = UserViewModel.From(user),
-        });
+        var result = await accounts.SignupAsync(request, Client);
+        return result.Succeeded ? SignedInResponse(result.Value!, result.Message) : Error(result.StatusCode, result.Message);
     }
 
     [EnableRateLimiting("strict")]
     [HttpPost("login")]
     public async Task<IActionResult> Login(LoginRequest request)
     {
-        var email = request.Email.Trim().ToLowerInvariant();
-        var user = await db.Users.FirstOrDefaultAsync(u => u.Email == email);
-        if (user is null)
-        {
-            return Error(StatusCodes.Status401Unauthorized, "Invalid email or password.");
-        }
-
-        var result = Hasher.VerifyHashedPassword(user, user.PasswordHash, request.Password);
-        if (result == PasswordVerificationResult.Failed)
-        {
-            return Error(StatusCodes.Status401Unauthorized, "Invalid email or password.");
-        }
-        if (result == PasswordVerificationResult.SuccessRehashNeeded)
-        {
-            user.PasswordHash = Hasher.HashPassword(user, request.Password);
-        }
-
-        var session = await StartSessionAsync(user);
-        return Ok(new
-        {
-            success = true,
-            token = tokens.CreateToken(user, session),
-            expiresAt = session.ExpiresAt,
-            user = UserViewModel.From(user),
-        });
+        var result = await accounts.LoginAsync(request.Email, request.Password, Client, request.Role);
+        return result.Succeeded ? SignedInResponse(result.Value!) : Error(result.StatusCode, result.Message);
     }
 
     // Ends the session behind the current token; the token is rejected from then on.
@@ -138,9 +39,7 @@ public class AuthController(
     {
         if (CurrentSessionId is { } sessionId)
         {
-            await db.UserSessions
-                .Where(s => s.Id == sessionId && s.RevokedAt == null)
-                .ExecuteUpdateAsync(s => s.SetProperty(x => x.RevokedAt, DateTime.UtcNow));
+            await accounts.LogoutAsync(sessionId);
         }
         return Ok(new { success = true, message = "Signed out." });
     }
@@ -149,147 +48,100 @@ public class AuthController(
     [HttpGet("validate")]
     public async Task<IActionResult> Validate()
     {
-        var user = await db.Users.FindAsync(CurrentUserId);
-        if (user is null)
+        if (await accounts.ValidateAsync(CurrentUserId, CurrentSessionId) is not { } found)
         {
             return Error(StatusCodes.Status401Unauthorized, "Account no longer exists.");
         }
-        var expiresAt = await db.UserSessions
-            .Where(s => s.Id == CurrentSessionId)
-            .Select(s => (DateTime?)s.ExpiresAt)
-            .FirstOrDefaultAsync();
-        return Ok(new { success = true, valid = true, expiresAt, user = UserViewModel.From(user) });
-    }
-
-    private Guid? CurrentSessionId => Guid.TryParse(User.FindFirstValue("jti"), out var id) ? id : null;
-
-    // Blank optional profile text is stored as null rather than an empty string.
-    private static string? OptionalText(string value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-
-    // Records a new sign-in and clears out this user's sessions that can no longer be used.
-    private async Task<UserSession> StartSessionAsync(User user)
-    {
-        var now = DateTime.UtcNow;
-        await db.UserSessions
-            .Where(s => s.UserId == user.Id && (s.ExpiresAt <= now || s.RevokedAt != null))
-            .ExecuteDeleteAsync();
-
-        var userAgent = Request.Headers.UserAgent.ToString();
-        var session = new UserSession
-        {
-            UserId = user.Id,
-            CreatedAt = now,
-            ExpiresAt = tokens.NewExpiry(),
-            IpAddress = HttpContext.Connection.RemoteIpAddress?.ToString(),
-            UserAgent = userAgent.Length > 300 ? userAgent[..300] : userAgent,
-        };
-        db.UserSessions.Add(session);
-        user.LastLoginAt = now;
-        await db.SaveChangesAsync();
-        return session;
+        return Ok(new { success = true, valid = true, expiresAt = found.ExpiresAt, user = UserViewModel.From(found.User) });
     }
 
     [Authorize]
     [HttpPut("profile")]
     public async Task<IActionResult> UpdateProfile(UpdateProfileRequest request)
     {
-        var user = await db.Users.FindAsync(CurrentUserId);
-        if (user is null)
-        {
-            return NotFoundError("User not found.");
-        }
-
-        if (!string.IsNullOrWhiteSpace(request.Email))
-        {
-            var email = request.Email.Trim().ToLowerInvariant();
-            if (email != user.Email && await db.Users.AnyAsync(u => u.Email == email))
-            {
-                return Error(StatusCodes.Status409Conflict, "That email is already used by another account.");
-            }
-            user.Email = email;
-        }
-        if (request.Name is not null)
-        {
-            var name = request.Name.Trim();
-            if (name.Length < 2)
-            {
-                return BadRequestError("Name must be between 2 and 100 characters.");
-            }
-            user.Name = name;
-        }
-        if (!string.IsNullOrWhiteSpace(request.Gender))
-        {
-            if (UserGenders.Normalize(request.Gender) is not { } gender)
-            {
-                return BadRequestError($"Gender must be one of: {string.Join(", ", UserGenders.All)}.");
-            }
-            user.Gender = gender;
-        }
-        if (request.Phone is not null)
-        {
-            user.Phone = OptionalText(request.Phone);
-        }
-        if (request.Bio is not null)
-        {
-            user.Bio = OptionalText(request.Bio);
-        }
-        if (request.HomeArea is not null)
-        {
-            user.HomeArea = OptionalText(request.HomeArea);
-        }
-        if (request.WorkArea is not null)
-        {
-            user.WorkArea = OptionalText(request.WorkArea);
-        }
-        user.UpdatedAt = DateTime.UtcNow;
-        notifications.Notify(user.Id, "Profile updated", "Your profile has been updated.", NotificationTypes.Success,
-            category: NotificationCategories.Account);
-        try
-        {
-            await db.SaveChangesAsync();
-        }
-        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg
-                                           && pg.ConstraintName?.Contains("email") == true)
-        {
-            // Another account took the same email between the check above and the update.
-            return Error(StatusCodes.Status409Conflict, "That email is already used by another account.");
-        }
-
-        return Ok(new { success = true, message = "Your profile has been updated.", user = UserViewModel.From(user) });
+        var result = await accounts.UpdateProfileAsync(CurrentUserId, request);
+        return result.Succeeded
+            ? Ok(new { success = true, message = result.Message, user = UserViewModel.From(result.Value!) })
+            : Error(result.StatusCode, result.Message);
     }
 
     [Authorize]
     [HttpPut("password")]
     public async Task<IActionResult> UpdatePassword(UpdatePasswordRequest request)
     {
-        var user = await db.Users.FindAsync(CurrentUserId);
-        if (user is null)
-        {
-            return NotFoundError("User not found.");
-        }
-        if (Hasher.VerifyHashedPassword(user, user.PasswordHash, request.CurrentPassword) == PasswordVerificationResult.Failed)
-        {
-            return BadRequestError("Current password is incorrect.");
-        }
+        var result = await accounts.UpdatePasswordAsync(CurrentUserId, request.CurrentPassword, request.NewPassword);
+        return result.Succeeded
+            ? Ok(new { success = true, message = result.Message, user = UserViewModel.From(result.Value!) })
+            : Error(result.StatusCode, result.Message);
+    }
 
-        user.PasswordHash = Hasher.HashPassword(user, request.NewPassword);
-        user.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync();
-        return Ok(new { success = true, message = "Password updated." });
+    // ---- Forgot password: ask an admin for a temporary password (no sign-in needed) ----
+
+    // Returns the request id and a secret. The browser keeps both; the secret is the only way to see the
+    // temporary password once an admin sends it.
+    [EnableRateLimiting("strict")]
+    [HttpPost("forgot-password")]
+    public async Task<IActionResult> ForgotPassword(ForgotPasswordRequest request)
+    {
+        var result = await passwordResets.CreateAsync(request.Email, request.Message);
+        if (!result.Succeeded)
+        {
+            return Error(result.StatusCode, result.Message);
+        }
+        var (created, secret) = result.Value;
+        return Created201(new
+        {
+            success = true,
+            message = result.Message,
+            requestId = created.Id,
+            secret,
+            request = ResetStatusViewModel.From(created, DateTime.UtcNow),
+        });
+    }
+
+    // The requester checks whether an admin has answered. POST, so the secret is not written to URL logs.
+    [EnableRateLimiting("strict")]
+    [HttpPost("forgot-password/status")]
+    public async Task<IActionResult> ForgotPasswordStatus(ResetStatusRequest request)
+    {
+        var found = await passwordResets.FindWithSecretAsync(request.RequestId, request.Secret);
+        return found is null
+            ? NotFoundError("Request not found. Please send a new request.")
+            : Ok(new { success = true, request = ResetStatusViewModel.From(found, DateTime.UtcNow) });
+    }
+
+    // The person who asked collects a temporary password for an approved request, proving the request's secret.
+    // It is made now, stored only as a bcrypt hash, and appears in this response only: never in the database,
+    // never to an admin. Asking again makes a new one and the previous one stops working.
+    [EnableRateLimiting("strict")]
+    [HttpPost("forgot-password/reveal")]
+    public async Task<IActionResult> RevealTemporaryPassword(ResetStatusRequest request)
+    {
+        var result = await passwordResets.RevealAsync(request.RequestId, request.Secret);
+        if (!result.Succeeded)
+        {
+            return Error(result.StatusCode, result.Message);
+        }
+        var (password, expiresAt) = result.Value;
+        // Never cache a response that contains a password.
+        Response.Headers.CacheControl = "no-store";
+        return Ok(new { success = true, message = result.Message, temporaryPassword = password, expiresAt });
     }
 
     // The code is created once at sign-up and never changes; this only reads it.
     [Authorize]
     [HttpGet("friend-code")]
-    public async Task<IActionResult> GetFriendCode()
-    {
-        var user = await db.Users.FindAsync(CurrentUserId);
-        if (user is null)
-        {
-            return NotFoundError("User not found.");
-        }
-        return Ok(new { success = true, friendCode = user.FriendCode });
-    }
+    public async Task<IActionResult> GetFriendCode() => await accounts.FriendCodeAsync(CurrentUserId) is { } code
+        ? Ok(new { success = true, friendCode = code })
+        : NotFoundError("User not found.");
+
+    private Guid? CurrentSessionId => Guid.TryParse(User.FindFirstValue("jti"), out var id) ? id : null;
+
+    private ClientInfo Client => new(HttpContext.Connection.RemoteIpAddress?.ToString(), Request.Headers.UserAgent.ToString());
+
+    private OkObjectResult SignedInResponse(SignedIn signedIn, string message = "") => message.Length > 0
+        ? Ok(new { success = true, message, token = signedIn.Token, expiresAt = signedIn.ExpiresAt, user = UserViewModel.From(signedIn.User) })
+        : Ok(new { success = true, token = signedIn.Token, expiresAt = signedIn.ExpiresAt, user = UserViewModel.From(signedIn.User) });
 
     // Looks a person up by their exact friend code: ?code=R7K2M. Returns their public profile and how the caller
     // is already connected to them ("none", "self", "friends", "request_sent" or "request_received").

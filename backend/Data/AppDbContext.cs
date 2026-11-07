@@ -33,6 +33,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<Verification> Verifications => Set<Verification>();
     public DbSet<VerificationImage> VerificationImages => Set<VerificationImage>();
+    public DbSet<PasswordResetRequest> PasswordResetRequests => Set<PasswordResetRequest>();
+    public DbSet<SupportMessage> SupportMessages => Set<SupportMessage>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -288,6 +290,28 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.UserId, x.CreatedAt });
             e.HasIndex(x => x.StorageKey).IsUnique();
+        });
+
+        b.Entity<PasswordResetRequest>(e =>
+        {
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.HandledBy).WithMany().HasForeignKey(x => x.HandledById).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(x => new { x.Status, x.CreatedAt });
+            // One request waiting for an admin per user at a time.
+            e.HasIndex(x => x.UserId).IsUnique().HasFilter("status = 'pending'").HasDatabaseName("ix_password_reset_requests_one_pending_per_user");
+            e.ToTable(t => t.HasCheckConstraint("ck_password_reset_requests_status",
+                "status IN ('pending', 'sent', 'completed', 'dismissed')"));
+        });
+
+        b.Entity<SupportMessage>(e =>
+        {
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            // Deleting an admin's account keeps their replies, just without the link to them.
+            e.HasOne(x => x.Sender).WithMany().HasForeignKey(x => x.SenderId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            // Unread counts only look at unread rows.
+            e.HasIndex(x => new { x.UserId, x.FromAdmin }).HasFilter("read_at IS NULL").HasDatabaseName("ix_support_messages_unread");
+            e.ToTable(t => t.HasCheckConstraint("ck_support_messages_text_not_blank", @"text ~ '\S'"));
         });
     }
 }

@@ -1,10 +1,6 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
-using Microsoft.EntityFrameworkCore;
-using SmartCommute.Server.Data;
-using SmartCommute.Server.Extensions;
-using SmartCommute.Server.Models;
 using SmartCommute.Server.Services;
 using SmartCommute.Server.ViewModels;
 
@@ -93,16 +89,16 @@ public class GeocodingController(GeoService geo, FareService fares, ILogger<Geoc
     private static object ToJson(GeoPlace p) => new { display_name = p.DisplayName, lat = p.Lat, lon = p.Lon, place_id = p.PlaceId };
 }
 
+
+// Bus stops. The rules live in StopService.
 [Route("api/stops")]
-public class StopsController(AppDbContext db, BusRouteCache routes) : ApiControllerBase
+public class StopsController(StopService stops) : ApiControllerBase
 {
-    // Every bus stop once, by name, with its coordinates. A stop served by several routes is stored once per route,
-    // so its position is the average of those rows.
     [HttpGet("")]
     public async Task<IActionResult> All(CancellationToken ct)
     {
-        var stops = await DistinctStopsAsync(ct);
-        return Ok(new { success = true, count = stops.Count, data = stops.Select(s => new { name = s.Name, lat = s.Lat, lng = s.Lng }) });
+        var all = await stops.AllAsync(ct);
+        return Ok(new { success = true, count = all.Count, data = all });
     }
 
     // Bus stops closest to a point, nearest first, with the straight-line distance to each.
@@ -114,39 +110,14 @@ public class StopsController(AppDbContext db, BusRouteCache routes) : ApiControl
         {
             return BadRequestError("lat and lng are required and must be valid coordinates.");
         }
-
-        var radius = Math.Clamp(radiusKm, 0.1, 10);
-        var stops = (await DistinctStopsAsync(ct))
-            .Select(s => new { name = s.Name, lat = s.Lat, lng = s.Lng, distanceKm = Math.Round(GeoService.HaversineKm(la, ln, s.Lat, s.Lng), 2) })
-            .Where(s => s.distanceKm <= radius)
-            .OrderBy(s => s.distanceKm)
-            .Take(Math.Clamp(limit, 1, 20))
-            .ToList();
-        return Ok(new { success = true, count = stops.Count, data = stops });
+        var nearby = await stops.NearbyAsync(la, ln, radiusKm, limit, ct);
+        return Ok(new { success = true, count = nearby.Count, data = nearby });
     }
 
     [HttpGet("search")]
-    public async Task<IActionResult> Search([FromQuery] string? q)
-    {
-        if (string.IsNullOrWhiteSpace(q))
-        {
-            return Ok(new { success = true, data = Array.Empty<object>() });
-        }
-
-        var term = q.Trim();
-        var pattern = term.ContainsPattern();
-        var stops = await db.BusStops
-            .Where(s => EF.Functions.ILike(s.Name, pattern))
-            .GroupBy(s => s.Name)
-            .Select(g => new { name = g.Key, lat = g.Average(s => s.Lat), lng = g.Average(s => s.Lng) })
-            .ToListAsync();
-
-        var ordered = stops
-            .OrderByDescending(s => s.name.StartsWith(term, StringComparison.OrdinalIgnoreCase))
-            .ThenBy(s => s.name)
-            .Take(10);
-        return Ok(new { success = true, data = ordered });
-    }
+    public async Task<IActionResult> Search([FromQuery] string? q) => string.IsNullOrWhiteSpace(q)
+        ? Ok(new { success = true, data = Array.Empty<object>() })
+        : Ok(new { success = true, data = await stops.SearchAsync(q) });
 
     // Returns success=false (still 200) when nothing matches, so callers can fall back to geocoding.
     [HttpGet("coordinates")]
@@ -156,27 +127,16 @@ public class StopsController(AppDbContext db, BusRouteCache routes) : ApiControl
         {
             return Ok(new { success = false, message = "name is required.", data = (object?)null });
         }
-
-        var exact = name.EscapeLike();
-        var contains = name.ContainsPattern();
-        var stop = await db.BusStops.FirstOrDefaultAsync(s => EF.Functions.ILike(s.Name, exact))
-                   ?? await db.BusStops.OrderBy(s => s.Name.Length).FirstOrDefaultAsync(s => EF.Functions.ILike(s.Name, contains));
+        var stop = await stops.FindAsync(name);
         return stop is null
             ? Ok(new { success = false, message = "Stop not found.", data = (object?)null })
-            : Ok(new { success = true, data = new { name = stop.Name, lat = stop.Lat, lng = stop.Lng } });
+            : Ok(new { success = true, data = stop });
     }
-
-    private async Task<List<(string Name, double Lat, double Lng)>> DistinctStopsAsync(CancellationToken ct) =>
-        (await routes.AllAsync(ct))
-            .SelectMany(r => r.Stops)
-            .GroupBy(s => s.Name, StringComparer.OrdinalIgnoreCase)
-            .Select(g => (Name: g.First().Name, Lat: g.Average(s => s.Lat), Lng: g.Average(s => s.Lng)))
-            .OrderBy(s => s.Name)
-            .ToList();
 }
 
+// Fare calculation and saved fares. The rules live in FareService.
 [Route("api/fares")]
-public class FaresController(AppDbContext db, FareService fares) : ApiControllerBase
+public class FaresController(FareService fares) : ApiControllerBase
 {
     private const string NotConfigured = "Fare calculation is unavailable: the fare rate (Rewards:FarePerKm) is not configured.";
 
@@ -240,7 +200,7 @@ public class FaresController(AppDbContext db, FareService fares) : ApiController
     {
         if (request.UserId is { } userId)
         {
-            if (!await db.Users.AnyAsync(u => u.Id == userId))
+            if (!await fares.UserExistsAsync(userId))
             {
                 return NotFoundError("User not found.");
             }
@@ -253,22 +213,7 @@ public class FaresController(AppDbContext db, FareService fares) : ApiController
         {
             return Error(StatusCodes.Status503ServiceUnavailable, NotConfigured);
         }
-
-        var fare = new FareRecord
-        {
-            UserId = request.UserId,
-            Source = request.Source.Trim(),
-            Destination = request.Destination.Trim(),
-            Distance = Math.Round(request.Distance, 2),
-            FarePerKm = fares.FarePerKm,
-            Fare = fares.FareFor(request.Distance),
-            SourceLat = request.SourceCoordinates?.Lat,
-            SourceLon = request.SourceCoordinates?.Lon,
-            DestinationLat = request.DestinationCoordinates?.Lat,
-            DestinationLon = request.DestinationCoordinates?.Lon,
-        };
-        db.Fares.Add(fare);
-        await db.SaveChangesAsync();
+        var fare = await fares.SaveAsync(request);
         return Created201(new { success = true, message = "Fare saved.", data = FareViewModel.From(fare) });
     }
 
@@ -280,13 +225,7 @@ public class FaresController(AppDbContext db, FareService fares) : ApiController
         {
             return BadRequestError("source and destination are required.");
         }
-
-        var src = source.EscapeLike();
-        var dst = destination.EscapeLike();
-        var query = db.Fares.Where(f => EF.Functions.ILike(f.Source, src) && EF.Functions.ILike(f.Destination, dst));
-        var fare = (userId is null ? null : await query.Where(f => f.UserId == userId).OrderByDescending(f => f.CreatedAt).FirstOrDefaultAsync())
-                   ?? await query.OrderByDescending(f => f.CreatedAt).FirstOrDefaultAsync();
-
+        var fare = await fares.LatestForRouteAsync(source, destination, userId);
         return fare is null
             ? NotFoundError("Fare not found.")
             : Ok(new { success = true, data = FareViewModel.From(fare) });
@@ -300,12 +239,7 @@ public class FaresController(AppDbContext db, FareService fares) : ApiController
         {
             return ForbiddenError();
         }
-        var records = await db.Fares
-            .Where(f => f.UserId == userId)
-            .OrderByDescending(f => f.CreatedAt)
-            .Take(100)
-            .AsNoTracking()
-            .ToListAsync();
+        var records = await fares.ForUserAsync(userId);
         return Ok(new { success = true, count = records.Count, data = records.Select(FareViewModel.From) });
     }
 }

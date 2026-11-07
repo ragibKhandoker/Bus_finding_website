@@ -31,7 +31,7 @@ public static class DbSeeder
                 Role = UserRoles.Admin,
                 FriendCode = await friendCodes.GenerateUniqueAsync(),
             };
-            admin.PasswordHash = new PasswordHasher<User>().HashPassword(admin, adminPassword);
+            admin.PasswordHash = PasswordHashing.Hash(adminPassword);
             db.Users.Add(admin);
             db.Wallets.Add(new Wallet { User = admin });
             await db.SaveChangesAsync();
