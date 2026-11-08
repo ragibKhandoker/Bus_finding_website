@@ -59,7 +59,8 @@ export async function apiRequest(path, { token, ignoreUnauthorized = false, ...o
     window.dispatchEvent(new Event(UNAUTHORIZED_EVENT))
   }
   if (!response.ok) {
-    throw new Error(data.message || data.error || `Request failed (${response.status})`)
+    // status lets a caller tell, say, a 409 conflict from other failures.
+    throw Object.assign(new Error(data.message || data.error || `Request failed (${response.status})`), { status: response.status })
   }
   return data
 }

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowRight, BusFront, Check, ChevronDown, CircleHelp, Languages, Menu, ShieldCheck, Users, Wallet, X } from 'lucide-react'
+import { ArrowRight, BusFront, ChevronDown, CircleHelp, Languages, Menu, ShieldCheck, Users, Wallet, X } from 'lucide-react'
 import { MapPage } from './pages/MorePages'
 import { GpayPage } from './pages/Gpay'
 import { VerificationPage } from './pages/Verification'
@@ -27,6 +27,7 @@ import { WalletPage } from './pages/WalletPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { AdminPage } from './pages/AdminPage'
 import { AuthModal } from './components/AuthModal'
+import { Toaster, useToasts } from './components/Toaster'
 
 export function PageLoader({ page }) {
   return (
@@ -68,7 +69,7 @@ export function App() {
     document.addEventListener('keydown', onKey)
     return () => { document.removeEventListener('pointerdown', onPointer); document.removeEventListener('keydown', onKey) }
   }, [moreMenu])
-  const [toast, setToast] = useState('')
+  const { toasts, notify, dismiss: dismissToast, remove: removeToast } = useToasts()
   const [authMode, setAuthMode] = useState('')
   // The temporary password just used to sign in, kept in memory only so the new-password form can use it.
   const [temporaryPassword, setTemporaryPassword] = useState('')
@@ -79,10 +80,6 @@ export function App() {
   const changeTheme = (next) => { setTheme(next); setThemeState(next) }
   useEffect(() => { syncThemeColor() }, [])
 
-  const notify = useCallback((message) => {
-    setToast(message)
-    window.setTimeout(() => setToast(''), 3600)
-  }, [])
   // Shows a page and records it in the browser history; replace swaps the current entry instead of adding one.
   // 'Bus details' also takes the route to show.
   const showPage = useCallback((target, { replace = false, route = null } = {}) => {
@@ -124,7 +121,7 @@ export function App() {
     setToken(null)
     setUser(null)
     showPage('Home')
-    notify(message)
+    notify(message, 'info')
   }, [notify, showPage])
   // "Continue as …" in the sign-in form: use the most recent sign-in in this tab too.
   const continueAs = useCallback(() => {
@@ -263,7 +260,7 @@ export function App() {
         </div>
         <div className="site-footer-bottom"><span>© {formatNumber(new Date().getFullYear(), { useGrouping: false })} {t('SmartCommute Dhaka')}</span><span>{t('Making every trip a little simpler.')}</span></div>
       </footer>
-      {toast && <div className="toast"><Check size={16} /> {toast}</div>}
+      <Toaster toasts={toasts} onDismiss={dismissToast} onRemove={removeToast} />
       {isAdmin && <AdminAlert alert={adminAlert} onView={openAdminAlert} onClose={dismissAdminAlert} />}
       {authMode && <AuthModal mode={authMode} onMode={setAuthMode} onClose={() => setAuthMode('')} onContinue={continueAs} onSuccess={(nextUser, nextToken, { admin = false, password = '' } = {}) => {
         // Signing in here changes only this tab; other tabs keep their own account.

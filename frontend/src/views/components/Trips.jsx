@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react'
-import { ArrowRight, BusFront, CheckCircle2, Clock3, Gem, MapPin, Play, Square, X } from 'lucide-react'
+import { ArrowRight, BusFront, CheckCircle2, ChevronDown, Clock3, Gem, MapPin, Play, Receipt, Route, Square, X } from 'lucide-react'
 import { apiRequest as request } from '../../models/api'
 import { formatDate, formatNumber, formatTime, t } from '../../models/i18n'
 import { errorText } from '../../models/messages'
 import { announceTripChange, destinationsFrom, stopsOf } from '../../models/trips'
 import { useActiveTrip } from '../../controllers/useTrips'
+import { SelectMenu } from './AuthModal'
 
 export { errorText } from '../../models/messages'
 export { TRIP_CHANGED_EVENT } from '../../models/trips'
@@ -18,6 +19,18 @@ export { useActiveTrip } from '../../controllers/useTrips'
 // The server owns all the rules (one active trip per rider, fare, gems once per trip); these components only ask.
 
 export const money = (value) => `৳${formatNumber(value)}`
+
+// A labelled stop picker, styled to match the rest of the app instead of the browser's own drop-down list.
+// empty: the label of the "nothing chosen" first option. tone: 'start' or 'end' colours the pin.
+let stopSelectCount = 0
+export function StopSelect({ label, value, stops, onChange, empty = t('Choose a stop'), tone = 'start' }) {
+  const [id] = useState(() => `stop-select-${++stopSelectCount}`)
+  const options = [{ value: '', label: empty }, ...stops.map((stop) => ({ value: stop, label: t(stop) }))]
+  return <div className={`trip-select stop-select is-${tone}${value ? ' has-value' : ''}`}>
+    <small id={id}>{label}</small>
+    <SelectMenu labelledBy={id} value={value} onChange={onChange} options={options} icon={MapPin} />
+  </div>
+}
 
 // The trip in progress, with where to get off and an End trip button; after ending, the fare and gems earned.
 export function ActiveTripPanel({ token, signedIn, notify, onCompleted }) {
@@ -68,12 +81,7 @@ export function ActiveTripPanel({ token, signedIn, notify, onCompleted }) {
       <b>{t(trip.busName)}{trip.busCode && <em> · {trip.busCode}</em>}</b>
       <span><MapPin size={13} /> {t('Got on at {stop}', { stop: t(trip.source) })} · <Clock3 size={13} /> {t('since {time}', { time: formatTime(trip.startedAt) })}</span>
       <div className="trip-panel-end">
-        <label className="trip-select"><small>{t('Getting off at')}</small>
-          <select value={destination} onChange={(e) => setDestination(e.target.value)}>
-            <option value="">{t('Choose a stop')}</option>
-            {choices.map((stop) => <option key={stop} value={stop}>{t(stop)}</option>)}
-          </select>
-        </label>
+        <StopSelect label={t('Getting off at')} value={destination} stops={choices} onChange={setDestination} tone="end" />
         <button type="button" className={`button button-dark${ending ? ' is-loading' : ''}`} onClick={end} disabled={ending} aria-busy={ending}>
           {ending ? <><span className="button-spinner" aria-hidden="true" /> {t('Ending trip…')}</> : <><Square size={14} /> {t('End trip')}</>}
         </button>
@@ -147,18 +155,9 @@ export function useBoardControls({ bus, token, signedIn, openAuth, notify, activ
           })}
         </div>
         <div className="board-stops">
-          <label className="trip-select"><small>{t('Getting on at')}</small>
-            <select value={boarding} onChange={(e) => setBoarding(e.target.value)}>
-              <option value="">{t('Choose a stop')}</option>
-              {stops.map((stop) => <option key={stop} value={stop}>{t(stop)}</option>)}
-            </select>
-          </label>
-          <label className="trip-select"><small>{t('Getting off at (optional)')}</small>
-            <select value={destination} onChange={(e) => setDestination(e.target.value)}>
-              <option value="">{t('Decide later')}</option>
-              {destinationsFrom(stops, boarding, bus.runsBothWays).map((stop) => <option key={stop} value={stop}>{t(stop)}</option>)}
-            </select>
-          </label>
+          <StopSelect label={t('Getting on at')} value={boarding} stops={stops} tone="start"
+            onChange={(next) => { setBoarding(next); setError(''); if (!destinationsFrom(stops, next, bus.runsBothWays).includes(destination)) setDestination('') }} />
+          <StopSelect label={t('Getting off at (optional)')} value={destination} stops={destinationsFrom(stops, boarding, bus.runsBothWays)} onChange={setDestination} empty={t('Decide later')} tone="end" />
         </div>
         <div className="board-form-actions">
           <button type="submit" className={`button button-green button-small${saving ? ' is-loading' : ''}`} disabled={saving} aria-busy={saving}>{saving ? <><span className="button-spinner" aria-hidden="true" /> {t('Boarding…')}</> : <><Play size={13} /> {t('Start trip')}</>}</button>
@@ -170,19 +169,107 @@ export function useBoardControls({ bus, token, signedIn, openAuth, notify, activ
   return { button, form }
 }
 
-// One row of trip history.
-export function TripRow({ trip }) {
+// "1 hr 5 min" / "25 min" / "under a minute".
+export const tripDuration = (minutes) => {
+  if (minutes === null || minutes === undefined || minutes < 0) return null
+  if (minutes < 1) return t('under a minute')
+  const total = Math.round(minutes)
+  const hours = Math.floor(total / 60), mins = total % 60
+  return hours ? (mins ? t('{h} hr {m} min', { h: hours, m: mins }) : t('{h} hr', { h: hours })) : t('{m} min', { m: mins })
+}
+// Stops shown before "Show all stops" in a long ride.
+const STOPS_PREVIEW = 6
+
+// The stops of one ride as a vertical timeline: where they got on, each stop passed, where they got off.
+function StopsTimeline({ stops }) {
+  const [all, setAll] = useState(false)
+  const long = stops.length > STOPS_PREVIEW
+  // A long ride shows its first two and last two stops until expanded.
+  const shown = all || !long ? stops.map((name, i) => ({ name, i })) : [...stops.slice(0, 2).map((name, i) => ({ name, i })), null, ...stops.slice(-2).map((name, j) => ({ name, i: stops.length - 2 + j }))]
+  return <div className="trip-stops">
+    <ol className="trip-timeline">
+      {shown.map((stop) => stop === null
+        ? <li key="gap" className="is-gap"><button type="button" className="trip-link" onClick={() => setAll(true)}>{t('+{count} more stops', { count: stops.length - 4 })}</button></li>
+        : <li key={stop.i} className={stop.i === 0 ? 'is-start' : stop.i === stops.length - 1 ? 'is-end' : ''}>
+          <span>{t(stop.name)}</span>
+          {stop.i === 0 && <small>{t('Got on')}</small>}
+          {stop.i === stops.length - 1 && <small>{t('Got off')}</small>}
+        </li>)}
+    </ol>
+    {long && all && <button type="button" className="trip-link" onClick={() => setAll(false)}>{t('Show fewer stops')}</button>}
+  </div>
+}
+
+// One trip in the history: a summary line that opens to every detail saved about the ride.
+export function TripRow({ trip, onOpenRoute }) {
+  const [open, setOpen] = useState(false)
   const active = trip.status === 'active'
-  return <article className={`trip-row${active ? ' is-active' : ''}`}>
-    <span className="trip-icon"><BusFront size={18} /></span>
-    <div className="trip-route-info">
-      <b>{t(trip.source || 'Trip')} <ArrowRight size={13} /> {trip.destination ? t(trip.destination) : t('Destination not chosen yet')}</b>
-      <small>{t(trip.busName || 'Public transit')}{trip.busCode ? ` · ${trip.busCode}` : ''} · {formatDate(trip.startedAt || trip.createdAt)} {formatTime(trip.startedAt || trip.createdAt)}</small>
-    </div>
-    <div className="trip-row-side">
-      <span className={`trip-status ${active ? 'active' : 'completed'}`}>{active ? t('Active') : t('Completed')}</span>
-      <span className="trip-fare">{active ? '—' : money(trip.fare)}</span>
-      {trip.gemsEarned > 0 && <span className="trip-gems"><Gem size={12} /> +{formatNumber(trip.gemsEarned)}</span>}
-    </div>
+  const started = trip.startedAt || trip.createdAt
+  const duration = tripDuration(trip.durationMinutes)
+  const stops = trip.stopsRidden || []
+  const detailsId = `trip-details-${trip._id}`
+  const fact = (label, value, extra) => value || value === 0 ? <div className={extra}><dt>{t(label)}</dt><dd>{value}</dd></div> : null
+  const km = Number(trip.distance || 0)
+
+  return <article className={`trip-row${active ? ' is-active' : ''}${open ? ' is-open' : ''}`} data-testid="trip">
+    <button type="button" className="trip-row-head" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls={detailsId}>
+      <span className="trip-icon"><BusFront size={18} /></span>
+      <div className="trip-route-info">
+        <b>{t(trip.source || 'Trip')} <ArrowRight size={13} /> {trip.destination ? t(trip.destination) : t('Destination not chosen yet')}</b>
+        <small>
+          {t(trip.busName || 'Public transit')}
+          {trip.routeNumber && <span className="trip-chip">{trip.routeNumber}</span>}
+          {trip.busCode && <span className="trip-chip is-code">{trip.busCode}</span>}
+          <span className="trip-when">{formatDate(started)} · {formatTime(started)}</span>
+        </small>
+      </div>
+      <div className="trip-row-side">
+        <span className={`trip-status ${active ? 'active' : 'completed'}`}>{active ? t('Active') : t('Completed')}</span>
+        <span className="trip-fare">{active ? '—' : money(trip.fare)}</span>
+        {trip.gemsEarned > 0 && <span className="trip-gems"><Gem size={12} /> +{formatNumber(trip.gemsEarned)}</span>}
+      </div>
+      <ChevronDown size={17} className="trip-chevron" aria-hidden="true" />
+    </button>
+
+    {open && <div className="trip-details" id={detailsId}>
+      <div className="trip-details-grid">
+        <section>
+          <h4><BusFront size={14} aria-hidden="true" /> {t('Bus')}</h4>
+          <dl>
+            {fact('Bus name', t(trip.busName || 'Public transit'))}
+            {fact('Route number', trip.routeNumber)}
+            {fact('Vehicle', trip.busCode)}
+            {fact('Bus type', trip.busType && t(trip.busType.charAt(0).toUpperCase() + trip.busType.slice(1)))}
+            {fact('Operator', trip.operator && t(trip.operator))}
+          </dl>
+        </section>
+        <section>
+          <h4><Clock3 size={14} aria-hidden="true" /> {t('Time')}</h4>
+          <dl>
+            {fact('Date', formatDate(started, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }))}
+            {fact('Got on', formatTime(started))}
+            {fact('Got off', trip.endedAt ? formatTime(trip.endedAt) : active ? t('Still on the bus') : null)}
+            {fact('Time on the bus', duration)}
+          </dl>
+        </section>
+        <section>
+          <h4><Receipt size={14} aria-hidden="true" /> {t('Fare & rewards')}</h4>
+          <dl>
+            {fact('Distance', km > 0 ? t('{km} km', { km: formatNumber(km, { maximumFractionDigits: 1 }) }) : null)}
+            {fact('Fare paid', active ? null : money(trip.fare), 'is-strong')}
+            {fact('Rate', trip.perKmFare ? t('{rate} per km · minimum {min}', { rate: money(trip.perKmFare), min: money(trip.baseFare || 0) }) : null)}
+            {fact('Gems earned', trip.gemsEarned > 0 ? `+${formatNumber(trip.gemsEarned)}` : null, 'is-gems')}
+          </dl>
+        </section>
+      </div>
+      {stops.length > 1 && <section className="trip-details-stops">
+        <h4><MapPin size={14} aria-hidden="true" /> {t('Stops on this ride')} <span>{t('{count} stops', { count: stops.length })}</span></h4>
+        <StopsTimeline stops={stops} />
+      </section>}
+      {onOpenRoute && trip.routeNumber && <div className="trip-details-actions">
+        <button type="button" className="button button-outline button-small" onClick={() => onOpenRoute(trip.routeNumber)}><Route size={14} /> {t('View this bus route')}</button>
+      </div>}
+    </div>}
   </article>
 }
+

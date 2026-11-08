@@ -11,13 +11,19 @@ namespace SmartCommute.Server.Controllers;
 public class ReviewsController(ReviewService reviews) : ApiControllerBase
 {
     // A bus's reviews, newest first, with replies, reaction counts, the reader's own reaction (when signed in) and
-    // the rating summary: ?page=1&pageSize=20 (pageSize at most 50).
+    // the rating summary: ?page=1&pageSize=20&sort=newest|helpful|highest|lowest (pageSize at most 50).
+    // A signed-in reader also gets myReview, their own review of this bus, wherever it falls in the list.
     [HttpGet("bus/{busId:guid}")]
-    public async Task<IActionResult> ForBus(Guid busId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    public async Task<IActionResult> ForBus(Guid busId, [FromQuery] int page = 1, [FromQuery] int pageSize = 20, [FromQuery] string? sort = null)
     {
         page = Math.Max(1, page);
         pageSize = Math.Clamp(pageSize, 1, 50);
-        var (list, total) = await reviews.ForBusAsync(busId, IsSignedIn ? CurrentUserId : null, page, pageSize);
+        sort = sort?.Trim().ToLowerInvariant();
+        if (sort is not null && sort.Length > 0 && !ReviewService.Sorts.Contains(sort))
+        {
+            return Error(StatusCodes.Status400BadRequest, "Sort must be newest, helpful, highest or lowest.");
+        }
+        var (list, total) = await reviews.ForBusAsync(busId, IsSignedIn ? CurrentUserId : null, page, pageSize, sort);
         return Ok(new
         {
             success = true,
@@ -28,6 +34,7 @@ public class ReviewsController(ReviewService reviews) : ApiControllerBase
             totalPages = (int)Math.Ceiling(total / (double)pageSize),
             summary = await reviews.SummaryAsync(busId),
             reviews = list,
+            myReview = IsSignedIn ? await reviews.MineAsync(busId, CurrentUserId) : null,
         });
     }
 

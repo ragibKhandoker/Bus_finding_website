@@ -242,6 +242,77 @@
 .review-reply-delete{position:absolute;top:4px;right:0;display:grid;place-items:center;width:28px;height:28px;border:0;border-radius:6px;background:none;color:var(--fg-a95548)}
 .review-more{justify-self:start}.review-load-error{display:grid;gap:8px;justify-items:start}
 @media(max-width:700px){.review-replies{margin-left:6px;padding-left:10px}.review-form textarea{font-size:16px}.review-summary{gap:12px}.review-actions button{padding:7px 9px}}
+
+/* ---- Reviews, redesigned: summary card, one review per person, compact list ---- */
+.bus-reviews .review-content{gap:14px;padding-top:12px}
+.review-summary{display:grid;grid-template-columns:auto 1fr;gap:22px;padding:16px 18px;border-radius:12px;border:1px solid var(--bd-e4ebe5);background:var(--bg-f7faf7)}
+.review-average{justify-items:center;text-align:center;padding-right:22px;border-right:1px solid var(--bd-e4ebe5);gap:6px}
+.review-average strong{font-size:38px}
+.review-distribution{gap:5px;align-self:center}
+.review-distribution li{grid-template-columns:30px 1fr 32px;gap:9px}
+.review-distribution li>span:first-child{display:inline-flex;align-items:center;gap:2px;font-weight:700;color:var(--fg-34483b)}
+.review-distribution li>span:first-child svg{color:var(--fg-e3a008);fill:currentColor}
+.review-distribution li>span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.review-distribution i{height:8px;border-radius:5px}.review-distribution b{border-radius:5px;transition:width .4s ease}
+.review-empty-summary{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:12px;border:1px dashed var(--bd-e4ebe5)}
+.review-empty-summary>div{display:grid;gap:2px}.review-empty-summary b{font-size:14px;color:var(--fg-34483b)}
+.review-empty-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:50%;background:var(--bg-fff3dc);color:var(--fg-e3a008);flex:none}
+.review-empty-icon svg{fill:currentColor}
+
+/* Write a review */
+.review-composer{gap:10px;padding:16px 18px;border-radius:12px;border:1px solid var(--bd-e4ebe5);background:var(--bg-ffffff)}
+.review-composer-head{display:grid;gap:2px}.review-composer-head b{font-size:15px;color:var(--fg-34483b)}.review-composer-head small{font-size:12.5px;color:var(--fg-718078)}
+.review-composer textarea{min-height:84px;border-radius:10px;padding:11px 13px;transition:border-color .15s,box-shadow .15s}
+.review-composer textarea:focus{box-shadow:0 0 0 3px #19865e1f}
+.star-picker button{width:38px;height:38px;transition:transform .12s,background .12s}
+.star-picker button:hover:not(:disabled){transform:scale(1.12)}
+.review-signin{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:14px 16px;border-radius:12px;border:1px solid var(--bd-e4ebe5);background:var(--bg-f7faf7)}
+.review-signin>span{display:grid;gap:2px;font-size:13px;color:var(--fg-566d5e)}.review-signin b{font-size:14.5px;color:var(--fg-34483b)}
+
+/* Your own review, pinned above the others */
+.review-mine{display:grid;gap:8px}
+.review-mine-note{display:flex;align-items:center;gap:6px;margin:0;font-size:12.5px;font-weight:600;color:var(--fg-247248)}
+.review-item.is-mine{padding:14px 16px;border:1px solid var(--bd-20875f);border-radius:12px;background:var(--bg-e4f4e8)}
+.review-you{margin-left:6px;padding:2px 8px;border-radius:20px;background:var(--bg-19865e);color:#fff;font-size:10.5px;font-weight:700;letter-spacing:.02em}
+
+/* The list */
+.review-list-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding-top:4px}
+.review-list-head>b{display:inline-flex;align-items:center;gap:7px;font-size:15px;color:var(--fg-34483b)}
+.review-list-head>b span{padding:1px 8px;border-radius:20px;background:var(--bg-eff5ef);font-size:12px;color:var(--fg-566d5e)}
+.review-sort{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--fg-718078)}
+.review-sort .select-menu{width:170px}
+.review-sort .select-menu-button{height:36px;padding:0 10px}.review-sort .select-menu-value{font-size:13px}
+.review-sort .select-menu-list{left:auto;right:0;z-index:20}
+.review-list{gap:10px}
+.review-list.is-expanded{max-height:560px;overflow-y:auto;padding-right:6px;overscroll-behavior:contain;scrollbar-width:thin}
+.review-list .review-item{padding:14px 16px;border:1px solid var(--bd-eef1ee);border-radius:12px;background:var(--bg-ffffff);transition:border-color .15s,box-shadow .15s}
+.review-list .review-item:hover{border-color:var(--bd-e4ebe5);box-shadow:0 4px 14px -10px rgba(22,66,48,.35)}
+.review-head{align-items:flex-start}
+.review-score{display:grid;justify-items:end;gap:2px}.review-score small{font-size:11.5px;font-weight:700;color:var(--fg-986f25)}
+.review-avatar{display:grid;place-items:center;width:36px;height:36px;border-radius:50%;font-weight:800;font-size:14px;flex:none}
+.review-reply .review-avatar{width:28px;height:28px;font-size:12px}
+.review-avatar.tone-0{background:#e4f4e8;color:#19704d}.review-avatar.tone-1{background:#e6effd;color:#2c5ea8}.review-avatar.tone-2{background:#fdeee3;color:#a5541c}
+.review-avatar.tone-3{background:#f1e9fb;color:#6a3fa8}.review-avatar.tone-4{background:#fdf3d6;color:#8a6510}.review-avatar.tone-5{background:#fde7ec;color:#a83a55}
+html[data-theme="dark"] .review-avatar,html[data-theme="night"] .review-avatar{filter:brightness(.82) saturate(1.15)}
+.review-read-more{border:0;background:none;padding:0;font:inherit;font-size:13px;font-weight:700;color:var(--fg-19865e);cursor:pointer}
+.review-read-more:hover{text-decoration:underline}
+.review-actions{gap:6px;padding-top:2px}
+.review-actions-own{display:inline-flex;gap:6px;margin-left:auto}
+.review-actions button{border-radius:20px;padding:5px 11px}
+.review-replies{margin-left:18px;border-left-width:2px}
+.review-show-all{display:inline-flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:10px;border:1px dashed var(--bd-e4ebe5);border-radius:10px;background:none;font:inherit;font-size:13.5px;font-weight:700;color:var(--fg-19865e);cursor:pointer}
+.review-show-all:hover{background:var(--bg-f7faf7)}
+.review-show-all[aria-expanded="true"] svg{transform:rotate(180deg)}
+.review-show-all:focus-visible,.review-read-more:focus-visible{outline:2px solid var(--bd-20875f);outline-offset:2px}
+@media(max-width:560px){
+  .review-summary{grid-template-columns:1fr;gap:14px;padding:14px}
+  .review-average{padding:0 0 12px;border-right:0;border-bottom:1px solid var(--bd-e4ebe5)}
+  .review-sort{width:100%}.review-sort .select-menu{flex:1;width:auto}
+  .review-list .review-item,.review-item.is-mine,.review-composer{padding:12px}
+  .review-actions-own{margin-left:0}
+  .review-list.is-expanded{max-height:70vh}
+}
+@media(prefers-reduced-motion:reduce){.star-picker button,.review-distribution b{transition:none}.star-picker button:hover:not(:disabled){transform:none}}
 /* ---- Notifications & SOS (F14) ---- */
 .notification-bell{position:relative}
 .notification-badge{position:absolute;top:-4px;right:-5px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;display:grid;place-items:center;background:var(--bg-bb463d);color:var(--fg-ffffff);font:700 10.5px "DM Sans",sans-serif;line-height:1;border:2px solid var(--bd-ffffff)}

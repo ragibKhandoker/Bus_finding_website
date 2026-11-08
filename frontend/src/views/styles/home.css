@@ -626,6 +626,18 @@ input{line-height:1.6}
 .trip-select small{font-size:12px;font-weight:600;color:var(--fg-4b5d54)}
 .trip-select select{height:44px;padding:0 10px;border:1px solid var(--bd-d4ddd7);border-radius:10px;background:var(--bg-ffffff);color:var(--fg-13281f);font:inherit;font-size:14.5px}
 .trip-select select:focus{outline:0;border-color:var(--bd-19865e);box-shadow:0 0 0 3px #19865e1f}
+/* Stop pickers (StopSelect): the styled drop-down, sized like the other boarding controls. */
+.stop-select small{letter-spacing:.01em}
+.stop-select .select-menu-button{height:46px;padding:0 12px;border:1px solid var(--bd-d4ddd7);border-radius:10px;background:var(--bg-ffffff);gap:10px}
+.stop-select .select-menu-button:hover{border-color:var(--bd-19865e)}
+.stop-select .select-menu-button:focus-visible{outline:0;border-color:var(--bd-19865e);box-shadow:0 0 0 3px #19865e1f}
+.stop-select .select-menu-button>svg:first-child{color:var(--fg-19865e)}
+.stop-select.is-end .select-menu-button>svg:first-child{color:var(--fg-c0392b,#c0392b)}
+.stop-select:not(.has-value) .select-menu-value{color:var(--fg-718078);font-weight:500}
+.stop-select .select-menu-value{font-size:14.5px;font-weight:600}
+.stop-select .select-menu-list{z-index:30;max-height:280px}
+.stop-select .select-menu-list li:first-child{color:var(--fg-718078);font-style:italic}
+.stop-select .select-menu-list li:first-child.is-selected{font-style:normal}
 .trip-panel-figures{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px}
 .trip-panel-figures>span{display:grid;gap:2px;min-width:110px;padding:9px 13px;border-radius:11px;background:var(--bg-ffffff);border:1px solid var(--bd-e2e9e4)}
 .trip-panel-figures small{font-size:12px;color:var(--fg-6f8178)}
@@ -662,6 +674,59 @@ input{line-height:1.6}
 .trip-status.active{background:var(--bg-fdecea);color:var(--fg-b4402f)}
 .trip-status.completed{background:var(--bg-e8f4eb);color:var(--fg-14684a)}
 .trip-gems{display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:700;color:var(--fg-7a4fc0)}
+
+/* ---- Trip history: each trip opens to its full details ---- */
+.trip-row{display:block;padding:0}
+.trip-row-head{display:flex;align-items:center;gap:12px;width:100%;padding:15px 4px;border:0;background:none;font:inherit;color:inherit;text-align:left;cursor:pointer;border-radius:10px;transition:background .15s}
+.trip-row-head:hover{background:var(--bg-f4faf6)}
+.trip-row-head:focus-visible{outline:2px solid var(--bd-19865e);outline-offset:2px}
+.trip-route-info small{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.trip-chip{padding:1px 7px;border-radius:6px;background:var(--bg-e8f4eb);color:var(--fg-14684a);font-size:11px;font-weight:700;letter-spacing:.02em}
+.trip-chip.is-code{background:var(--bg-eff5ef);color:var(--fg-4b5d54);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:600}
+.trip-when{color:var(--fg-718078)}
+.trip-chevron{flex:none;color:var(--fg-718078);transition:transform .2s}
+.trip-row.is-open .trip-chevron{transform:rotate(180deg);color:var(--fg-19865e)}
+.trip-row.is-open{background:var(--bg-f7faf7);margin:0 -17px;padding:0 17px;border-bottom-color:var(--bd-e4ebe5)}
+.trip-row.is-open .trip-row-head:hover{background:none}
+
+.trip-details{display:grid;gap:16px;padding:4px 0 18px 48px;animation:trip-open .2s ease-out}
+@keyframes trip-open{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.trip-details-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.trip-details-grid section,.trip-details-stops{padding:14px 16px;border:1px solid var(--bd-e4ebe5);border-radius:12px;background:var(--bg-ffffff)}
+.trip-details h4{display:flex;align-items:center;gap:7px;margin:0 0 10px;font:750 12.5px var(--font-head);letter-spacing:.05em;text-transform:uppercase;color:var(--fg-14684a)}
+.trip-details h4 span{margin-left:auto;padding:1px 8px;border-radius:20px;background:var(--bg-eff5ef);color:var(--fg-4b5d54);font-size:11px;letter-spacing:0;text-transform:none}
+.trip-details dl{display:grid;gap:9px;margin:0}
+.trip-details dl>div{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+.trip-details dt{font-size:12.5px;color:var(--fg-718078)}
+.trip-details dd{margin:0;font-size:13.5px;font-weight:650;color:var(--fg-13281f);text-align:right;overflow-wrap:anywhere}
+.trip-details .is-strong dd{font-size:15.5px;font-weight:800}
+.trip-details .is-gems dd{color:var(--fg-7a4fc0)}
+
+.trip-timeline{list-style:none;margin:0;padding:0;display:grid}
+.trip-timeline li{position:relative;display:flex;align-items:center;gap:10px;min-height:32px;padding-left:26px;font-size:13.5px;color:var(--fg-34483b)}
+.trip-timeline li::before{content:"";position:absolute;left:6px;top:50%;width:10px;height:10px;margin-top:-5px;border-radius:50%;background:var(--bg-ffffff);border:2px solid var(--bd-d4ddd7);z-index:1}
+.trip-timeline li::after{content:"";position:absolute;left:10px;top:0;bottom:0;width:2px;background:var(--bd-e4ebe5)}
+.trip-timeline li:first-child::after{top:50%}.trip-timeline li:last-child::after{bottom:50%}
+.trip-timeline li.is-start::before{border-color:var(--bd-19865e);background:var(--bg-19865e)}
+.trip-timeline li.is-end::before{border-color:#c0392b;background:#c0392b}
+.trip-timeline li.is-start>span,.trip-timeline li.is-end>span{font-weight:750;color:var(--fg-13281f)}
+.trip-timeline li small{padding:1px 7px;border-radius:20px;font-size:10.5px;font-weight:700;background:var(--bg-e8f4eb);color:var(--fg-14684a)}
+.trip-timeline li.is-end small{background:var(--bg-fdecea);color:var(--fg-b4402f)}
+.trip-timeline li.is-gap::before{background:none;border-style:dashed}
+.trip-stops{display:grid;gap:6px;justify-items:start}
+.trip-link{border:0;background:none;padding:0;font:inherit;font-size:12.5px;font-weight:700;color:var(--fg-19865e);cursor:pointer}
+.trip-link:hover{text-decoration:underline}
+.trip-details-actions{display:flex;gap:8px}
+.trip-list-hint{margin:10px 4px 0;font-size:12.5px;color:var(--fg-718078)}
+@media(max-width:900px){.trip-details-grid{grid-template-columns:1fr 1fr}.trip-details-grid section:last-child{grid-column:1/-1}}
+@media(max-width:600px){
+  .trip-details{padding-left:0}
+  .trip-details-grid{grid-template-columns:1fr}
+  .trip-row.is-open{margin:0 -12px;padding:0 12px}
+  .trip-row-head{gap:9px;padding:12px 0}
+  .trip-chevron{display:none}
+}
+@media(prefers-reduced-motion:reduce){.trip-details{animation:none}.trip-chevron{transition:none}}
 .wallet-gems small{font-size:11.5px;font-weight:700;letter-spacing:1px;color:var(--fg-4b6b5c)}
 .wallet-gems-count{font:800 34px var(--font-head)!important;color:var(--fg-13281f);margin:2px 0}
 @media(max-width:700px){

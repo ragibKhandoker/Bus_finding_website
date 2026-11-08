@@ -100,7 +100,11 @@ describe('BusReviews', () => {
     expect(within(other).queryByRole('button', { name: /^Delete/ })).toBeNull()
   })
 
+  // The list without the signed-in user's own review, so the "Write a review" form shows.
+  const notReviewedYet = () => { routes['GET /api/reviews/bus/bus1'] = () => reply(200, { success: true, total: 1, totalPages: 1, summary: summary(2, 1, { 2: 1 }), reviews: [theirs], myReview: null }) }
+
   it('posts a review with the chosen stars and updates the list and average', async () => {
+    notReviewedYet()
     const created = review('rv-new', 'me', 'Rafi Ahmed', 5, 'Great driver')
     routes['POST /api/reviews'] = () => reply(201, { success: true, review: created, summary: summary(3.7, 3, { 5: 1, 4: 1, 2: 1 }) })
     const user = userEvent.setup()
@@ -113,7 +117,7 @@ describe('BusReviews', () => {
 
     await user.click(within(form).getByRole('radio', { name: '5 stars' }))
     expect(within(form).getByRole('radio', { name: '5 stars' }).getAttribute('aria-checked')).toBe('true')
-    expect(within(form).getByText('5 of 5')).toBeTruthy()
+    expect(within(form).getByText('5 of 5 · Excellent')).toBeTruthy()
     await user.type(within(form).getByRole('textbox'), '  Great driver  ')
     await user.click(within(form).getByRole('button', { name: /Post review/ }))
 
@@ -122,10 +126,15 @@ describe('BusReviews', () => {
     expect(await screen.findByText('Great driver')).toBeTruthy()
     expect(screen.getByTestId('rating-summary').textContent).toContain('3.7')
     expect(notify).toHaveBeenCalledWith('Review posted.')
-    expect(within(form).getByRole('textbox').value).toBe('')
+    // One review per bus: the form is replaced by the new review, pinned as yours.
+    expect(screen.queryByRole('form', { name: 'Write a review' })).toBeNull()
+    const pinned = within(screen.getByRole('region', { name: 'Your review' })).getByTestId('review')
+    expect(within(pinned).getByText('Great driver')).toBeTruthy()
+    expect(within(pinned).getByRole('button', { name: /Edit/ })).toBeTruthy()
   })
 
   it('keeps the form and shows the error when posting fails', async () => {
+    notReviewedYet()
     routes['POST /api/reviews'] = () => reply(400, { success: false, message: 'A rating must be from 1 to 5 stars.' })
     const user = userEvent.setup()
     renderReviews()
@@ -135,7 +144,66 @@ describe('BusReviews', () => {
     await user.click(within(form).getByRole('button', { name: /Post review/ }))
     expect((await within(form).findByRole('alert')).textContent).toBe('A rating must be from 1 to 5 stars.')
     expect(within(form).getByRole('textbox').value).toBe('Fine')
-    expect(screen.queryAllByTestId('review')).toHaveLength(2)
+    expect(screen.queryAllByTestId('review')).toHaveLength(1)
+  })
+
+  it('shows your own review pinned instead of a second form', async () => {
+    renderReviews()
+    const pinned = await screen.findByRole('region', { name: 'Your review' })
+    expect(within(pinned).getByText('Comfortable seats.')).toBeTruthy()
+    expect(screen.queryByRole('form', { name: 'Write a review' })).toBeNull()
+    // It is not listed a second time among the others.
+    expect(within(screen.getByTestId('review-list')).queryByText('Comfortable seats.')).toBeNull()
+    expect(screen.getAllByText('Comfortable seats.')).toHaveLength(1)
+  })
+
+  it('shows your existing review when the server says you already reviewed this bus', async () => {
+    notReviewedYet()
+    routes['POST /api/reviews'] = () => {
+      routes['GET /api/reviews/bus/bus1'] = () => reply(200, { success: true, total: 2, totalPages: 1, summary: summary(3, 2), reviews: [theirs, mine], myReview: mine })
+      return reply(409, { success: false, message: 'You have already reviewed this bus. Edit your review instead.' })
+    }
+    const user = userEvent.setup()
+    renderReviews()
+    const form = await screen.findByRole('form', { name: 'Write a review' })
+    await user.click(within(form).getByRole('radio', { name: '4 stars' }))
+    await user.type(within(form).getByRole('textbox'), 'Again')
+    await user.click(within(form).getByRole('button', { name: /Post review/ }))
+    const pinned = await screen.findByRole('region', { name: 'Your review' })
+    expect(within(pinned).getByText('Comfortable seats.')).toBeTruthy()
+    expect(screen.queryByRole('form', { name: 'Write a review' })).toBeNull()
+  })
+
+  it('previews a few reviews, then shows all of them in a sortable list', async () => {
+    const many = Array.from({ length: 7 }, (_, i) => review(`rv-${i}`, `u${i}`, `Rider ${i}`, (i % 5) + 1, `Review number ${i}`))
+    routes['GET /api/reviews/bus/bus1'] = ({ params }) => reply(200, { success: true, total: 7, totalPages: 1, summary: summary(3, 7), reviews: params.sort === 'lowest' ? [...many].reverse() : many, myReview: null })
+    const user = userEvent.setup()
+    renderReviews()
+    const list = await screen.findByTestId('review-list')
+    expect(within(list).getAllByTestId('review')).toHaveLength(3)
+    await user.click(screen.getByRole('button', { name: 'Show all 7 reviews' }))
+    expect(within(screen.getByTestId('review-list')).getAllByTestId('review')).toHaveLength(7)
+    expect(screen.getByTestId('review-list').className).toContain('is-expanded')
+    await user.click(screen.getByRole('button', { name: 'Show fewer reviews' }))
+    expect(within(screen.getByTestId('review-list')).getAllByTestId('review')).toHaveLength(3)
+
+    const sortButton = screen.getByRole('button', { name: 'Sort by' })
+    expect(sortButton.textContent).toContain('Most recent')
+    await user.click(sortButton)
+    await user.click(screen.getByRole('option', { name: 'Lowest rated' }))
+    await waitFor(() => expect(calls.at(-1).params.sort).toBe('lowest'))
+    await waitFor(() => expect(within(screen.getByTestId('review-list')).getAllByTestId('review')[0].textContent).toContain('Review number 6'))
+  })
+
+  it('shortens a long review until Read more is pressed', async () => {
+    const long = 'Very long story. '.repeat(30).trim()
+    routes['GET /api/reviews/bus/bus1'] = () => reply(200, { success: true, total: 1, totalPages: 1, summary: summary(4, 1), reviews: [review('rv-long', 'u9', 'Nadia', 4, long)], myReview: null })
+    const user = userEvent.setup()
+    renderReviews()
+    const card = (await screen.findAllByTestId('review'))[0]
+    expect(card.textContent).not.toContain(long)
+    await user.click(within(card).getByRole('button', { name: 'Read more' }))
+    expect(card.textContent).toContain(long)
   })
 
   it('edits your own review, or cancels without saving', async () => {

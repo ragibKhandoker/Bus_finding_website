@@ -50,14 +50,23 @@ public class ReviewService(AppDbContext db)
         .ToListAsync();
 
     // One page of a bus's reviews, newest first, each with its replies, reaction counts and the reader's reaction.
-    public async Task<(List<ReviewViewModel> Reviews, int Total)> ForBusAsync(Guid busId, Guid? reader, int page, int pageSize)
+    // sort: newest (default), helpful (most liked), highest or lowest rating.
+    public static readonly string[] Sorts = ["newest", "helpful", "highest", "lowest"];
+
+    public async Task<(List<ReviewViewModel> Reviews, int Total)> ForBusAsync(Guid busId, Guid? reader, int page, int pageSize, string? sort = null)
     {
         var query = db.Reviews.Where(r => r.BusId == busId);
         var total = await query.CountAsync();
-        var reviews = await query
+        IOrderedQueryable<Review> ordered = sort switch
+        {
+            "helpful" => query.OrderByDescending(r => r.Likes - r.Dislikes).ThenByDescending(r => r.Likes).ThenByDescending(r => r.CreatedAt),
+            "highest" => query.OrderByDescending(r => r.Rating ?? 0).ThenByDescending(r => r.CreatedAt),
+            "lowest" => query.OrderBy(r => r.Rating ?? 6).ThenByDescending(r => r.CreatedAt),
+            _ => query.OrderByDescending(r => r.CreatedAt),
+        };
+        var reviews = await ordered.ThenByDescending(r => r.Id)
             .Include(r => r.User)
             .Include(r => r.Replies).ThenInclude(x => x.User)
-            .OrderByDescending(r => r.CreatedAt).ThenByDescending(r => r.Id)
             .Skip((page - 1) * pageSize).Take(pageSize)
             .AsSplitQuery()
             .AsNoTracking()
@@ -118,11 +127,36 @@ public class ReviewService(AppDbContext db)
             return new(StatusCodes.Status401Unauthorized, "Please sign in to continue.");
         }
 
-        var now = DateTime.UtcNow;
-        var review = new Review { BusId = busId, UserId = authorId, UserName = author.Name, Rating = rating, Comment = text, CreatedAt = now, UpdatedAt = now };
-        db.Reviews.Add(review);
-        await db.SaveChangesAsync();
-        return new(StatusCodes.Status201Created, "Review posted.", await ViewAsync(review.Id, authorId));
+        // One review per person per bus: a second one is refused, and the person edits theirs instead. The lock is
+        // per (bus, user) and held until commit, so two quick clicks cannot both get past the check.
+        var strategy = db.Database.CreateExecutionStrategy();
+        var created = await strategy.ExecuteAsync(async () =>
+        {
+            await using var transaction = await db.Database.BeginTransactionAsync();
+            var lockKey = $"review:{busId}:{authorId}";
+            await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtextextended({lockKey}, 0))");
+            if (await db.Reviews.AnyAsync(r => r.BusId == busId && r.UserId == authorId))
+            {
+                return (Guid?)null;
+            }
+            var now = DateTime.UtcNow;
+            var review = new Review { BusId = busId, UserId = authorId, UserName = author.Name, Rating = rating, Comment = text, CreatedAt = now, UpdatedAt = now };
+            db.Reviews.Add(review);
+            await db.SaveChangesAsync();
+            await transaction.CommitAsync();
+            return review.Id;
+        });
+        return created is { } id
+            ? new(StatusCodes.Status201Created, "Review posted.", await ViewAsync(id, authorId))
+            : new(StatusCodes.Status409Conflict, "You have already reviewed this bus. Edit your review instead.");
+    }
+
+    // The reader's own review of a bus (their latest, should older data hold more than one), or null.
+    public async Task<ReviewViewModel?> MineAsync(Guid busId, Guid reader)
+    {
+        var id = await db.Reviews.Where(r => r.BusId == busId && r.UserId == reader)
+            .OrderByDescending(r => r.CreatedAt).Select(r => (Guid?)r.Id).FirstOrDefaultAsync();
+        return id is { } reviewId ? await ViewAsync(reviewId, reader) : null;
     }
 
     public async Task<ReviewResult<ReviewViewModel>> UpdateAsync(Guid authorId, Guid reviewId, int? rating, string? comment)

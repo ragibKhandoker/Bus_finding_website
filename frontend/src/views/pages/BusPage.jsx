@@ -42,11 +42,37 @@ export function TripSummary({ trip, estimate, onRetry }) {
   </section>
 }
 
-export function BusPage({ token, signedIn, user, notify, navigate, openAuth }) {
-  // A search started from another page (home or a route page); it runs once when the page opens.
+// The search shown is kept in the address (/find-a-bus?mode=name&name=Victor), so going back to this page, or
+// reloading it, brings the same results back. Returns { mode, from, to, name } or null.
+export function searchFromUrl(search = window.location.search) {
+  const params = new URLSearchParams(search)
+  const mode = params.get('mode')
+  if (mode === 'name' && params.get('name')?.trim()) return { mode, name: params.get('name').trim() }
+  if (mode === 'route' && params.get('from')?.trim() && params.get('to')?.trim()) return { mode, from: params.get('from').trim(), to: params.get('to').trim() }
+  return null
+}
+export const searchUrl = ({ mode, from, to, name }) => `/find-a-bus?${new URLSearchParams(mode === 'name' ? { mode, name } : { mode, from, to })}`
+
+export function BusPage({ token, signedIn, user, notify, navigate: goTo, openAuth }) {
+  // A search started from another page (home or a route page) runs once when the page opens; otherwise a search
+  // kept in the address (coming back to this page) is shown again.
   const savedQuery = useMemo(() => {
-    try { return JSON.parse(sessionStorage.getItem('bus_query') || '{}') } catch { return {} }
+    try {
+      const handed = JSON.parse(sessionStorage.getItem('bus_query') || '{}')
+      if (handed.auto) return handed
+    } catch { /* fall through to the address */ }
+    const fromUrl = searchFromUrl()
+    return fromUrl ? { ...fromUrl, auto: true, restoring: true } : {}
   }, [])
+  // Where the reader was (the selected bus and how far down), saved when they leave for another page.
+  const restoreView = useRef(savedQuery.restoring ? window.history.state?.busView || null : null)
+  // Leaving for another page: remember the selected bus and the scroll position in this history entry.
+  const navigate = (...args) => {
+    if (window.location.pathname === '/find-a-bus') {
+      window.history.replaceState({ ...(window.history.state || {}), busView: { selectedId, scrollY: window.scrollY } }, '', window.location.href)
+    }
+    goTo(...args)
+  }
   // Cleared after the first render, not while reading it: React's development mode runs that read twice.
   useEffect(() => { sessionStorage.removeItem('bus_query') }, [])
   const [from, setFrom] = useState(savedQuery.from || '')
@@ -73,22 +99,31 @@ export function BusPage({ token, signedIn, user, notify, navigate, openAuth }) {
       .catch((e) => setEstimate({ status: 'error', message: errorText(e) }))
   }, [token])
 
-  const search = async (event) => {
-    event?.preventDefault()
+  const search = async (event, { restoring = false } = {}) => {
+    event?.preventDefault?.()
     if (!signedIn) return openAuth()
     const start = toEnglish(from.trim()), end = toEnglish(to.trim()), busName = toEnglish(name.trim())
     if (mode === 'route' && !start) { setError(t('Enter your starting point.')); return }
     if (mode === 'route' && !end) { setError(t('Enter your destination.')); return }
     if (mode === 'name' && !busName) { setError(t('Enter a bus name to search.')); return }
-    setLoading(true); setError(''); setSearched({ mode, from: start, to: end, name: busName }); setSelectedId(null); setTrip(null)
-    const shownUntil = Date.now() + MIN_LOADER_MS
+    const query = { mode, from: start, to: end, name: busName }
+    setLoading(true); setError(''); setSearched(query); setSelectedId(null); setTrip(null)
+    // Keep the search in this history entry's address, so Back from another page returns to these results.
+    if (window.location.pathname === '/find-a-bus') {
+      const { busView, ...state } = window.history.state || {}
+      window.history.replaceState(restoring ? { ...state, busView } : { ...state, page: 'Find a bus' }, '', searchUrl(query))
+    }
+    // Coming back to results already seen: no need for the "searching" animation.
+    const shownUntil = Date.now() + (restoring ? 0 : MIN_LOADER_MS)
     if (mode === 'route') loadEstimate(start, end); else setEstimate({ status: 'idle' })
     try {
       const result = await request(mode === 'route'
         ? `/bus/search-by-route?${new URLSearchParams({ startLocation: start, endLocation: end })}`
         : `/bus/search-by-name?${new URLSearchParams({ busName })}`, { token })
       setBuses(result.data || [])
-      setSelectedId(result.data?.[0]?._id || null)
+      // Back on this page: select the bus that was selected before leaving, if it is still in the results.
+      const keep = restoring && restoreView.current?.selectedId
+      setSelectedId((keep && result.data?.some((bus) => bus._id === keep) ? keep : result.data?.[0]?._id) || null)
       if (result.start && result.end) setTrip({ start: result.start, end: result.end })
     } catch (e) {
       setBuses([]); setError(errorText(e)); setEstimate({ status: 'idle' })
@@ -102,8 +137,30 @@ export function BusPage({ token, signedIn, user, notify, navigate, openAuth }) {
   useEffect(() => {
     if (autoSearched.current || !savedQuery.auto || !signedIn) return
     autoSearched.current = true
-    search()
+    search(null, { restoring: Boolean(savedQuery.restoring) })
   }, [signedIn]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Keep the selected bus and scroll position in this history entry as they change, so they come back however the
+  // reader leaves (a card's link, the menu, the notification bell…). Saved once scrolling settles.
+  useEffect(() => {
+    if (!searched || loading) return
+    let timer = 0
+    const save = () => {
+      if (window.location.pathname !== '/find-a-bus') return
+      window.history.replaceState({ ...(window.history.state || {}), busView: { selectedId, scrollY: window.scrollY } }, '', window.location.href)
+    }
+    const onScroll = () => { window.clearTimeout(timer); timer = window.setTimeout(save, 250) }
+    save()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => { window.clearTimeout(timer); window.removeEventListener('scroll', onScroll) }
+  }, [searched, loading, selectedId])
+  // Once the restored results are on screen, scroll back to where the reader was.
+  useEffect(() => {
+    const view = restoreView.current
+    if (loading || !view || !searched) return
+    restoreView.current = null
+    const frame = window.requestAnimationFrame(() => window.scrollTo(0, view.scrollY || 0))
+    return () => window.cancelAnimationFrame(frame)
+  }, [loading, searched])
 
   const saveTrip = async (bus) => {
     if (!signedIn) return openAuth()

@@ -36,7 +36,8 @@ export function TripsPage({ token, signedIn, openAuth, notify, navigate }) {
             <span><small>{t('Spent on fares')}</small><b>{money(totals.fare)}</b></span>
             <span><small>{t('Gems earned')}</small><b>{formatNumber(totals.gems)}</b></span>
           </div>
-          <div className="trip-list panel">{trips.map((trip) => <TripRow key={trip._id} trip={trip} />)}</div>
+          <div className="trip-list panel">{trips.map((trip) => <TripRow key={trip._id} trip={trip} onOpenRoute={(route) => navigate('Bus details', { route })} />)}</div>
+          <p className="trip-list-hint">{t('Tap a trip to see every detail of the ride.')}</p>
         </>
         : <div className="empty-state panel"><span className="empty-icon"><History size={22} /></span><b>{t('Your next trip starts here')}</b><span>{t('Board a bus from the search results and your trips will show up here.')}</span><button className="button button-green button-small" onClick={() => navigate('Find a bus')}><Search size={14} /> {t('Find a bus')}</button></div>}
     </>}

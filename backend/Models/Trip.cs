@@ -50,6 +50,30 @@ public class Trip
     public string Destination { get; set; } = "";
 
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+    // ---- A snapshot of the ride, taken when boarding and completed when the trip ends, so the rider's history
+    // keeps its full details even if the route or the vehicle is later edited or removed. Null on trips logged by
+    // hand and on trips from before these were saved.
+
+    [MaxLength(40)]
+    public string? RouteNumber { get; set; }
+
+    [MaxLength(40)]
+    public string? BusType { get; set; }
+
+    [MaxLength(100)]
+    public string? Operator { get; set; }
+
+    // The vehicle's code (e.g. "R-11-03"), kept here as well as through IndividualBus.
+    [MaxLength(40)]
+    public string? BusCode { get; set; }
+
+    // The rates the fare was worked out with.
+    public decimal? BaseFare { get; set; }
+    public decimal? PerKmFare { get; set; }
+
+    // Every stop from boarding to getting off, in the order ridden.
+    public List<string>? StopsRidden { get; set; }
 }
 
 public class FareRecord

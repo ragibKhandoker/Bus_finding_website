@@ -52,9 +52,10 @@ public class ReviewTests(TestServerFixture server)
         RequireServer();
         var busId = await NewBus();
         var (user, client) = await server.CreateUserAsync();
+        var (_, other) = await server.CreateUserAsync();
 
         Assert.Equal(HttpStatusCode.Created, (await Post(client, busId, 1)).StatusCode);
-        Assert.Equal(HttpStatusCode.Created, (await Post(client, busId, 5)).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await Post(other, busId, 5)).StatusCode);
         foreach (var bad in new object[] { 0, 6, -1, "five" })
         {
             Assert.Equal(HttpStatusCode.BadRequest, (await Post(client, busId, bad)).StatusCode);
@@ -81,6 +82,7 @@ public class ReviewTests(TestServerFixture server)
         var busId = await NewBus();
         var (_, a) = await server.CreateUserAsync();
         var (_, b) = await server.CreateUserAsync();
+        var (_, c) = await server.CreateUserAsync();
 
         var empty = await Summary(busId);
         Assert.Equal(JsonValueKind.Null, empty.GetProperty("averageRating").ValueKind);
@@ -88,7 +90,7 @@ public class ReviewTests(TestServerFixture server)
 
         var first = await ReviewId(a, busId, 5);
         await ReviewId(b, busId, 2);
-        await ReviewId(b, busId, 4);
+        await ReviewId(c, busId, 4);
         var summary = await Summary(busId);
         Assert.Equal(3.7, summary.GetProperty("averageRating").GetDouble());
         Assert.Equal(3, summary.GetProperty("totalRatings").GetInt32());
@@ -120,6 +122,71 @@ public class ReviewTests(TestServerFixture server)
         var summary = await Summary(busId);
         Assert.Equal(4.0, summary.GetProperty("averageRating").GetDouble());
         Assert.Equal(1, summary.GetProperty("totalRatings").GetInt32());
+    }
+
+    // ---- one review per person per bus ----
+
+    [SkippableFact]
+    public async Task A_person_can_review_a_bus_only_once_but_can_edit_it()
+    {
+        RequireServer();
+        var busId = await NewBus();
+        var otherBus = await NewBus();
+        var (_, client) = await server.CreateUserAsync();
+        var reviewId = await ReviewId(client, busId, 4, "First thoughts");
+
+        var again = await Post(client, busId, 1, "Spam");
+        Assert.Equal(HttpStatusCode.Conflict, again.StatusCode);
+        Assert.Equal("You have already reviewed this bus. Edit your review instead.", (await JsonOf(again)).GetProperty("message").GetString());
+        Assert.Equal(HttpStatusCode.Created, (await Post(client, otherBus, 5)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await client.PutAsJsonAsync($"/api/reviews/{reviewId}", new { rating = 2, comment = "Changed my mind" })).StatusCode);
+
+        var list = await JsonOf(await client.GetAsync($"/api/reviews/bus/{busId}"));
+        Assert.Single(list.GetProperty("reviews").EnumerateArray());
+        Assert.Equal(reviewId, list.GetProperty("myReview").GetProperty("_id").GetString());
+        Assert.Equal(1, (await Summary(busId)).GetProperty("totalRatings").GetInt32());
+        Assert.Equal(JsonValueKind.Null, (await JsonOf(await server.ClientFor(null).GetAsync($"/api/reviews/bus/{busId}"))).GetProperty("myReview").ValueKind);
+
+        // Deleting it lets the person write a fresh one.
+        Assert.Equal(HttpStatusCode.OK, (await client.DeleteAsync($"/api/reviews/{reviewId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Created, (await Post(client, busId, 3)).StatusCode);
+    }
+
+    [SkippableFact]
+    public async Task Simultaneous_posts_leave_one_review()
+    {
+        RequireServer();
+        var busId = await NewBus();
+        var (user, client) = await server.CreateUserAsync();
+        var responses = await Task.WhenAll(Enumerable.Range(0, 8).Select(_ => Post(client, busId, 5)));
+        Assert.Equal(1, responses.Count(r => r.StatusCode == HttpStatusCode.Created));
+        Assert.All(responses, r => Assert.True(r.StatusCode is HttpStatusCode.Created or HttpStatusCode.Conflict));
+        await using var scope = server.Scope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.Equal(1, await db.Reviews.CountAsync(r => r.BusId == busId && r.UserId == user.Id));
+    }
+
+    [SkippableFact]
+    public async Task Reviews_can_be_sorted()
+    {
+        RequireServer();
+        var busId = await NewBus();
+        var (_, a) = await server.CreateUserAsync();
+        var (_, b) = await server.CreateUserAsync();
+        var (_, c) = await server.CreateUserAsync();
+        var low = await ReviewId(a, busId, 1);
+        var high = await ReviewId(b, busId, 5);
+        var mid = await ReviewId(c, busId, 3);
+        await React(a, mid, "like");
+        await React(b, mid, "like");
+
+        async Task<string?[]> Order(string sort) => (await JsonOf(await a.GetAsync($"/api/reviews/bus/{busId}?sort={sort}")))
+            .GetProperty("reviews").EnumerateArray().Select(r => r.GetProperty("_id").GetString()).ToArray();
+        Assert.Equal([mid, high, low], await Order("newest"));
+        Assert.Equal([high, mid, low], await Order("highest"));
+        Assert.Equal([low, mid, high], await Order("lowest"));
+        Assert.Equal(mid, (await Order("helpful"))[0]);
+        Assert.Equal(HttpStatusCode.BadRequest, (await a.GetAsync($"/api/reviews/bus/{busId}?sort=random")).StatusCode);
     }
 
     // ---- ownership ----
@@ -239,8 +306,9 @@ public class ReviewTests(TestServerFixture server)
         var otherBus = await NewBus();
         var (_, a) = await server.CreateUserAsync();
         var (replier, b) = await server.CreateUserAsync();
+        var (_, c) = await server.CreateUserAsync();
         var first = await ReviewId(a, busId, 5, "First review");
-        var second = await ReviewId(a, busId, 3, "Second review");
+        var second = await ReviewId(c, busId, 3, "Second review");
 
         var reply = await b.PostAsJsonAsync($"/api/reviews/{first}/reply", new { busId, comment = "  Same here  " });
         Assert.Equal(HttpStatusCode.Created, reply.StatusCode);

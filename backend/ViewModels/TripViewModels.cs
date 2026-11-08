@@ -24,6 +24,15 @@ public class TripViewModel : EntityViewModel
     public string? IndividualBusId { get; init; }
     public string? BusCode { get; init; }
 
+    // The ride's saved details (see Trip); null where they were not recorded.
+    public string? RouteNumber { get; init; }
+    public string? BusType { get; init; }
+    public string? Operator { get; init; }
+    public decimal? BaseFare { get; init; }
+    public decimal? PerKmFare { get; init; }
+    public List<string> StopsRidden { get; init; } = [];
+    public double? DurationMinutes { get; init; }
+
     public static TripViewModel From(Trip t) => new()
     {
         Id = t.Id.ToString(),
@@ -40,7 +49,14 @@ public class TripViewModel : EntityViewModel
         EndedAt = t.EndedAt,
         GemsEarned = t.GemsEarned,
         IndividualBusId = t.IndividualBusId?.ToString(),
-        BusCode = t.IndividualBus?.BusCode,
+        BusCode = t.BusCode ?? t.IndividualBus?.BusCode,
+        RouteNumber = t.RouteNumber,
+        BusType = t.BusType,
+        Operator = t.Operator,
+        BaseFare = t.BaseFare,
+        PerKmFare = t.PerKmFare,
+        StopsRidden = t.StopsRidden ?? [],
+        DurationMinutes = t.EndedAt is { } end && t.IndividualBusId is not null ? Math.Round((end - t.CreatedAt).TotalMinutes, 1) : null,
     };
 }
 

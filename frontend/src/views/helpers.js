@@ -29,7 +29,28 @@ export const googleMapsDirections = (from, to) => `https://www.google.com/maps/d
   api: '1', origin: `${from}, Dhaka, Bangladesh`, destination: `${to}, Dhaka, Bangladesh`, travelmode: 'driving',
 })}`
 
-export const signedMoney = (value) => `${value > 0 ? '+' : value < 0 ? '−' : ''}৳${formatNumber(Math.abs(value), { maximumFractionDigits: 2 })}`
+// Google Maps allows at most 9 waypoints in a directions link; keep one spare.
+export const MAX_MAP_WAYPOINTS = 8
+const hasCoords = (stop) => Number.isFinite(Number(stop?.lat)) && Number.isFinite(Number(stop?.lng)) && !(Number(stop.lat) === 0 && Number(stop.lng) === 0)
+const placeOf = (stop) => hasCoords(stop) ? `${Number(stop.lat).toFixed(6)},${Number(stop.lng).toFixed(6)}` : `${stop.name}, Dhaka, Bangladesh`
+
+// Google Maps directions along a whole bus route: first stop to last, through evenly spread stops in between,
+// so the map follows the bus's path and shows its distance and travel time. stops must be in route order.
+export const googleMapsRouteDirections = (stops) => {
+  const usable = (stops || []).filter((stop) => hasCoords(stop) || stop?.name)
+  if (usable.length < 2) return null
+  const middle = usable.slice(1, -1)
+  const step = middle.length / Math.min(middle.length, MAX_MAP_WAYPOINTS)
+  const waypoints = middle.length <= MAX_MAP_WAYPOINTS ? middle : Array.from({ length: MAX_MAP_WAYPOINTS }, (_, i) => middle[Math.floor(i * step + step / 2)])
+  const params = { api: '1', origin: placeOf(usable[0]), destination: placeOf(usable[usable.length - 1]), travelmode: 'driving' }
+  if (waypoints.length) params.waypoints = waypoints.map(placeOf).join('|')
+  return `https://www.google.com/maps/dir/?${new URLSearchParams(params)}`
+}
+
+// One stop on Google Maps.
+export const googleMapsPlace = (stop) => `https://www.google.com/maps/search/?${new URLSearchParams({ api: '1', query: placeOf(stop) })}`
+
+export const signedMoney =(value) => `${value > 0 ? '+' : value < 0 ? '−' : ''}৳${formatNumber(Math.abs(value), { maximumFractionDigits: 2 })}`
 
 export const signedGems = (value) => `${value > 0 ? '+' : '−'}${formatNumber(Math.abs(value))}`
 

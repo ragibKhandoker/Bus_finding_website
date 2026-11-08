@@ -5,7 +5,7 @@ import { useFavoriteStatus } from '../../controllers/useFavorites'
 import { FavoriteButton } from './Favorites'
 import { apiRequest as request } from '../../models/api'
 import { formatNumber, t } from '../../models/i18n'
-import { BUS_TYPES, coordinate, money, routeLengthKm, sortedStops } from '../helpers'
+import { BUS_TYPES, coordinate, googleMapsPlace, googleMapsRouteDirections, money, routeLengthKm, sortedStops } from '../helpers'
 import { errorText } from '../../models/messages'
 import { findCachedRoute, routesFresh } from '../../models/busRoutes'
 import { useBusRoutes } from '../../controllers/useBusRoutes'
@@ -69,6 +69,7 @@ export function BusDetailPage({ routeNumber, token, user, signedIn, notify, navi
   const stops = sortedStops(bus)
   const first = stops[0], last = stops[stops.length - 1]
   const km = routeLengthKm(stops)
+  const directions = googleMapsRouteDirections(stops)
   const planTrip = () => { sessionStorage.setItem('bus_query', JSON.stringify({ mode: 'route', from: first.name, to: last.name, auto: true })); navigate('Find a bus') }
   return <div className="page inner-page route-detail">
     {back}
@@ -90,7 +91,7 @@ export function BusDetailPage({ routeNumber, token, user, signedIn, notify, navi
       </div>
       {first && <div className="route-hero-actions">
         <button className="button button-green button-small" onClick={planTrip}><Search size={14} /> {t('Search buses on this route')}</button>
-        <a className="button button-outline button-small" href={`https://www.openstreetmap.org/?mlat=${first.lat}&mlon=${first.lng}#map=13/${first.lat}/${first.lng}`} target="_blank" rel="noreferrer"><MapIcon size={14} /> {t('Open on the map')}</a>
+        {directions && <a className="button button-outline button-small" href={directions} target="_blank" rel="noreferrer"><MapIcon size={14} /> {t('Open on the map')}</a>}
       </div>}
     </section>
     <section className="panel route-stops-panel">
@@ -99,7 +100,7 @@ export function BusDetailPage({ routeNumber, token, user, signedIn, notify, navi
         {stops.map((stop) => <li key={`${stop.order}-${stop.name}`}>
           <span className="hp-stop-no">{formatNumber((stop.order ?? 0) + 1)}</span>
           <span className="hp-stop-name">{t(stop.name)}</span>
-          <a href={`https://www.openstreetmap.org/?mlat=${stop.lat}&mlon=${stop.lng}#map=17/${stop.lat}/${stop.lng}`} target="_blank" rel="noreferrer" title={t('Open on the map')}>
+          <a href={googleMapsPlace(stop)} target="_blank" rel="noreferrer" title={t('Open on the map')}>
             <MapPin size={12} /> {coordinate(stop.lat)}, {coordinate(stop.lng)}
           </a>
         </li>)}

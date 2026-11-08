@@ -140,6 +140,7 @@ public class TripService(AppDbContext db, BusRouteCache routes, WalletService wa
             Destination = destination,
             Status = TripStatus.Active,
         };
+        Snapshot(trip, route, vehicle);
         db.Trips.Add(trip);
         db.BusBoardings.Add(new BusBoarding { UserId = userId, IndividualBusId = vehicle.Id });
         vehicle.CurrentPassengerCount++;
@@ -206,6 +207,8 @@ public class TripService(AppDbContext db, BusRouteCache routes, WalletService wa
         trip.Status = TripStatus.Completed;
         trip.EndedAt = DateTime.UtcNow;
         trip.GemsEarned = gems;
+        Snapshot(trip, route, trip.IndividualBus);
+        trip.StopsRidden = StopsBetween(route, from, to);
 
         var boarding = await db.BusBoardings.FirstOrDefaultAsync(b => b.UserId == userId && b.IndividualBusId == vehicleId && b.EndedAt == null);
         if (boarding is not null)
@@ -234,6 +237,25 @@ public class TripService(AppDbContext db, BusRouteCache routes, WalletService wa
         }
         return new TripResult(StatusCodes.Status200OK, $"Trip completed! Fare {trip.Fare:0} Tk. You earned {gems} gems.", trip, wallet);
     }
+
+    // Copies the route's and the vehicle's details onto the trip, so its history does not depend on them later.
+    private static void Snapshot(Trip trip, BusViewModel route, IndividualBus? vehicle)
+    {
+        trip.RouteNumber = route.RouteNumber;
+        trip.BusType = string.IsNullOrWhiteSpace(route.BusType) ? null : route.BusType;
+        trip.Operator = route.Operator;
+        trip.BaseFare = route.BaseFare;
+        trip.PerKmFare = route.PerKmFare;
+        if (vehicle is not null)
+        {
+            trip.BusCode = vehicle.BusCode;
+        }
+    }
+
+    // The stops from one index to another inclusive, in the order ridden (backwards on a return journey).
+    public static List<string> StopsBetween(BusViewModel route, int from, int to) => from <= to
+        ? route.Stops.Skip(from).Take(to - from + 1).Select(s => s.Name).ToList()
+        : route.Stops.Skip(to).Take(from - to + 1).Select(s => s.Name).Reverse().ToList();
 
     // Position of a stop on the route by name (case and spacing ignored), or -1.
     public static int StopIndex(BusViewModel route, string name)
