@@ -58,6 +58,16 @@ export function App() {
   const [routeNumber, setRouteNumber] = useState(() => routeFromPath(window.location.pathname))
   const [mobileMenu, setMobileMenu] = useState(false)
   const [moreMenu, setMoreMenu] = useState(false)
+  // Close the More menu on a click/tap outside it or on Escape.
+  const moreRef = useRef(null)
+  useEffect(() => {
+    if (!moreMenu) return
+    const onPointer = (e) => { if (moreRef.current && !moreRef.current.contains(e.target)) setMoreMenu(false) }
+    const onKey = (e) => { if (e.key === 'Escape') setMoreMenu(false) }
+    document.addEventListener('pointerdown', onPointer)
+    document.addEventListener('keydown', onKey)
+    return () => { document.removeEventListener('pointerdown', onPointer); document.removeEventListener('keydown', onKey) }
+  }, [moreMenu])
   const [toast, setToast] = useState('')
   const [authMode, setAuthMode] = useState('')
   // The temporary password just used to sign in, kept in memory only so the new-password form can use it.
@@ -193,7 +203,7 @@ export function App() {
           {['Home', 'Find a bus', 'Bus routes', 'Ride share', 'My trips'].map((item) => (
             <button key={item} className={page === item || (item === 'Bus routes' && page === 'Bus details') ? 'nav-link active' : 'nav-link'} onClick={() => navigate(item)}>{t(item)}</button>
           ))}
-          <div className="more-nav-wrap">
+          <div className="more-nav-wrap" ref={moreRef}>
             <button className={['Friends', 'Messages', 'Notifications', 'Offers', 'Map', 'Favourites', 'Wallet', 'GPay', 'Verification', 'Admin'].includes(page) ? 'nav-link active' : 'nav-link'} aria-expanded={moreMenu} onClick={() => setMoreMenu(!moreMenu)}>{t('More')} <ChevronDown size={13} /></button>
             {moreMenu && <div className="more-nav-menu">{[['Friends','Friends'],['Messages','Messages'],['Notifications','Notifications'],['Offers','Offers & rewards'],['Map','Map & fare calculator'],['Favourites','Favourite buses'],['Wallet','My wallet'],['GPay','GPay & recharge'],['Verification','Account verification'], ['Support','Contact admin'], ...(isAdmin ? [['Admin', 'Admin · Users']] : [])].map(([target,label]) => <button key={target} className={page === target ? 'current' : ''} onClick={() => navigate(target)}>{t(label)}<ArrowRight size={13} /></button>)}</div>}
           </div>
