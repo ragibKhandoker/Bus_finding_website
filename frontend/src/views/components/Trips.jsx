@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react'
-import { ArrowRight, BusFront, CheckCircle2, ChevronDown, Clock3, Gem, MapPin, Play, Receipt, Route, Square, X } from 'lucide-react'
+import { ArrowRight, BusFront, CheckCircle2, ChevronDown, Clock3, Gem, Lock, MapPin, Play, Receipt, Route, Square, Timer, X } from 'lucide-react'
 import { apiRequest as request } from '../../models/api'
 import { formatDate, formatNumber, formatTime, t } from '../../models/i18n'
 import { errorText } from '../../models/messages'
 import { announceTripChange, destinationsFrom, stopsOf } from '../../models/trips'
-import { useActiveTrip } from '../../controllers/useTrips'
+import { formatClock, useActiveTrip, useElapsed } from '../../controllers/useTrips'
 import { SelectMenu } from './AuthModal'
 
 export { errorText } from '../../models/messages'
@@ -19,6 +19,8 @@ export { useActiveTrip } from '../../controllers/useTrips'
 // The server owns all the rules (one active trip per rider, fare, gems once per trip); these components only ask.
 
 export const money = (value) => `৳${formatNumber(value)}`
+// The "You are on a bus" panel, which other cards scroll to.
+export const ACTIVE_TRIP_ID = 'active-trip'
 
 // A labelled stop picker, styled to match the rest of the app instead of the browser's own drop-down list.
 // empty: the label of the "nothing chosen" first option. tone: 'start' or 'end' colours the pin.
@@ -34,7 +36,8 @@ export function StopSelect({ label, value, stops, onChange, empty = t('Choose a 
 
 // The trip in progress, with where to get off and an End trip button; after ending, the fare and gems earned.
 export function ActiveTripPanel({ token, signedIn, notify, onCompleted }) {
-  const { status, trip, route } = useActiveTrip(token, signedIn)
+  const { status, trip, route, clockOffset } = useActiveTrip(token, signedIn)
+  const elapsed = useElapsed(trip?.startedAt, clockOffset)
   const [destination, setDestination] = useState('')
   const [ending, setEnding] = useState(false)
   const [error, setError] = useState('')
@@ -57,12 +60,15 @@ export function ActiveTripPanel({ token, signedIn, notify, onCompleted }) {
   }
 
   if (finished) {
+    const minutes = finished.trip.durationMinutes ?? (finished.trip.endedAt && finished.trip.startedAt ? (Date.parse(finished.trip.endedAt) - Date.parse(finished.trip.startedAt)) / 60000 : null)
     return <section className="panel trip-panel trip-panel-done" role="status">
       <span className="trip-panel-icon done"><CheckCircle2 size={22} /></span>
       <div className="trip-panel-main">
         <b>{t('Trip completed!')}</b>
         <span>{t(finished.trip.busName)} · {t(finished.trip.source)} <ArrowRight size={12} /> {t(finished.trip.destination)}</span>
+        {finished.trip.startedAt && finished.trip.endedAt && <span><Clock3 size={13} /> {t('{from} – {to}', { from: formatTime(finished.trip.startedAt), to: formatTime(finished.trip.endedAt) })}</span>}
         <div className="trip-panel-figures">
+          {minutes !== null && <span className="time"><small>{t('Time on the bus')}</small><b><Timer size={15} /> {tripDuration(minutes)}</b></span>}
           <span><small>{t('Fare')}</small><b>{money(finished.trip.fare)}</b></span>
           <span><small>{t('Distance')}</small><b>{t('{km} km', { km: formatNumber(finished.trip.distance, { maximumFractionDigits: 1 }) })}</b></span>
           <span className="gems"><small>{t('Gems earned')}</small><b><Gem size={15} /> +{formatNumber(finished.trip.gemsEarned)}</b></span>
@@ -74,12 +80,22 @@ export function ActiveTripPanel({ token, signedIn, notify, onCompleted }) {
   }
   if (status !== 'ready' || !trip) return null
 
-  return <section className="panel trip-panel" aria-live="polite">
+  return <section className="panel trip-panel" id={ACTIVE_TRIP_ID} aria-live="polite">
     <span className="trip-panel-icon"><BusFront size={22} /><i className="trip-live-dot" /></span>
     <div className="trip-panel-main">
       <span className="trip-panel-kicker">{t('YOU ARE ON A BUS')}</span>
       <b>{t(trip.busName)}{trip.busCode && <em> · {trip.busCode}</em>}</b>
       <span><MapPin size={13} /> {t('Got on at {stop}', { stop: t(trip.source) })} · <Clock3 size={13} /> {t('since {time}', { time: formatTime(trip.startedAt) })}</span>
+      {elapsed !== null && <div className="trip-timer" data-testid="trip-timer">
+        <span className="trip-timer-icon" aria-hidden="true"><Timer size={18} /></span>
+        <div>
+          <small>{t('Time on the bus')}</small>
+          {/* The ticking clock is hidden from screen readers; the label says the same in minutes, and only changes once a minute. */}
+          <b aria-hidden="true">{formatClock(elapsed)}</b>
+          <span className="sr-only">{tripDuration(elapsed / 60000)}</span>
+        </div>
+        <i className="trip-live-dot" aria-hidden="true" />
+      </div>}
       <div className="trip-panel-end">
         <StopSelect label={t('Getting off at')} value={destination} stops={choices} onChange={setDestination} tone="end" />
         <button type="button" className={`button button-dark${ending ? ' is-loading' : ''}`} onClick={end} disabled={ending} aria-busy={ending}>
@@ -106,6 +122,7 @@ export function useBoardControls({ bus, token, signedIn, openAuth, notify, activ
 
   const onThisBus = activeTrip && activeTrip.busId === bus._id
   const busyElsewhere = activeTrip && !onThisBus
+  const onBoardFor = useElapsed(onThisBus ? activeTrip.startedAt : null)
 
   const toggle = () => {
     if (!signedIn) return openAuth()
@@ -135,8 +152,24 @@ export function useBoardControls({ bus, token, signedIn, openAuth, notify, activ
     } catch (e) { setError(errorText(e)) } finally { setSaving(false) }
   }
 
-  if (onThisBus) return { button: <span className="board-state"><i className="trip-live-dot" /> {t('On this bus')}</span>, form: null }
-  const button = <button type="button" className="button button-green button-small board-button" onClick={toggle} disabled={busyElsewhere} title={busyElsewhere ? t('End your current trip first.') : undefined} aria-expanded={open}>
+  if (onThisBus) return { button: <span className="board-state"><i className="trip-live-dot" /> {t('On this bus')}{onBoardFor !== null && <em className="board-state-time"> · {formatClock(onBoardFor)}</em>}</span>, form: null }
+  // One bus at a time: while on another bus this one cannot be boarded (the server refuses it too), and the card
+  // says why and how to end the current trip.
+  if (busyElsewhere) {
+    const showTrip = () => document.getElementById(ACTIVE_TRIP_ID)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    return {
+      button: <button type="button" className="button button-small board-button is-locked" disabled aria-describedby={`board-blocked-${bus._id}`}>
+        <Lock size={13} /> {t('Board')}
+      </button>,
+      form: <div className="board-blocked" id={`board-blocked-${bus._id}`} role="note">
+        <span className="board-blocked-icon" aria-hidden="true"><Lock size={15} /></span>
+        <div><b>{t('You are already on {bus}', { bus: t(activeTrip.busName || 'a bus') })}</b>
+          <span>{t('You can only be on one bus at a time. End that trip first, then board this bus.')}</span></div>
+        <button type="button" className="button button-outline button-small" onClick={showTrip}><Square size={12} /> {t('Go to my trip')}</button>
+      </div>,
+    }
+  }
+  const button = <button type="button" className="button button-green button-small board-button" onClick={toggle} aria-expanded={open}>
       <Play size={13} /> {t('Board')}
     </button>
   const form = open && <form className="board-form" onSubmit={board}>
@@ -221,6 +254,7 @@ export function TripRow({ trip, onOpenRoute }) {
           {trip.routeNumber && <span className="trip-chip">{trip.routeNumber}</span>}
           {trip.busCode && <span className="trip-chip is-code">{trip.busCode}</span>}
           <span className="trip-when">{formatDate(started)} · {formatTime(started)}</span>
+          {duration && !active && <span className="trip-chip is-time"><Timer size={11} aria-hidden="true" /> {duration}</span>}
         </small>
       </div>
       <div className="trip-row-side">

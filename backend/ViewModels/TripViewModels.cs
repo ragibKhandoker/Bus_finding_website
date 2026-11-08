@@ -56,7 +56,8 @@ public class TripViewModel : EntityViewModel
         BaseFare = t.BaseFare,
         PerKmFare = t.PerKmFare,
         StopsRidden = t.StopsRidden ?? [],
-        DurationMinutes = t.EndedAt is { } end && t.IndividualBusId is not null ? Math.Round((end - t.CreatedAt).TotalMinutes, 1) : null,
+        // Only for trips ridden (boarded, then ended); a trip logged by hand has no real start time.
+        DurationMinutes = t.EndedAt is { } end && (t.IndividualBusId is not null || t.BusCode is not null) ? Math.Round(Math.Max(0, (end - t.CreatedAt).TotalMinutes), 1) : null,
     };
 }
 

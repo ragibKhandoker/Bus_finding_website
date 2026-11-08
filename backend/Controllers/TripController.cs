@@ -29,7 +29,9 @@ public class TripController(TripService trips, BusRouteCache routes) : ApiContro
             return Ok(new { success = true, data = (object?)null });
         }
         var route = Guid.TryParse(trip.BusId, out var routeId) ? await routes.ByIdAsync(routeId) : null;
-        return Ok(new { success = true, data = TripViewModel.From(trip), route });
+        // serverTime lets the app time the ride by the server's clock, so a phone set a few minutes off still shows
+        // the right time on the bus.
+        return Ok(new { success = true, data = TripViewModel.From(trip), route, serverTime = DateTime.UtcNow });
     }
 
     [HttpGet("user")]

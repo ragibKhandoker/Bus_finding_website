@@ -49,6 +49,9 @@ public class BusRouteCache(IServiceScopeFactory scopes)
         }
     }
 
+    // Drops the copy so the next read loads the routes again (after routes are added or edited).
+    public void Invalidate() => _routes = null;
+
     public async Task<BusViewModel?> ByIdAsync(Guid id, CancellationToken cancellationToken = default)
     {
         var key = id.ToString();

@@ -643,9 +643,31 @@ input{line-height:1.6}
 .trip-panel-figures small{font-size:12px;color:var(--fg-6f8178)}
 .trip-panel-figures b{display:flex;align-items:center;gap:5px;font:800 18px var(--font-head);color:var(--fg-13281f)}
 .trip-panel-figures .gems b{color:var(--fg-7a4fc0)}
+.trip-panel-figures .time b{color:var(--fg-14684a)}
+
+/* The running "time on the bus" clock while a trip is active. */
+.trip-timer{position:relative;display:inline-flex;align-items:center;gap:12px;justify-self:start;margin-top:6px;padding:10px 18px 10px 12px;border-radius:14px;background:var(--bg-ffffff);border:1px solid var(--bd-bfdcca);box-shadow:0 6px 18px -12px rgba(22,66,48,.45)}
+.trip-timer>div{display:grid;gap:1px}
+.trip-timer small{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--fg-14805a)}
+.trip-timer b{font:800 26px/1.1 var(--font-head);color:var(--fg-13281f);font-variant-numeric:tabular-nums;letter-spacing:.5px}
+.trip-timer-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:var(--bg-e8f4eb);color:var(--fg-19865e)}
+.trip-timer .trip-live-dot{position:absolute;top:8px;right:8px}
+.board-state-time{font-style:normal;font-variant-numeric:tabular-nums}
+@media(max-width:600px){.trip-timer{justify-self:stretch}.trip-timer b{font-size:23px}}
 .trip-panel-close{position:absolute;top:10px;right:10px;display:grid;place-items:center;width:30px;height:30px;border:0;border-radius:8px;background:transparent;color:var(--fg-6f8178)}
 .trip-panel-close:hover{background:var(--bg-e8f4eb)}
 .board-button{margin-top:4px}
+/* While on another bus: a locked Board button and a note saying why. */
+.board-button.is-locked{background:var(--bg-eff5ef);color:var(--fg-718078);border:1px solid var(--bd-d4ddd7);box-shadow:none;cursor:not-allowed;opacity:1}
+.board-blocked{flex:1 0 100%;display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:4px;padding:12px 14px;border:1px solid #f1d39a;border-radius:12px;background:#fff8e8}
+.board-blocked>div{display:grid;gap:2px;flex:1;min-width:200px}
+.board-blocked b{font-size:13.5px;color:#7a5410}
+.board-blocked span:not(.board-blocked-icon){font-size:12.5px;line-height:1.45;color:#8a6a2c}
+.board-blocked-icon{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:#fdebc4;color:#a5730f;flex:none}
+html[data-theme="dark"] .board-blocked,html[data-theme="night"] .board-blocked{background:#3a2f1a;border-color:#6b5524}
+html[data-theme="dark"] .board-blocked b,html[data-theme="night"] .board-blocked b{color:#f3d58f}
+html[data-theme="dark"] .board-blocked span:not(.board-blocked-icon),html[data-theme="night"] .board-blocked span:not(.board-blocked-icon){color:#dcc48e}
+html[data-theme="dark"] .board-blocked-icon,html[data-theme="night"] .board-blocked-icon{background:#5a4718;color:#f3d58f}
 .board-state{display:inline-flex;align-items:center;gap:6px;margin-top:4px;padding:6px 10px;border-radius:999px;background:var(--bg-e8f4eb);color:var(--fg-14684a);font-size:12.5px;font-weight:700;white-space:nowrap}
 .bus-result{flex-wrap:wrap}
 .board-form{flex:1 0 100%;display:grid;gap:12px;margin-top:4px;padding:14px;border:1px solid var(--bd-d4ddd7);border-radius:12px;background:var(--bg-f8faf9)}
@@ -684,6 +706,7 @@ input{line-height:1.6}
 .trip-chip{padding:1px 7px;border-radius:6px;background:var(--bg-e8f4eb);color:var(--fg-14684a);font-size:11px;font-weight:700;letter-spacing:.02em}
 .trip-chip.is-code{background:var(--bg-eff5ef);color:var(--fg-4b5d54);font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:600}
 .trip-when{color:var(--fg-718078)}
+.trip-chip.is-time{display:inline-flex;align-items:center;gap:3px;background:var(--bg-fff3dc);color:var(--fg-986f25)}
 .trip-chevron{flex:none;color:var(--fg-718078);transition:transform .2s}
 .trip-row.is-open .trip-chevron{transform:rotate(180deg);color:var(--fg-19865e)}
 .trip-row.is-open{background:var(--bg-f7faf7);margin:0 -17px;padding:0 17px;border-bottom-color:var(--bd-e4ebe5)}
