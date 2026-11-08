@@ -27,7 +27,8 @@ export function RequireSignIn({ openAuth }) { return <div className="extra-panel
 
 // One place field of the fare calculator. Typing suggests bus stops from our own database as you go; place
 // search on OpenStreetMap (Nominatim) only runs when asked (Enter or the button), as its usage policy requires.
-function LocationField({ id, label, placeholder, place, onSelect, onLocate }) {
+// tone: 'start' (green pin) or 'end' (red pin), the usual colours for the two ends of a route on a map.
+function LocationField({ id, label, placeholder, place, onSelect, onLocate, tone = 'start' }) {
   const [text, setText] = useState(place?.name ? t(place.name) : '')
   const [stops, setStops] = useState([])
   const [places, setPlaces] = useState(null)
@@ -66,10 +67,10 @@ function LocationField({ id, label, placeholder, place, onSelect, onLocate }) {
   const shortName = (displayName) => displayName.split(',').slice(0, 2).join(',').trim()
   const showList = open && !place && text.trim().length >= 2
 
-  return <div className="location-field" onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false) }}>
-    <label htmlFor={id}>{label}</label>
+  return <div className={`location-field is-${tone}`} onBlur={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setOpen(false) }}>
+    <label htmlFor={id}><span className="location-pin" aria-hidden="true"><MapPin size={13} strokeWidth={2.6} /></span>{label}</label>
     <div className={place ? 'location-input chosen' : 'location-input'}>
-      <MapPin size={15} />
+      <MapPin size={16} className="location-input-pin" aria-hidden="true" />
       <input id={id} autoComplete="off" value={text} placeholder={placeholder} aria-expanded={showList} aria-controls={`${id}-list`}
         onFocus={() => setOpen(true)} onChange={(e) => type(e.target.value)}
         onKeyDown={(e) => { if (e.key === 'Enter' && !place) { e.preventDefault(); searchPlaces() } if (e.key === 'Escape') setOpen(false) }} />
@@ -172,7 +173,7 @@ export function MapPage({ token, user, signedIn, openAuth, notify }) {
         <form className="fare-form" onSubmit={calculate} noValidate>
           <LocationField id="fare-from" label={t('From (starting point)')} placeholder={t('Type a place, e.g. Mirpur 10')} place={start} onSelect={pickStart} onLocate={locate} />
           <button type="button" className="fare-swap" onClick={swap} disabled={!start || !end} title={t('Swap places')} aria-label={t('Swap places')}><ArrowUpDown size={14} /></button>
-          <LocationField id="fare-to" label={t('To (destination)')} placeholder={t('Type a place, e.g. Motijheel')} place={end} onSelect={pickEnd} />
+          <LocationField id="fare-to" label={t('To (destination)')} placeholder={t('Type a place, e.g. Motijheel')} place={end} onSelect={pickEnd} tone="end" />
           <button className="extra-button fare-submit" disabled={calculating || rate?.configured === false}>{calculating ? <><i className="location-spinner light" /> {t('Calculating…')}</> : <>{t('Calculate distance & fare')} <ArrowRight size={14} /></>}</button>
           {rate?.configured === false && <small className="location-problem">{t('Fare calculation is unavailable: the fare rate is not configured on the server.')}</small>}
         </form>

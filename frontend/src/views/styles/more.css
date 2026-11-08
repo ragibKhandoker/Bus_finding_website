@@ -31,7 +31,20 @@
 /* Larger, higher-contrast text on the map & fare page, so first-time users can read every step. */
 .fare-page .extra-heading p{font-size:13px;line-height:1.5;color:var(--fg-566d5e)}.fare-page .extra-panel-title small,.fare-page .location-group{font-size:10.5px;letter-spacing:1.2px}.fare-page .extra-panel-title h2{font-size:18px}
 .fare-steps{margin:0 0 14px;padding:10px 12px 10px 30px;background:var(--bg-f0f5f1);border-radius:8px;display:grid;gap:5px;font-size:12.5px;line-height:1.45;color:var(--fg-34483b)}.fare-steps li::marker{font-weight:700;color:var(--fg-19865e)}.fare-steps li.done{color:var(--fg-28734f)}.fare-steps li.done::after{content:" ✓";font-weight:700}
-.fare-page .location-field>label{font-size:12px;letter-spacing:.3px;text-transform:none;color:var(--fg-34483b)}.fare-page .location-input input{font-size:14px;padding:12px 0}
+.fare-page .location-field>label{font-size:12px;letter-spacing:.3px;text-transform:none;color:var(--fg-34483b)}
+/* A coloured pin beside "From" (green) and "To" (red), and the same colour on the pin inside the box. */
+.location-field{--pin:#19865e;--pin-soft:#e4f4e8}
+.location-field.is-end{--pin:#d0412d;--pin-soft:#fdebe7}
+html[data-theme="dark"] .location-field,html[data-theme="night"] .location-field{--pin:#4cc38a;--pin-soft:#4cc38a26}
+html[data-theme="dark"] .location-field.is-end,html[data-theme="night"] .location-field.is-end{--pin:#f07a66;--pin-soft:#f07a6626}
+.location-field>label{display:inline-flex;align-items:center;gap:7px}
+.location-pin{display:grid;place-items:center;width:22px;height:22px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--pin);color:#fff;box-shadow:0 3px 8px -3px var(--pin);flex:none}
+.location-pin svg{transform:rotate(45deg)}
+.location-input .location-input-pin{color:var(--pin);flex:none;transition:transform .15s}
+.location-input:focus-within .location-input-pin{transform:translateY(-1px) scale(1.08)}
+.location-input:focus-within{border-color:var(--pin);box-shadow:0 0 0 3px var(--pin-soft)}
+.location-input.chosen .location-input-pin{fill:var(--pin-soft)}
+@media(prefers-reduced-motion:reduce){.location-input .location-input-pin{transition:none}}.fare-page .location-input input{font-size:14px;padding:12px 0}
 .fare-page .location-coords{display:flex;align-items:center;gap:4px;font-size:12px;font-weight:600}.location-hint{font-size:12px;color:var(--fg-a95548)}
 .fare-page .location-list>button b{font-size:13px}.fare-page .location-list>button small{font-size:11px}.fare-page .location-list>.location-search-more{font-size:12.5px}.fare-page .location-problem{font-size:12px}.fare-page .location-credit{font-size:10.5px}
 .fare-page .fare-rate-chip{font-size:12px}.fare-page .fare-submit{font-size:13px;padding:11px 16px}.fare-page .fare-route{font-size:14px}
