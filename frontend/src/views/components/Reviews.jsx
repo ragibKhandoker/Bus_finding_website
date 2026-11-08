@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { BadgeCheck, ChevronDown, ChevronRight, MessageSquare, Pencil, Star, ThumbsDown, ThumbsUp, Trash2 } from 'lucide-react'
 import { SelectMenu } from './AuthModal'
+import { usePersistentState } from '../../controllers/usePersistentState'
 import { apiRequest } from '../../models/api'
 import { formatDate, formatNumber, t } from '../../models/i18n'
 
@@ -227,8 +228,9 @@ export function BusReviews({ bus, user, token, signedIn, notify, openAuth, defau
   const [status, setStatus] = useState('idle') // idle | loading | ready | error
   const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState('')
-  const [rating, setRating] = useState(0)
-  const [comment, setComment] = useState('')
+  // A review half written (stars and text) is kept for each bus when leaving the page and coming back.
+  const [rating, setRating] = usePersistentState(busId ? `review:rating:${busId}` : null, 0)
+  const [comment, setComment] = usePersistentState(busId ? `review:comment:${busId}` : null, '')
   const [formError, setFormError] = useState('')
   const [saving, setSaving] = useState(false)
 

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
 using SmartCommute.Server.Data;
+using SmartCommute.Server.Extensions;
 using SmartCommute.Server.Models;
 using SmartCommute.Server.ViewModels;
 
@@ -8,6 +9,10 @@ namespace SmartCommute.Server.Services;
 
 // The buses that serve a trip, with the stops the typed places resolved to.
 public record RouteSearch(List<BusViewModel> Buses, BusStopViewModel Start, BusStopViewModel End);
+
+// A bus that serves a trip between two map points: the bus (with where to board and get off), the walk from the
+// starting point to the boarding stop and from the last stop to the destination, and the ride on the bus.
+public record NearbyBusOption(BusViewModel Bus, double WalkToBoardingKm, double WalkFromAlightingKm, double RideKm, decimal Fare);
 
 // Bus routes and vehicles: searching by name or by trip, route statistics and road estimates. Routes are read
 // from the in-memory BusRouteCache, so no user text goes into SQL.
@@ -38,6 +43,54 @@ public class BusService(AppDbContext db, BusRouteCache routes, GoogleRoutesServi
             .ThenBy(b => b.BusName)
             .ToList();
         return ServiceResult<List<BusViewModel>>.Ok(buses);
+    }
+
+    public const double DefaultWalkKm = 1.0;
+
+    // Buses between two points on the map (places picked on the fare calculator, which have coordinates but are
+    // not stop names): every stop within walking distance of each point counts, then the usual route rules apply
+    // (BusRouteMatcher). Sorted by the least walking, then the fewest stops. Each bus's fare follows its own rates,
+    // like a boarded trip (TripService.Fare).
+    public async Task<ServiceResult<List<NearbyBusOption>>> SearchNearAsync(double fromLat, double fromLng, double toLat, double toLng,
+        double walkKm, CancellationToken ct)
+    {
+        var radius = Math.Clamp(walkKm, 0.2, 3);
+        var all = await routes.AllAsync(ct);
+        var stops = all.SelectMany(r => r.Stops).ToList();
+        ResolvedPlace? Near(double lat, double lng)
+        {
+            var close = stops.Select(s => (stop: s, km: GeoService.HaversineKm(lat, lng, s.Lat, s.Lng))).Where(x => x.km <= radius).ToList();
+            return close.Count == 0
+                ? null
+                : new ResolvedPlace(close.Select(x => BusRouteMatcher.Normalize(x.stop.Name)).ToHashSet(), close.MinBy(x => x.km).stop);
+        }
+        var start = Near(fromLat, fromLng);
+        var end = Near(toLat, toLng);
+        if (start is null || end is null)
+        {
+            return ServiceResult<List<NearbyBusOption>>.NotFound(
+                $"There is no bus stop within {radius:0.#} km of the {(start is null ? "starting point" : "destination")}.");
+        }
+
+        var options = all
+            .Select(bus => (bus, match: BusRouteMatcher.Match(bus, start, end)))
+            .Where(x => x.match is not null)
+            .Select(x =>
+            {
+                var match = x.match!;
+                var rideKm = match.Segment.Zip(match.Segment.Skip(1), (a, b) => GeoService.HaversineKm(a.Lat, a.Lng, b.Lat, b.Lng)).Sum();
+                return new NearbyBusOption(
+                    x.bus.WithMatch(match),
+                    Math.Round(GeoService.HaversineKm(fromLat, fromLng, match.Boarding.Lat, match.Boarding.Lng), 2),
+                    Math.Round(GeoService.HaversineKm(match.Alighting.Lat, match.Alighting.Lng, toLat, toLng), 2),
+                    Math.Round(rideKm, 2),
+                    TripService.Fare(x.bus, rideKm));
+            })
+            .OrderBy(o => o.WalkToBoardingKm + o.WalkFromAlightingKm)
+            .ThenBy(o => o.Bus.Match!.StopsToRide)
+            .ThenBy(o => o.Bus.BusName)
+            .ToList();
+        return ServiceResult<List<NearbyBusOption>>.Ok(options);
     }
 
     // Buses that stop at both places with the start first in the stored stop order, or in reverse order when the
@@ -130,6 +183,30 @@ public class BusService(AppDbContext db, BusRouteCache routes, GoogleRoutesServi
     }
 
     public Task<IndividualBus?> VehicleAsync(Guid id) => db.IndividualBuses.AsNoTracking().FirstOrDefaultAsync(b => b.Id == id);
+
+    // A vehicle by its id, or by its code as printed on the bus ("AL-2-01", any case). Riders only ever see the
+    // code, so lookups by hand use that. The route comes along for its name and number.
+    public Task<IndividualBus?> VehicleByIdOrCodeAsync(string idOrCode)
+    {
+        var key = idOrCode.Trim();
+        var vehicles = db.IndividualBuses.Include(b => b.Bus).AsNoTracking();
+        return Guid.TryParse(key, out var id)
+            ? vehicles.FirstOrDefaultAsync(b => b.Id == id)
+            : vehicles.FirstOrDefaultAsync(b => b.BusCode.ToUpper() == key.ToUpper());
+    }
+
+    // Vehicle codes containing the text, codes that start with it first, for suggestions while typing.
+    public Task<List<IndividualBus>> SearchVehiclesAsync(string text, int limit)
+    {
+        var pattern = text.Trim().ContainsPattern();
+        var starts = text.Trim().ToUpper();
+        return db.IndividualBuses.Include(b => b.Bus).AsNoTracking()
+            .Where(b => EF.Functions.ILike(b.BusCode, pattern))
+            .OrderByDescending(b => b.BusCode.ToUpper().StartsWith(starts))
+            .ThenBy(b => b.BusCode)
+            .Take(Math.Clamp(limit, 1, 20))
+            .ToListAsync();
+    }
 
     // Checks both places and resolves them to stops.
     private static ServiceResult<(ResolvedPlace Start, ResolvedPlace End)> ResolveTrip(List<BusViewModel> all, string? startLocation, string? endLocation)

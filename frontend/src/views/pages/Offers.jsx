@@ -3,6 +3,7 @@ import { BadgeDollarSign, Gift, History, Percent, RefreshCw, Ticket, Wallet } fr
 import { apiRequest } from '../../models/api'
 import { formatDate, formatNumber, t } from '../../models/i18n'
 import { Feedback, Heading, Loading, RequireSignIn } from './MorePages'
+import { usePersistentState } from '../../controllers/usePersistentState'
 
 // Offers: cashback (paid into the wallet) and coupon / discount value (taken off a completed trip's fare). The
 // server holds every balance and does every calculation; this page only shows what it returns.
@@ -45,7 +46,7 @@ export function OffersPage({ token, signedIn, openAuth, notify }) {
   const [data, setData] = useState(null)
   const [status, setStatus] = useState('loading') // loading | ready | error
   const [error, setError] = useState('')
-  const [amount, setAmount] = useState('')
+  const [amount, setAmount] = usePersistentState('offers:amount', '') // kept when leaving the page and coming back
   const [amountError, setAmountError] = useState('')
   const [busy, setBusy] = useState('') // '' | 'cashback' | '<kind>:<tripId>'
 

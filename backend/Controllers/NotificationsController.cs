@@ -73,6 +73,12 @@ public class NotificationsController(NotificationService notifications) : ApiCon
     public async Task<IActionResult> Clear(Guid userId) =>
         NotMe(userId) ?? Ok(new { success = true, message = "Notifications cleared.", count = await notifications.ClearAsync(userId), unreadCount = 0 });
 
+    // How many people an SOS from the signed-in user would reach right now, so the page can say so before it is
+    // pressed (and offer to add friends when it would reach nobody). Only the count: no names.
+    [HttpGet("sos/recipients")]
+    public async Task<IActionResult> SosRecipients() =>
+        Ok(new { success = true, count = (await notifications.SosRecipientsAsync(CurrentUserId)).Count });
+
     // Sends an emergency alert with a Google Maps link to the sender's friends and ride companions (see
     // NotificationService.SosRecipientsAsync). It is an in-app alert only; no emergency service is contacted.
     [EnableRateLimiting("strict")]

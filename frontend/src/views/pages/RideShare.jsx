@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { ArrowRight, BadgeCheck, Check, CheckCircle2, Plus, RefreshCw, Search, Trash2, Users, X } from 'lucide-react'
 import { apiRequest } from '../../models/api'
 import { formatDate, formatNumber, formatTime, t } from '../../models/i18n'
+import { usePersistentState } from '../../controllers/usePersistentState'
 
 // Ride share: browse open rides (filtered by destination on the server), post a ride, and manage your own posts.
 // The server takes the host from the sign-in token and decides who may delete or complete a post; the buttons
@@ -53,7 +54,8 @@ const writeDestination = (value) => {
 }
 
 function CreateRideForm({ token, onCreated, onClose }) {
-  const [form, setForm] = useState(EMPTY_FORM)
+  // A ride half filled in is kept when leaving the page and coming back; it is cleared once the ride is posted.
+  const [form, setForm] = usePersistentState('ride:create-form', EMPTY_FORM)
   const [errors, setErrors] = useState({})
   const [serverError, setServerError] = useState('')
   const [saving, setSaving] = useState(false)

@@ -87,6 +87,11 @@ describe('NotificationsPage', () => {
     expect(map.getAttribute('href')).toBe('https://www.google.com/maps?q=23.810332,90.412518')
     expect(map.getAttribute('target')).toBe('_blank')
     expect(map.getAttribute('rel')).toContain('noopener')
+    // The location is shown clearly: a small map of the spot and its coordinates beside the button.
+    const card = within(await row('🚨 SOS from Nadia')).getByTestId('shared-location')
+    expect(within(card).getByTitle('Map of the shared location').getAttribute('src')).toContain('q=23.810332%2C90.412518')
+    expect(card.textContent).toContain('Shared location')
+    expect(card.textContent).toContain('23.81033, 90.41252')
     expect(within(await row('Odd link')).queryByRole('link')).toBeNull()
     expect(within(await row('Odd link')).queryByRole('button', { name: 'Open' })).toBeNull()
   })
@@ -155,7 +160,9 @@ describe('NotificationsPage', () => {
 })
 
 describe('SosAlert', () => {
-  const geo = (impl) => Object.defineProperty(navigator, 'geolocation', { value: impl ? { getCurrentPosition: impl } : undefined, configurable: true })
+  // Only the alerts sent; the page also asks how many people an SOS would reach.
+  const posts = () => calls.filter((c) => c.method === 'POST')
+  const geo =(impl) => Object.defineProperty(navigator, 'geolocation', { value: impl ? { getCurrentPosition: impl } : undefined, configurable: true })
   const renderSos = (props = {}) => {
     const notify = vi.fn()
     const openAuth = vi.fn()
@@ -169,14 +176,14 @@ describe('SosAlert', () => {
     const user = userEvent.setup()
     const { notify } = renderSos()
     await user.click(screen.getByRole('button', { name: /Send SOS/ }))
-    expect(calls).toHaveLength(0)
+    expect(posts()).toHaveLength(0)
     await user.click(screen.getByRole('radio', { name: 'Medical' }))
     await user.type(screen.getByRole('textbox'), 'Near Farmgate')
     await user.click(screen.getByRole('button', { name: 'Yes, send SOS now' }))
 
     expect(await screen.findByText('SOS sent to 3 people.')).toBeTruthy()
-    expect(calls[0].body).toEqual({ latitude: 23.8103321, longitude: 90.4125181, serviceName: 'Medical', message: 'Near Farmgate' })
-    expect(calls[0].auth).toBe('Bearer tok')
+    expect(posts()[0].body).toEqual({ latitude: 23.8103321, longitude: 90.4125181, serviceName: 'Medical', message: 'Near Farmgate' })
+    expect(posts()[0].auth).toBe('Bearer tok')
     expect(notify).toHaveBeenCalledWith('SOS sent to 3 people.')
   })
 
@@ -191,7 +198,7 @@ describe('SosAlert', () => {
     await user.click(screen.getByRole('button', { name: /Send SOS/ }))
     await user.click(screen.getByRole('button', { name: 'Yes, send SOS now' }))
     expect((await screen.findByRole('alert')).textContent).toContain(text)
-    expect(calls).toHaveLength(0)
+    expect(posts()).toHaveLength(0)
     expect(screen.getByRole('button', { name: 'Try again' })).toBeTruthy()
   })
 
@@ -202,7 +209,7 @@ describe('SosAlert', () => {
     await user.click(screen.getByRole('button', { name: /Send SOS/ }))
     await user.click(screen.getByRole('button', { name: 'Yes, send SOS now' }))
     expect((await screen.findByRole('alert')).textContent).toBe('This browser cannot share your location, so no alert was sent.')
-    expect(calls).toHaveLength(0)
+    expect(posts()).toHaveLength(0)
   })
 
   it('shows the server refusal instead of success, and sends once while busy', async () => {
@@ -220,6 +227,43 @@ describe('SosAlert', () => {
     expect((await screen.findByRole('alert')).textContent).toContain('No alert was sent')
     expect(calls.filter((c) => c.method === 'POST')).toHaveLength(1)
     expect(notify).not.toHaveBeenCalled()
+    // The location was still found: it is shown with ways to share it by hand, and handed to the map.
+    const spot = screen.getByTestId('sos-location')
+    expect(spot.textContent).toContain('Your current location')
+    expect(spot.textContent).toContain('23.8, 90.4')
+    expect(within(spot).getByRole('link', { name: /Open in Google Maps/ }).getAttribute('href')).toBe('https://www.google.com/maps?q=23.800000,90.400000')
+    // The site never places a call itself: no "Call 999" button and no phone link anywhere in the box.
+    expect(within(spot).queryByRole('link', { name: /999/ })).toBeNull()
+    expect(spot.querySelector('a[href^="tel:"]')).toBeNull()
+    // Only advice, as plain text.
+    expect(within(spot).getByTestId('sos-emergency-note').textContent).toContain('In an emergency, call 999.')
+  })
+
+  it('says how many people an SOS reaches, and offers to add friends when nobody', async () => {
+    routes['GET /api/notifications/sos/recipients'] = () => reply(200, { success: true, count: 2 })
+    const first = renderSos()
+    expect((await screen.findByTestId('sos-reach')).textContent).toContain('Your SOS will reach 2 people.')
+    cleanup()
+
+    routes['GET /api/notifications/sos/recipients'] = () => reply(200, { success: true, count: 0 })
+    const navigate = vi.fn()
+    const user = userEvent.setup()
+    renderSos({ navigate })
+    expect((await screen.findByTestId('sos-reach')).textContent).toContain('No one would receive an SOS yet.')
+    await user.click(screen.getByRole('button', { name: /Add friends/ }))
+    expect(navigate).toHaveBeenCalledWith('Friends')
+    expect(first.notify).not.toHaveBeenCalled()
+  })
+
+  it('shows your location on request without sending an alert', async () => {
+    geo((ok) => ok({ coords: { latitude: 23.7590394, longitude: 90.3871113 } }))
+    const onLocated = vi.fn()
+    const user = userEvent.setup()
+    renderSos({ onLocated })
+    await user.click(screen.getByRole('button', { name: /Show my location/ }))
+    expect((await screen.findByTestId('sos-location')).textContent).toContain('23.75904, 90.38711')
+    expect(onLocated).toHaveBeenCalledWith({ latitude: 23.7590394, longitude: 90.3871113 })
+    expect(posts()).toHaveLength(0)
   })
 
   it('sends visitors to sign in', async () => {

@@ -7,6 +7,7 @@ import { t } from '../../models/i18n'
 // requires the attribution shown in the corner; the tiles are for light, interactive use only.
 //   start, end   {name, lat, lon}: the chosen places, shown as A and B pins
 //   path         the road line as [lat, lon] points (empty when the distance is a straight-line estimate)
+//   me           {latitude, longitude}: the rider's real location (from SOS), shown as a pulsing red dot
 const DHAKA = [23.7808, 90.4093]
 const TILES = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
 const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors'
@@ -15,7 +16,9 @@ const ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright" ta
 const pin = (label, className) => L.divIcon({ className: '', html: `<div class="gmap-pin ${className}">${label}</div>`, iconSize: [28, 28], iconAnchor: [14, 14] })
 const hasPoint = (p) => p && Number.isFinite(Number(p.lat)) && Number.isFinite(Number(p.lon))
 
-export default function FareMap({ start, end, path = [] }) {
+const meIcon = L.divIcon({ className: '', html: '<div class="map-me"><i></i></div>', iconSize: [22, 22], iconAnchor: [11, 11] })
+
+export default function FareMap({ start, end, path = [], me = null }) {
   const boxRef = useRef(null)
   const mapRef = useRef(null)
   const layerRef = useRef(null)
@@ -48,8 +51,18 @@ export default function FareMap({ start, end, path = [] }) {
       L.marker(at, { icon: pin(label, className), title: t(place.name), keyboard: false }).bindTooltip(t(place.name)).addTo(layer)
       bounds.extend(at)
     }
-    if (bounds.isValid()) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 })
-  }, [start, end, path])
+    const here = me && Number.isFinite(me.latitude) && Number.isFinite(me.longitude) ? [me.latitude, me.longitude] : null
+    if (here) {
+      L.marker(here, { icon: meIcon, title: t('Your current location'), keyboard: false, zIndexOffset: 1000 })
+        .bindTooltip(t('Your current location'), { permanent: true, direction: 'top', offset: [0, -12], className: 'map-me-label' }).addTo(layer)
+    }
+    // With only the rider's location, zoom in on it; otherwise fit everything shown.
+    if (here && !bounds.isValid()) map.setView(here, 16)
+    else {
+      if (here) bounds.extend(here)
+      if (bounds.isValid()) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 })
+    }
+  }, [start, end, path, me])
 
   return <div ref={boxRef} className="fare-map" role="region" aria-label={t('Map of the selected places')} />
 }

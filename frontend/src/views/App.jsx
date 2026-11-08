@@ -28,6 +28,7 @@ import { ProfilePage } from './pages/ProfilePage'
 import { AdminPage } from './pages/AdminPage'
 import { AuthModal } from './components/AuthModal'
 import { Toaster, useToasts } from './components/Toaster'
+import { clearPersistentState } from '../controllers/usePersistentState'
 
 export function PageLoader({ page }) {
   return (
@@ -84,7 +85,11 @@ export function App() {
   // 'Bus details' also takes the route to show.
   const showPage = useCallback((target, { replace = false, route = null } = {}) => {
     const path = target === 'Bus details' && route ? busPath(route) : PAGE_PATHS[target] || '/'
-    if (window.location.pathname !== path) window.history[replace ? 'replaceState' : 'pushState']({ page: target }, '', path)
+    if (window.location.pathname !== path) {
+      // Remember how far down this page was, so Back returns to the same spot.
+      if (!replace) window.history.replaceState({ ...(window.history.state || {}), scrollY: window.scrollY }, '', window.location.href)
+      window.history[replace ? 'replaceState' : 'pushState']({ page: target }, '', path)
+    }
     setPage(target)
     setRouteNumber(route)
     setMobileMenu(false)
@@ -98,21 +103,29 @@ export function App() {
   }, [])
   // Back and forward: show whichever page the browser moved to.
   useEffect(() => {
-    const onPop = () => {
+    let timers = []
+    const onPop = (event) => {
       setPage(pageFromPath(window.location.pathname))
       setRouteNumber(routeFromPath(window.location.pathname))
       setMobileMenu(false)
       setMoreMenu(false)
       setAuthMode('')
       window.scrollTo(0, 0)
+      // Back to a page left part-way down: return to that spot. Pages fill in a moment later (lists load,
+      // kept work is restored), so try again as the page grows.
+      timers.forEach((id) => window.clearTimeout(id))
+      const y = Number(event?.state?.scrollY)
+      timers = y > 0 ? [60, 250, PAGE_LOADER_MS + 80, PAGE_LOADER_MS + 500].map((ms) => window.setTimeout(() => window.scrollTo(0, y), ms)) : []
     }
     window.addEventListener('popstate', onPop)
-    return () => window.removeEventListener('popstate', onPop)
+    return () => { timers.forEach((id) => window.clearTimeout(id)); window.removeEventListener('popstate', onPop) }
   }, [])
   // Signs this tab out; other tabs keep their own sign-in. revoke: also end the session on the server, which is
   // skipped when the server already rejected the token, and when this tab only borrowed another tab's session.
   const signOut = useCallback((message = t('You have been signed out.'), { revoke = true } = {}) => {
     const { token: current, owned } = endSession()
+    // Work kept on pages (searches, drafts, forms) belongs to this account; the next person on this tab starts clean.
+    clearPersistentState()
     if (revoke && owned && current) {
       request('/auth/logout', { token: current, method: 'POST', ignoreUnauthorized: true }).catch(() => {})
     }
@@ -235,10 +248,10 @@ export function App() {
         {page === 'Profile' && <ProfilePage user={user} token={token} signedIn={signedIn} navigate={navigate} updateUser={setUser} signOut={signOut} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Friends' && <FriendsPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} onChat={(friend) => { navigate('Messages'); window.history.replaceState({ page: 'Messages' }, '', `/messages?with=${encodeURIComponent(friend.id || friend._id)}`) }} notify={notify} />}
         {page === 'Messages' && <ChatPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} onFindFriends={() => navigate('Friends')} />}
-        {page === 'Notifications' && <NotificationsPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
+        {page === 'Notifications' && <NotificationsPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} navigate={navigate} />}
         {page === 'Offers' && <OffersPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Favourites' && <FavoritesPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} navigate={navigate} />}
-        {page === 'Map' && <MapPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
+        {page === 'Map' && <MapPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} navigate={navigate} />}
         {page === 'GPay' && <GpayPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Verification' && <VerificationPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Admin' && <AdminPage user={user} token={token} signedIn={signedIn} isAdmin={isAdmin} navigate={navigate} openAuth={() => setAuthMode('admin')} notify={notify} />}

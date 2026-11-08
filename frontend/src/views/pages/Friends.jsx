@@ -1,8 +1,9 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { BadgeCheck, Check, Clock, Copy, MessageCircle, RefreshCw, Search, Send, UserPlus, Users, X } from 'lucide-react'
+import { BadgeCheck, Check, Clock, Copy, Inbox, MessageCircle, RefreshCw, Search, Send, ShieldCheck, UserPlus, Users, X } from 'lucide-react'
 import { apiRequest } from '../../models/api'
 import { formatDate, formatNumber, t } from '../../models/i18n'
 import { Feedback, Heading, Loading, RequireSignIn } from './MorePages'
+import { usePersistentState } from '../../controllers/usePersistentState'
 
 // Friends page: your friend code, search by code, incoming and sent requests, and your friends.
 // Every call carries the sign-in token; the server takes the user from it, so nothing here sends a user id.
@@ -31,18 +32,30 @@ export const friendsApi = {
 // Keeps the first entry for each id, so a person never appears twice in a list.
 const uniqueById = (items) => [...new Map(items.map((item) => [idOf(item), item])).values()]
 
+// Each person gets the same soft colour every time, picked from their name.
+const toneOf = (text = '') => [...text].reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % 6
+
 function Avatar({ person }) {
-  return <span className="extra-avatar" aria-hidden="true">{person?.name?.trim()?.[0]?.toUpperCase() || '?'}</span>
+  return <span className={`extra-avatar tone-${toneOf(person?.name)}`} aria-hidden="true">{person?.name?.trim()?.[0]?.toUpperCase() || '?'}</span>
+}
+
+// Grey placeholder rows the size of real ones, shown while a list loads, so the page does not jump when it arrives.
+function SkeletonRows({ count = 2 }) {
+  return <div className="friend-skeletons" aria-hidden="true">{Array.from({ length: count }, (_, i) => <div className="person-row friend-skeleton" key={i}><i /><span><b /><small /></span></div>)}</div>
 }
 
 function PersonName({ person }) {
   return <b className="friend-name">{person?.name || t('SmartCommute member')}{person?.verified && <BadgeCheck size={13} aria-label={t('Verified student')} />}</b>
 }
 
-function Section({ eyebrow, title, count, onRefresh, refreshing, children, className = '' }) {
-  return <article className={`extra-panel ${className}`} aria-busy={refreshing || undefined}>
+// A titled box with an icon. The count badge is always there ("…" while loading), so the title never shifts.
+function Section({ eyebrow, title, count, icon: Icon, onRefresh, refreshing, children, className = '' }) {
+  return <article className={`extra-panel friend-section ${className}`} aria-busy={refreshing || undefined}>
     <div className="extra-panel-title">
-      <div><small>{eyebrow}</small><h2>{title} {count !== undefined && <span>{formatNumber(count)}</span>}</h2></div>
+      <div className="tool-heading">
+        {Icon && <span className="tool-icon" aria-hidden="true"><Icon size={19} /></span>}
+        <div><small>{eyebrow}</small><h2>{title} <span className="friend-count">{count === undefined ? '…' : formatNumber(count)}</span></h2></div>
+      </div>
       {onRefresh && <button type="button" className="extra-icon-button" onClick={onRefresh} disabled={refreshing} aria-label={t('Refresh')} title={t('Refresh')}><RefreshCw size={15} /></button>}
     </div>
     {children}
@@ -76,7 +89,9 @@ function SearchResult({ result, busy, onAdd, onAnswer, onChat }) {
 }
 
 export function FriendsPage({ token, signedIn, openAuth, onChat, notify }) {
-  const [code, setCode] = useState('')
+  // What was typed is kept when leaving the page and coming back. (A search result is not: the friendship it
+  // shows may have changed in the meantime.)
+  const [code, setCode] = usePersistentState('friends:code', '')
   const [incoming, setIncoming] = useState([])
   const [sent, setSent] = useState([])
   const [friends, setFriends] = useState([])
@@ -86,7 +101,7 @@ export function FriendsPage({ token, signedIn, openAuth, onChat, notify }) {
   const [error, setError] = useState('')
   const [copied, setCopied] = useState(false)
 
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = usePersistentState('friends:query', '')
   const [queryError, setQueryError] = useState('')
   const [searching, setSearching] = useState(false)
   const [result, setResult] = useState(null) // { user, relationship, requestId } or { notFound: true }
@@ -200,76 +215,99 @@ export function FriendsPage({ token, signedIn, openAuth, onChat, notify }) {
   const loading = status === 'loading'
   const failed = status === 'error'
   const refresh = () => load({ quiet: true })
-  const listBody = (items, empty, render) => loading ? <Loading /> : failed ? <p className="extra-empty-copy">{t('Could not load this list.')}</p> : items.length ? items.map(render) : <p className="extra-empty-copy">{empty}</p>
+  // While loading, placeholder rows the size of real ones; then the list, or a friendly empty state.
+  const listBody = (items, empty, render, emptyIcon = Users) => loading ? <SkeletonRows />
+    : failed ? <p className="extra-empty-copy">{t('Could not load this list.')}</p>
+      : items.length ? <div className="friend-rows">{items.map(render)}</div>
+        : <div className="friend-empty">{React.createElement(emptyIcon, { size: 18, 'aria-hidden': true })}<p className="extra-empty-copy">{empty}</p></div>
 
+  // Two independent columns, so a box growing in one (a search result, a long list) never moves the other:
+  // left, your code, adding a friend and why it matters; right, requests, your friends and what you sent.
   return <section className="extra-page friends-page">
     {heading}
     <Feedback error={error} />
     {failed && <button type="button" className="extra-button friends-retry" onClick={() => load()}><RefreshCw size={14} /> {t('Try again')}</button>}
 
-    <div className="extra-grid friends-layout">
-      <article className="extra-panel friend-code-card">
-        <small>{t('YOUR FRIEND CODE')}</small>
-        <div className="friend-code-row">
-          <strong aria-label={t('Your friend code is {code}', { code: code || '—' })} data-testid="my-friend-code">{loading ? '·····' : code || '—'}</strong>
-          <button type="button" className="extra-button secondary" onClick={copyCode} disabled={!code}>
-            {copied ? <><Check size={14} /> {t('Copied')}</> : <><Copy size={14} /> {t('Copy code')}</>}
-          </button>
-        </div>
-        <p>{t('Share this code so friends can find and add you.')}</p>
-        <span className="sr-only" role="status">{copied ? t('Friend code copied.') : ''}</span>
-      </article>
+    <div className="friends-shell">
+      <aside className="friends-side">
+        <article className="extra-panel friend-code-card">
+          <small>{t('YOUR FRIEND CODE')}</small>
+          <div className="friend-code-row">
+            <strong aria-label={t('Your friend code is {code}', { code: code || '—' })} data-testid="my-friend-code">{loading ? '·····' : code || '—'}</strong>
+            <button type="button" className="extra-button secondary" onClick={copyCode} disabled={!code}>
+              {copied ? <><Check size={14} /> {t('Copied')}</> : <><Copy size={14} /> {t('Copy code')}</>}
+            </button>
+          </div>
+          <p>{t('Share this code so friends can find and add you.')}</p>
+          <span className="sr-only" role="status">{copied ? t('Friend code copied.') : ''}</span>
+        </article>
 
-      <article className="extra-panel friend-search-card">
-        <small className="friend-eyebrow">{t('SEARCH FRIENDS')}</small>
-        <form className="friend-search-form" onSubmit={search} noValidate>
-          <label htmlFor="friend-code-search">{t("Enter a friend's code")}</label>
+        <article className="extra-panel friend-search-card">
+          <div className="tool-heading">
+            <span className="tool-icon" aria-hidden="true"><UserPlus size={19} /></span>
+            <div><small className="friend-eyebrow">{t('SEARCH FRIENDS')}</small><h2 className="friend-card-title">{t('Add a friend')}</h2></div>
+          </div>
+          <form className="friend-search-form" onSubmit={search} noValidate>
+            <label htmlFor="friend-code-search">{t("Enter a friend's code")}</label>
+            <div>
+              <input id="friend-code-search" value={query} maxLength={5} autoComplete="off" autoCapitalize="characters" spellCheck="false"
+                placeholder="R7K2M" aria-invalid={Boolean(queryError) || undefined} aria-describedby="friend-code-hint"
+                onChange={(e) => { setQuery(cleanCode(e.target.value)); setQueryError(''); setResult(null) }} />
+              <button className="extra-button" type="submit" disabled={searching}>{searching ? <><i className="location-spinner light" aria-hidden="true" /> {t('Searching…')}</> : <><Search size={14} /> {t('Search')}</>}</button>
+            </div>
+            <small id="friend-code-hint" className={queryError ? 'friend-hint error' : 'friend-hint'}>{queryError || t('5 letters or digits, e.g. R7K2M')}</small>
+          </form>
+          <div aria-live="polite">
+            {result?.notFound && <p className="friend-not-found" data-testid="not-found">{t('User not found')}</p>}
+            {result?.user && <SearchResult result={result} busy={sending || answering.has(result.requestId)} onAdd={sendRequest} onAnswer={answer} onChat={onChat} />}
+          </div>
+        </article>
+
+        <article className="extra-panel friend-safety-card">
+          <span className="tool-icon" aria-hidden="true"><ShieldCheck size={19} /></span>
           <div>
-            <input id="friend-code-search" value={query} maxLength={5} autoComplete="off" autoCapitalize="characters" spellCheck="false"
-              placeholder="R7K2M" aria-invalid={Boolean(queryError) || undefined} aria-describedby="friend-code-hint"
-              onChange={(e) => { setQuery(cleanCode(e.target.value)); setQueryError(''); setResult(null) }} />
-            <button className="extra-button" type="submit" disabled={searching}>{searching ? <><i className="location-spinner light" aria-hidden="true" /> {t('Searching…')}</> : <><Search size={14} /> {t('Search')}</>}</button>
+            <b>{t('Friends keep you safe')}</b>
+            <p>{t('When you send an SOS, your friends get your location at once. Add family and people you trust.')}</p>
           </div>
-          <small id="friend-code-hint" className={queryError ? 'friend-hint error' : 'friend-hint'}>{queryError || t('5 letters or digits, e.g. R7K2M')}</small>
-        </form>
-        <div aria-live="polite">
-          {result?.notFound && <p className="friend-not-found" data-testid="not-found">{t('User not found')}</p>}
-          {result?.user && <SearchResult result={result} busy={sending || answering.has(result.requestId)} onAdd={sendRequest} onAnswer={answer} onChat={onChat} />}
-        </div>
-      </article>
+        </article>
+      </aside>
+
+      <div className="friends-main">
+        <Section icon={Inbox} eyebrow={t('INCOMING')} title={t('Friend requests')} count={loading ? undefined : incoming.length} onRefresh={refresh} refreshing={refreshing}>
+          {listBody(incoming, t('No pending requests.'), (request) => {
+            const id = idOf(request)
+            const busy = answering.has(id)
+            return <div className="person-row" key={id}>
+              <Avatar person={request.sender} />
+              <div><PersonName person={request.sender} /><small>{t('Sent {date}', { date: formatDate(request.createdAt) })}</small></div>
+              <div className="person-actions">
+                <button type="button" className="extra-button" disabled={busy} onClick={() => answer(id, true)} aria-label={t('Accept request from {name}', { name: request.sender?.name })}><Check size={13} /> {t('Accept')}</button>
+                <button type="button" className="extra-button secondary" disabled={busy} onClick={() => answer(id, false)} aria-label={t('Decline request from {name}', { name: request.sender?.name })}><X size={13} /> {t('Decline')}</button>
+              </div>
+            </div>
+          }, Inbox)}
+        </Section>
+
+        <Section className="friends-list" icon={Users} eyebrow={t('YOUR COMMUNITY')} title={t('My friends')} count={loading ? undefined : friends.length} onRefresh={refresh} refreshing={refreshing}>
+          {listBody(friends, t('Your friend list is waiting to grow. Add a friend with their code above.'), (friend) => <div className="person-row" key={idOf(friend)}>
+            <Avatar person={friend} />
+            <div><PersonName person={friend} /><small>{friend.friendsSince ? t('Friends since {date}', { date: formatDate(friend.friendsSince) }) : `${t('Friend code')}: ${friend.friendCode}`}</small></div>
+            <div className="person-actions">
+              <button type="button" className="extra-button secondary" onClick={() => onChat(friend)} aria-label={unreadByFriend[idOf(friend)] ? t('Message {name}, {count} unread', { name: friend.name, count: unreadByFriend[idOf(friend)] }) : t('Message {name}', { name: friend.name })}>
+                <MessageCircle size={14} /> {t('Message')}{unreadByFriend[idOf(friend)] > 0 && <i className="friend-unread" data-testid="friend-unread">{formatNumber(unreadByFriend[idOf(friend)])}</i>}
+              </button>
+            </div>
+          </div>)}
+        </Section>
+
+        <Section icon={Send} eyebrow={t('SENT')} title={t('Sent requests')} count={loading ? undefined : sent.length} onRefresh={refresh} refreshing={refreshing}>
+          {listBody(sent, t('No requests waiting for an answer.'), (request) => <div className="person-row" key={idOf(request)}>
+            <Avatar person={request.receiver} />
+            <div><PersonName person={request.receiver} /><small>{t('Sent {date}', { date: formatDate(request.createdAt) })}</small></div>
+            <div className="person-actions"><span className="friend-status pending"><Clock size={11} /> {t('Pending')}</span></div>
+          </div>, Send)}
+        </Section>
+      </div>
     </div>
-
-    <div className="extra-grid friends-layout friends-requests">
-      <Section eyebrow={t('INCOMING')} title={t('Friend requests')} count={loading ? undefined : incoming.length} onRefresh={refresh} refreshing={refreshing}>
-        {listBody(incoming, t('No pending requests.'), (request) => {
-          const id = idOf(request)
-          const busy = answering.has(id)
-          return <div className="person-row" key={id}>
-            <Avatar person={request.sender} />
-            <div><PersonName person={request.sender} /><small>{t('Sent {date}', { date: formatDate(request.createdAt) })}</small></div>
-            <button type="button" className="extra-button" disabled={busy} onClick={() => answer(id, true)} aria-label={t('Accept request from {name}', { name: request.sender?.name })}><Check size={13} /> {t('Accept')}</button>
-            <button type="button" className="extra-button secondary" disabled={busy} onClick={() => answer(id, false)} aria-label={t('Decline request from {name}', { name: request.sender?.name })}><X size={13} /> {t('Decline')}</button>
-          </div>
-        })}
-      </Section>
-
-      <Section eyebrow={t('SENT')} title={t('Sent requests')} count={loading ? undefined : sent.length} onRefresh={refresh} refreshing={refreshing}>
-        {listBody(sent, t('No requests waiting for an answer.'), (request) => <div className="person-row" key={idOf(request)}>
-          <Avatar person={request.receiver} />
-          <div><PersonName person={request.receiver} /><small>{t('Sent {date}', { date: formatDate(request.createdAt) })}</small></div>
-          <span className="friend-status pending"><Send size={11} /> {t('Pending')}</span>
-        </div>)}
-      </Section>
-    </div>
-
-    <Section className="extra-list-panel" eyebrow={t('YOUR COMMUNITY')} title={t('My friends')} count={loading ? undefined : friends.length} onRefresh={refresh} refreshing={refreshing}>
-      {listBody(friends, t('Your friend list is waiting to grow. Add a friend with their code above.'), (friend) => <div className="person-row" key={idOf(friend)}>
-        <Avatar person={friend} />
-        <div><PersonName person={friend} /><small>{friend.friendsSince ? t('Friends since {date}', { date: formatDate(friend.friendsSince) }) : `${t('Friend code')}: ${friend.friendCode}`}</small></div>
-        <button type="button" className="extra-button secondary" onClick={() => onChat(friend)} aria-label={unreadByFriend[idOf(friend)] ? t('Message {name}, {count} unread', { name: friend.name, count: unreadByFriend[idOf(friend)] }) : t('Message {name}', { name: friend.name })}>
-          <MessageCircle size={14} /> {t('Message')}{unreadByFriend[idOf(friend)] > 0 && <i className="friend-unread" data-testid="friend-unread">{formatNumber(unreadByFriend[idOf(friend)])}</i>}
-        </button>
-      </div>)}
-    </Section>
   </section>
 }

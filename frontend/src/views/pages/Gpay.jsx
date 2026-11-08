@@ -3,6 +3,7 @@ import { ArrowDownLeft, ArrowUpRight, Bus, KeyRound, Lock, RefreshCw, Wallet } f
 import { apiRequest } from '../../models/api'
 import { formatDate, formatDateTime, formatNumber, t } from '../../models/i18n'
 import { Feedback, Heading, Loading, RequireSignIn } from './MorePages'
+import { usePersistentState } from '../../controllers/usePersistentState'
 
 // GPay, the in-app stored-value account. The server keeps the balance and the history; moving money needs the
 // 4-digit PIN, which this page keeps in memory only while it is unlocked and never stores.
@@ -52,7 +53,7 @@ export function GpayPage({ token, signedIn, openAuth, notify }) {
   const [shownPin, setShownPin] = useState('')
   const [history, setHistory] = useState([])
   const [trips, setTrips] = useState([])
-  const [amount, setAmount] = useState('')
+  const [amount, setAmount] = usePersistentState('gpay:amount', '') // kept when leaving the page and coming back
   const [amountError, setAmountError] = useState('')
   const [busy, setBusy] = useState('')
   const [resetting, setResetting] = useState(false)

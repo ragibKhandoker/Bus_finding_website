@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { ArrowRight, BadgeCheck, CalendarDays, Check, CircleAlert, Copy, KeyRound, Lock, LogOut, Inbox, LayoutDashboard, Mail, Siren, Pencil, Phone, Plus, Route, ShieldCheck, Users, X } from 'lucide-react'
 import { apiRequest as request } from '../../models/api'
 import { formatDate, formatNumber, t } from '../../models/i18n'
+import { usePersistentState } from '../../controllers/usePersistentState'
 import { saveSessionUser } from '../../models/session'
 import { errorText } from '../../models/messages'
 import { PageHeading, SignInPrompt } from '../components/common'
@@ -11,8 +12,9 @@ import { ADMIN_FOCUS_KEY } from '../../controllers/router'
 import { changed } from '../../models/notifications'
 
 export function ProfilePage({ user, token, signedIn, updateUser, signOut, openAuth, notify, navigate }) {
-  const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState(() => profileFormOf(user))
+  // Changes being made are kept when leaving the page and coming back (cleared on sign-out).
+  const [editing, setEditing] = usePersistentState('profile:editing', false)
+  const [form, setForm] = usePersistentState('profile:form', () => profileFormOf(user))
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)

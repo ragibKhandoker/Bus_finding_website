@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { BadgeCheck, Check, Clock, Eye, FileImage, RefreshCw, ShieldCheck, UserRound, X } from 'lucide-react'
 import { apiBlob, apiRequest } from '../../models/api'
 import { formatDate, t } from '../../models/i18n'
+import { usePersistentState } from '../../controllers/usePersistentState'
 import { Feedback, Heading, Loading, RequireSignIn } from './MorePages'
 
 // Account verification: upload an NID or student pass photo and follow its review; admins review the queue.
@@ -62,8 +63,9 @@ export function PrivateImage({ path, token, alt }) {
 }
 
 function SubmitForm({ token, onSubmitted, notify }) {
-  const [type, setType] = useState('student_pass')
-  const [form, setForm] = useState({ institutionName: '', institutionId: '', gmail: '' })
+  // The document type and details typed are kept when leaving the page and coming back (the photo is not).
+  const [type, setType] = usePersistentState('verify:type', 'student_pass')
+  const [form, setForm] = usePersistentState('verify:form', { institutionName: '', institutionId: '', gmail: '' })
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState('')
   const [error, setError] = useState('')

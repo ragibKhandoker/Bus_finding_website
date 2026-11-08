@@ -3,6 +3,7 @@ import { ArrowLeft, BadgeCheck, Check, CheckCheck, MessageCircle, RefreshCw, Sen
 import { apiRequest } from '../../models/api'
 import { formatDate, formatNumber, formatTime, t } from '../../models/i18n'
 import { Feedback, Heading, Loading, RequireSignIn } from './MorePages'
+import { usePersistentState } from '../../controllers/usePersistentState'
 
 // One-to-one chat with friends. The server decides who the sender is and who may see a conversation; this page
 // only shows what it is given. Message text is rendered as plain text, never as HTML.
@@ -76,7 +77,8 @@ export function ChatPage({ token, user, signedIn, openAuth, onFindFriends }) {
   const [hasMore, setHasMore] = useState(false)
   const [messageStatus, setMessageStatus] = useState('idle') // idle | loading | ready | error
   const [loadingOlder, setLoadingOlder] = useState(false)
-  const [text, setText] = useState('')
+  // An unsent message is kept for each conversation, so leaving the page (or opening another chat) does not lose it.
+  const [text, setText] = usePersistentState(selected ? `chat:draft:${selected.chatId}` : null, '')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
   const [composeError, setComposeError] = useState('')

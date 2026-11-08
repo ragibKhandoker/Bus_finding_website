@@ -9,6 +9,7 @@ import { BUS_TYPES, coordinate, googleMapsPlace, googleMapsRouteDirections, mone
 import { errorText } from '../../models/messages'
 import { findCachedRoute, routesFresh } from '../../models/busRoutes'
 import { useBusRoutes } from '../../controllers/useBusRoutes'
+import { usePersistentState } from '../../controllers/usePersistentState'
 import { RouteTile, RoutesStatus } from '../components/BusRoutes'
 import { PageHeading } from '../components/common'
 
@@ -17,9 +18,11 @@ export const ROUTES_PAGE_SIZE = 24
 // Every route stored in the database, searchable by bus, route number or stop and filterable by bus type.
 export function BusRoutesPage({ navigate }) {
   const [state, load] = useBusRoutes()
-  const [query, setQuery] = useState('')
-  const [type, setType] = useState('all')
-  const [limit, setLimit] = useState(ROUTES_PAGE_SIZE)
+  // The search, the filter and how many routes are shown are kept, so Back from a route's page lands on the
+  // same list.
+  const [query, setQuery] = usePersistentState('routes:query', '')
+  const [type, setType] = usePersistentState('routes:type', 'all')
+  const [limit, setLimit] = usePersistentState('routes:limit', ROUTES_PAGE_SIZE)
   const term = query.trim().toLowerCase()
   // Matches the English names stored in the database and their Bangla, so either language can be typed.
   const buses = state.status === 'ready' ? state.buses.filter((bus) => bus.routeNumber && (type === 'all' || bus.busType === type) &&

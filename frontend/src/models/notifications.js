@@ -18,4 +18,6 @@ export const notificationApi = {
   remove: (id, token) => apiRequest(`/api/notifications/${encodeURIComponent(id)}`, { token, method: 'DELETE' }),
   clear: (userId, token) => apiRequest(`/api/notifications/clear/${encodeURIComponent(userId)}`, { token, method: 'DELETE' }),
   sos: (body, token) => apiRequest('/api/notifications/sos', { token, method: 'POST', body: JSON.stringify(body) }),
+  // How many people an SOS would reach now (friends and people on open ride shares).
+  sosRecipients: (token) => apiRequest('/api/notifications/sos/recipients', { token }),
 }

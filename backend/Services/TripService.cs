@@ -75,6 +75,26 @@ public class TripService(AppDbContext db, BusRouteCache routes, WalletService wa
             Status = TripStatus.Completed,
             EndedAt = DateTime.UtcNow,
         };
+        // A bus picked from the routes (busId is a route id) with stops on that route: the server works out the
+        // distance, fare and stops from the route, as for a boarded trip, and keeps the route's details. Anything
+        // else (a bus id typed in by hand, or stops that are not on the route) is logged as sent.
+        var route = Guid.TryParse(busId, out var routeId) ? await routes.ByIdAsync(routeId) : null;
+        if (route is not null)
+        {
+            trip.BusName = route.BusName;
+            Snapshot(trip, route, null);
+            var from = StopIndex(route, source);
+            var to = StopIndex(route, destination);
+            if (from >= 0 && CheckRide(route, from, to, destination) is null)
+            {
+                var km = DistanceKm(route, from, to);
+                trip.Source = route.Stops[from].Name;
+                trip.Destination = route.Stops[to].Name;
+                trip.Distance = Math.Round(km, 2);
+                trip.Fare = Fare(route, km);
+                trip.StopsRidden = StopsBetween(route, from, to);
+            }
+        }
         db.Trips.Add(trip);
         await db.SaveChangesAsync();
         return ServiceResult<(Trip, bool)>.Created((trip, true), "Trip added.");

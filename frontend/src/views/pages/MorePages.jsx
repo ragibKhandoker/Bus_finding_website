@@ -1,8 +1,11 @@
-import React, { useCallback, useEffect, useState } from 'react'
-import { ArrowRight, ArrowUpDown, BusFront, Calculator, Check, MapPin, Navigation, RefreshCw, Search, ShieldCheck } from 'lucide-react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
+import { ArrowRight, ArrowUpDown, BusFront, Calculator, Check, History, MapPin, Navigation, RefreshCw, Search, ShieldCheck } from 'lucide-react'
 import '../styles/more.css'
 import { apiRequest } from '../../models/api'
 import { SosAlert } from './Notifications'
+import { RouteBusPicker } from '../components/RouteBusPicker'
+import { PassengerLookup } from '../components/PassengerLookup'
+import { usePersistentState } from '../../controllers/usePersistentState'
 import { formatDateTime, formatNumber, getLang, t, toEnglish } from '../../models/i18n'
 
 // Leaflet is only downloaded when the map page is opened.
@@ -91,17 +94,24 @@ function LocationField({ id, label, placeholder, place, onSelect, onLocate, tone
   </div>
 }
 
-export function MapPage({ token, user, signedIn, openAuth, notify }) {
-  const [start, setStart] = useState(null)
-  const [end, setEnd] = useState(null)
+export function MapPage({ token, user, signedIn, openAuth, notify, navigate }) {
+  // The places, the result and the rider's location are kept when leaving the page, so coming back (or pressing
+  // Back) shows them again instead of an empty calculator.
+  const [start, setStart] = usePersistentState('map:start', null)
+  const [end, setEnd] = usePersistentState('map:end', null)
   const [rate, setRate] = useState(null)
-  const [result, setResult] = useState(null)
+  const [result, setResult] = usePersistentState('map:result', null)
   const [calculating, setCalculating] = useState(false)
   const [error, setError] = useState('')
   const [history, setHistory] = useState([])
   const [historyState, setHistoryState] = useState('idle')
-  const [busyId, setBusyId] = useState('')
-  const [tripBusId, setTripBusId] = useState('')
+  // The rider's real location once SOS has found it, shown on the map.
+  const [myLocation, setMyLocation] = usePersistentState('map:me', null)
+  const mapPanelRef = useRef(null)
+  const showMyLocation = (spot) => {
+    setMyLocation(spot)
+    mapPanelRef.current?.scrollIntoView?.({ behavior: 'smooth', block: 'start' })
+  }
 
   useEffect(() => { api('/api/fares/rate').then((data) => setRate(data.data)).catch(() => setRate(null)) }, [])
   const loadHistory = useCallback(async () => {
@@ -138,38 +148,22 @@ export function MapPage({ token, user, signedIn, openAuth, notify }) {
     setResult({ fare: item, path: [], saved: false, fromHistory: true }); setError('')
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
-  const busInfo = async (id) => {
-    if (!signedIn) return openAuth()
-    try { const data = await api(`/individual-bus/${encodeURIComponent(id.trim())}`, token); notify(t('Bus {code}: {taken} of {total} seats taken.', { code: data.data.busCode, taken: data.data.currentPassengerCount, total: data.data.totalPassengerCapacity })) }
-    catch (ex) { setError(err(ex)) }
-  }
-  const capacityAction = async (id, action) => {
-    if (!signedIn) return openAuth()
-    try { const data = await api(`/individual-bus/${action}`, token, { method: 'POST', body: json({ busId: id }) }); notify(t(data.message || 'Passenger count updated.')) }
-    catch (ex) { setError(err(ex)) }
-  }
-  const logRouteTrip = async () => {
-    if (!signedIn) return openAuth()
-    if (!result || !tripBusId.trim()) return setError(t('Enter the bus ID before logging this route as a trip.'))
-    const fare = result.fare
-    try {
-      await api('/trip/add', token, { method: 'POST', body: json({ busId: tripBusId.trim(), busName: 'Dhaka commute', distance: fare.distance, fare: fare.fare, source: fare.source, destination: fare.destination }) })
-      notify(t('Trip logged. Your journey now appears in trip history.'))
-    } catch (ex) { setError(err(ex)) }
-  }
 
 
   const fare = result?.fare
   const money = (value) => `৳${formatNumber(value, { maximumFractionDigits: 2 })}`
-  return <section className="extra-page fare-page"><Heading icon={Calculator} eyebrow={t('PLACES, DISTANCE & FARE')} title={t('Map & fare calculator')} subtitle={t('Find out how far it is between two places in Dhaka and about how much the bus fare will be.')} /><Feedback error={error} /><div className="map-grid">
-    <div className="map-main">
+  // Layout, top to bottom: the map across the full width (fixed in place, it does not move while scrolling), the
+  // calculator, "Which bus did you take?", then the saved calculations and other tools.
+  return <section className="extra-page fare-page"><Heading icon={Calculator} eyebrow={t('PLACES, DISTANCE & FARE')} title={t('Map & fare calculator')} subtitle={t('Find out how far it is between two places in Dhaka and about how much the bus fare will be.')} /><Feedback error={error} />
+    <div className="fare-top">
+      <article className="extra-panel fare-map-panel" ref={mapPanelRef}><React.Suspense fallback={<div className="fare-map"><Loading label="Loading map…" /></div>}><FareMap start={start} end={end} path={result?.path || []} me={myLocation} /></React.Suspense><small className="map-attribution">{t('Map data © OpenStreetMap contributors · Routes by OSRM')}</small></article>
       <article className="extra-panel fare-calc">
         <div className="extra-panel-title"><div><small>{t('FARE CALCULATOR')}</small><h2>{t('Where are you going?')}</h2></div>{rate?.configured && <span className="fare-rate-chip">{t('Rate: {rate} per km', { rate: money(rate.farePerKm) })}</span>}</div>
-        <ol className="fare-steps">
+        {!fare && <ol className="fare-steps">
           <li className={start ? 'done' : ''}>{t('Type your starting point and pick it from the list.')}</li>
           <li className={end ? 'done' : ''}>{t('Do the same for your destination.')}</li>
           <li className={fare ? 'done' : ''}>{t('Press “Calculate distance & fare”.')}</li>
-        </ol>
+        </ol>}
         <form className="fare-form" onSubmit={calculate} noValidate>
           <LocationField id="fare-from" label={t('From (starting point)')} placeholder={t('Type a place, e.g. Mirpur 10')} place={start} onSelect={pickStart} onLocate={locate} />
           <button type="button" className="fare-swap" onClick={swap} disabled={!start || !end} title={t('Swap places')} aria-label={t('Swap places')}><ArrowUpDown size={14} /></button>
@@ -189,14 +183,13 @@ export function MapPage({ token, user, signedIn, openAuth, notify }) {
           {fare.distanceEstimated && <small className="fare-warning">{t('We could not get the road route right now, so this distance is only an approximate guess. Try again later for the exact road distance.')}</small>}
           <small>{t('This is an estimate. The fare you pay on the bus may be different.')}</small>
           {!result.fromHistory && <small className="fare-saved">{signedIn ? (result.saved ? t('Saved to your fare history.') : t('Already saved to your fare history.')) : t('Sign in to keep a history of your fare calculations.')}</small>}
-          {signedIn && <div className="fare-log"><input className="route-bus-id" value={tripBusId} onChange={(e) => setTripBusId(e.target.value)} placeholder={t('Bus ID (required to log trip)')} /><button type="button" className="extra-button secondary" onClick={logRouteTrip}>{t('Log this trip')}</button></div>}
         </div>}
       </article>
-      <article className="extra-panel fare-map-panel"><React.Suspense fallback={<div className="fare-map"><Loading label="Loading map…" /></div>}><FareMap start={start} end={end} path={result?.path || []} /></React.Suspense><small className="map-attribution">{t('Map data © OpenStreetMap contributors · Routes by OSRM')}</small></article>
     </div>
-    <div className="map-side">
-      <article className="extra-panel">
-        <div className="extra-panel-title"><div><small>{t('SAVED CALCULATIONS')}</small><h2>{t('Your past calculations')}</h2></div>{signedIn && <button className="extra-icon-button" onClick={loadHistory} title={t('Refresh')} aria-label={t('Refresh')}><RefreshCw size={14} /></button>}</div>
+    {signedIn && fare && <RouteBusPicker token={token} start={start} end={end} notify={notify} />}
+    <div className="fare-tools">
+      <article className="extra-panel fare-history-panel">
+        <div className="extra-panel-title"><div className="tool-heading"><span className="tool-icon" aria-hidden="true"><History size={19} /></span><div><small>{t('SAVED CALCULATIONS')}</small><h2>{t('Your past calculations')}</h2></div></div>{signedIn && <button className="extra-icon-button" onClick={loadHistory} title={t('Refresh')} aria-label={t('Refresh')}><RefreshCw size={14} /></button>}</div>
         {!signedIn ? <p className="extra-empty-copy">{t('Sign in to see the fares you have calculated.')} <button className="link-button" onClick={openAuth}>{t('Sign in')}</button></p>
           : historyState === 'loading' && !history.length ? <Loading />
           : historyState !== 'idle' && historyState !== 'loading' ? <div className="extra-feedback error">{historyState}</div>
@@ -206,10 +199,10 @@ export function MapPage({ token, user, signedIn, openAuth, notify }) {
               <strong>{money(item.fare)}</strong>
             </button>)}</div>}
       </article>
-      <article className="extra-panel"><div className="extra-panel-title"><div><small>{t('ACTIVE BUS LOOKUP')}</small><h2>{t('Check passenger count')}</h2></div></div><p className="extra-help">{t('Enter the bus ID (for example DBR-128-01) to see how many seats are taken. This does not show where the bus is.')}</p><form className="map-form map-form-stacked" onSubmit={(e) => { e.preventDefault(); busInfo(busyId) }}><input required value={busyId} onChange={(e) => setBusyId(e.target.value)} placeholder={t('Individual bus ID')} /><button className="extra-button secondary">{t('Look up bus')}</button></form>{signedIn && <div className="map-capacity-actions"><button className="extra-button secondary" onClick={() => capacityAction(busyId, 'board')}>{t('Board bus')}</button><button className="extra-button secondary" onClick={() => capacityAction(busyId, 'end-trip')}>{t('End trip')}</button></div>}</article>
-      <SosAlert token={token} signedIn={signedIn} openAuth={openAuth} notify={notify} />
+      <PassengerLookup token={token} signedIn={signedIn} openAuth={openAuth} navigate={navigate} />
+      <SosAlert token={token} signedIn={signedIn} openAuth={openAuth} notify={notify} onLocated={showMyLocation} navigate={navigate} />
     </div>
-  </div></section>
+  </section>
 }
 
 

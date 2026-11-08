@@ -69,6 +69,39 @@ public class BusController(BusService buses) : ApiControllerBase
         return Ok(new { success = true, count = search.Buses.Count, data = search.Buses, start = search.Start, end = search.End });
     }
 
+    // Buses between two points on the map, e.g. the places picked on the fare calculator.
+    // ?fromLat=&fromLng=&toLat=&toLng=&walkKm=1 (how far the rider will walk to and from a stop, 0.2–3 km).
+    [HttpGet("near-route")]
+    public async Task<IActionResult> NearRoute([FromQuery] double? fromLat, [FromQuery] double? fromLng, [FromQuery] double? toLat,
+        [FromQuery] double? toLng, [FromQuery] double walkKm = BusService.DefaultWalkKm)
+    {
+        if (!ValidPoint(fromLat, fromLng) || !ValidPoint(toLat, toLng))
+        {
+            return BadRequestError("fromLat, fromLng, toLat and toLng are required and must be valid coordinates.");
+        }
+        var result = await buses.SearchNearAsync(fromLat!.Value, fromLng!.Value, toLat!.Value, toLng!.Value, walkKm, HttpContext.RequestAborted);
+        if (!result.Succeeded)
+        {
+            return Error(result.StatusCode, result.Message);
+        }
+        return Ok(new
+        {
+            success = true,
+            count = result.Value!.Count,
+            data = result.Value.Select(o => new
+            {
+                bus = o.Bus,
+                walkToBoardingKm = o.WalkToBoardingKm,
+                walkFromAlightingKm = o.WalkFromAlightingKm,
+                rideKm = o.RideKm,
+                fare = o.Fare,
+            }),
+        });
+    }
+
+    private static bool ValidPoint(double? lat, double? lng) =>
+        lat is { } la && lng is { } ln && double.IsFinite(la) && double.IsFinite(ln) && Math.Abs(la) <= 90 && Math.Abs(ln) <= 180;
+
     [EnableRateLimiting("maps")]
     [HttpGet("route-estimate")]
     public async Task<IActionResult> RouteEstimate([FromQuery] string? startLocation, [FromQuery] string? endLocation)
@@ -95,13 +128,37 @@ public class BusController(BusService buses) : ApiControllerBase
 [Route("individual-bus")]
 public class IndividualBusController(BusService buses) : ApiControllerBase
 {
-    [HttpGet("{id:guid}")]
-    public async Task<IActionResult> Get(Guid id)
+    // Vehicle codes matching the text, for suggestions while typing: ?q=AL-2
+    [HttpGet("search")]
+    public async Task<IActionResult> Search([FromQuery] string? q, [FromQuery] int limit = 8)
     {
-        var bus = await buses.VehicleAsync(id);
+        if (string.IsNullOrWhiteSpace(q))
+        {
+            return Ok(new { success = true, data = Array.Empty<object>() });
+        }
+        var found = await buses.SearchVehiclesAsync(q, limit);
+        return Ok(new { success = true, data = found.Select(VehicleJson) });
+    }
+
+    // One vehicle by its code ("AL-2-01", what riders see on the bus) or its id.
+    [HttpGet("{idOrCode}")]
+    public async Task<IActionResult> Get(string idOrCode)
+    {
+        var bus = await buses.VehicleByIdOrCodeAsync(idOrCode);
         return bus is null
-            ? NotFoundError("Bus not found.")
-            : Ok(new { success = true, data = IndividualBusViewModel.From(bus) });
+            ? NotFoundError($"No bus has the code \"{idOrCode.Trim()}\". Check the code written on the bus, e.g. AL-2-01.")
+            : Ok(new { success = true, data = VehicleJson(bus) });
+    }
+
+    // The vehicle with its route's name and number.
+    private static object VehicleJson(SmartCommute.Server.Models.IndividualBus b)
+    {
+        var v = IndividualBusViewModel.From(b);
+        return new
+        {
+            _id = v.Id, v.ParentBusInfoId, v.BusCode, v.TotalPassengerCapacity, v.CurrentPassengerCount, v.Status, v.BusType,
+            busName = b.Bus?.BusName, routeNumber = b.Bus?.RouteNumber,
+        };
     }
 
     // Starts a trip on this vehicle for the signed-in rider (the user comes from the token, never the request).

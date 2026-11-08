@@ -32,6 +32,139 @@
 .fare-page .extra-heading p{font-size:13px;line-height:1.5;color:var(--fg-566d5e)}.fare-page .extra-panel-title small,.fare-page .location-group{font-size:10.5px;letter-spacing:1.2px}.fare-page .extra-panel-title h2{font-size:18px}
 .fare-steps{margin:0 0 14px;padding:10px 12px 10px 30px;background:var(--bg-f0f5f1);border-radius:8px;display:grid;gap:5px;font-size:12.5px;line-height:1.45;color:var(--fg-34483b)}.fare-steps li::marker{font-weight:700;color:var(--fg-19865e)}.fare-steps li.done{color:var(--fg-28734f)}.fare-steps li.done::after{content:" ✓";font-weight:700}
 .fare-page .location-field>label{font-size:12px;letter-spacing:.3px;text-transform:none;color:var(--fg-34483b)}
+/* ---- Map & fare calculator layout ----
+   Calculator beside the map (the map stays in view while scrolling), "Which bus did you take?" across the full
+   width, then the saved calculations, bus lookup and SOS side by side. */
+/* The map across the full width at the top, in normal flow (not sticky, so it never moves while scrolling),
+   then the calculator below it with From, swap, To and Calculate in one row. */
+.fare-top{display:grid;grid-template-columns:1fr;gap:16px;margin-top:4px}
+.fare-top .fare-map-panel{position:static;padding:8px;display:grid;gap:6px;scroll-margin-top:90px}
+.fare-top .fare-map{height:clamp(340px,48vh,500px);border-radius:10px}
+.fare-top .fare-calc{display:grid;gap:4px;padding:20px 22px}
+@media(min-width:900px){
+  .fare-top .fare-form{grid-template-columns:minmax(0,1fr) auto minmax(0,1fr) auto;align-items:start;column-gap:12px}
+  .fare-top .fare-swap{justify-self:center;align-self:start;margin:30px 0 0;width:36px;height:36px;transform:rotate(90deg)}
+  .fare-top .fare-submit{margin:24px 0 0;align-self:start;height:48px;white-space:nowrap;display:inline-flex;align-items:center;gap:6px}
+  .fare-top .fare-form>.location-problem{grid-column:1/-1}
+  .fare-top .fare-steps{grid-auto-flow:column;grid-auto-columns:1fr;gap:16px}
+  .fare-top .fare-stats{max-width:720px}
+}
+.fare-page .route-buses{margin-top:16px}
+/* The boxes under the map. Saved calculations on the left; "Check passenger count" and SOS stacked on the right.
+   Each box is as tall as its own content (no stretching, so no empty gaps), with the same padding, corners,
+   heading style and an icon beside each heading. */
+.fare-page .extra-panel{border-radius:14px}
+.fare-tools{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);grid-template-areas:"history lookup" "history sos";gap:16px;align-items:start;margin-top:16px}
+.fare-tools>.fare-history-panel{grid-area:history}
+.fare-tools>.passenger-lookup{grid-area:lookup}
+.fare-tools>.sos-panel{grid-area:sos}
+.fare-tools>article{display:flex;flex-direction:column;gap:12px;min-width:0;padding:20px 22px;margin:0}
+.fare-tools>article .extra-panel-title{margin:0;align-items:flex-start}
+.fare-tools .extra-panel-title small,.fare-tools .sos-panel small{font-size:10.5px;letter-spacing:1.2px}
+.fare-tools .extra-panel-title h2,.fare-tools .sos-panel h2{font-size:17px;margin:3px 0 0}
+.fare-tools .extra-help,.fare-tools .sos-panel p{margin:0;font-size:12.5px;line-height:1.55}
+/* Heading with an icon tile: [icon] SMALL LABEL / Title */
+.tool-heading{display:flex;align-items:center;gap:12px;min-width:0}
+.tool-heading>div{display:grid;min-width:0}
+.tool-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;flex:none;background:var(--bg-e4f4e8);color:var(--fg-19865e)}
+.tool-icon.is-sos{background:#fdebe7;color:#c2412d}
+html[data-theme="dark"] .tool-icon.is-sos,html[data-theme="night"] .tool-icon.is-sos{background:#f07a6626;color:#f07a66}
+/* Saved calculations: the list scrolls inside the box, about as tall as the two boxes beside it. */
+.fare-tools .fare-history{max-height:520px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding-right:4px}
+.fare-tools .fare-history>.extra-help{padding-bottom:8px}
+.fare-tools .passenger-lookup .passenger-result{margin-top:2px}
+.fare-tools .passenger-lookup-board{margin-top:2px}
+.sos-intro{display:grid;gap:10px}
+.sos-intro .tool-heading h2{margin:3px 0 0}
+.sos-intro p{margin:0!important}
+.fare-steps{margin:2px 0 6px}
+@media(max-width:1000px){
+  .fare-top .fare-map{height:340px}
+  .fare-tools{grid-template-columns:1fr 1fr;grid-template-areas:"history history" "lookup sos"}
+  .fare-tools .fare-history{max-height:340px}
+}
+@media(max-width:640px){
+  .fare-top .fare-calc{padding:16px}
+  .fare-top .fare-map{height:300px}
+  .fare-tools{grid-template-columns:1fr;grid-template-areas:"history" "lookup" "sos"}
+  .fare-tools>article{padding:16px}
+}
+
+/* "Check passenger count": look a bus up by its code and see how full it is. */
+.passenger-lookup{display:grid;gap:10px}
+.passenger-lookup-form{display:grid;gap:8px}
+.passenger-lookup-input{display:flex;align-items:center;gap:8px;padding:0 12px;border:1.5px solid var(--bd-e4ebe5);border-radius:10px;background:var(--bg-ffffff);color:var(--fg-718078);transition:border-color .15s,box-shadow .15s}
+.passenger-lookup-input:focus-within{border-color:var(--bd-19865e);box-shadow:0 0 0 3px #19865e1f;color:var(--fg-19865e)}
+.passenger-lookup-input input{flex:1;min-width:0;border:0;outline:0;background:transparent;padding:11px 0;font:inherit;font-size:14px;font-weight:600;letter-spacing:.03em;color:var(--fg-13281f);text-transform:uppercase}
+.passenger-lookup-input input::placeholder{text-transform:none;letter-spacing:0;font-weight:400;color:var(--fg-9eaba4,#9eaba4)}
+.passenger-lookup-form .extra-button{display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.passenger-lookup-error{margin:0;padding:9px 11px;border-radius:9px;background:var(--bg-fff0ed);color:var(--fg-a95548);font-size:12.5px;font-weight:600;line-height:1.45}
+.passenger-result{display:grid;gap:8px;padding:12px 14px;border-radius:12px;border:1px solid var(--bd-e4ebe5);background:var(--bg-f7faf7);--level:#19865e}
+.passenger-result.is-busy{--level:#c98a12}
+.passenger-result.is-full{--level:#c2412d}
+.passenger-result-head{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 10px}
+.passenger-result-head b{font-size:16px;letter-spacing:.03em;color:var(--fg-13281f)}
+.passenger-result-head span{font-size:12.5px;color:var(--fg-566d5e)}
+.passenger-result-count{display:flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;color:var(--fg-34483b)}
+.passenger-result-count svg{color:var(--level)}
+.passenger-result-count em{margin-left:auto;font-style:normal;font-size:12px;font-weight:700;color:var(--level)}
+.passenger-bar{height:8px;border-radius:6px;background:var(--bg-eff4ef);overflow:hidden}
+.passenger-bar i{display:block;height:100%;border-radius:6px;background:var(--level);transition:width .4s ease}
+.passenger-result small{font-size:12px;color:var(--level);font-weight:600}
+.passenger-lookup-board{justify-self:start;display:inline-flex;align-items:center;gap:5px;border:0;background:none;padding:0;font:inherit;font-size:12.5px;font-weight:700;color:var(--fg-19865e);cursor:pointer}
+.passenger-lookup-board:hover{text-decoration:underline}
+@media(prefers-reduced-motion:reduce){.passenger-bar i{transition:none}}
+
+/* "Which bus did you take?": choosing a bus that runs between the two places, to log the trip. */
+.route-buses{display:grid;gap:14px;padding:18px 20px}
+.route-buses-head{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px}
+.route-buses-title{display:grid;gap:2px;min-width:0}
+.route-buses-title b{display:flex;align-items:center;gap:8px;font-size:16.5px;color:var(--fg-13281f)}
+.route-buses-title small{font-size:12.5px;color:var(--fg-718078)}
+.route-buses-count{padding:1px 8px;border-radius:20px;background:var(--bg-e4f4e8);color:var(--fg-14684a);font-size:12px}
+.route-buses-icon{display:grid;place-items:center;width:40px;height:40px;border-radius:12px;background:var(--bg-e4f4e8);color:var(--fg-19865e);flex:none}
+.route-buses-note{display:flex;align-items:center;gap:8px;margin:0;font-size:13px;color:var(--fg-566d5e)}
+.route-buses-note.is-error{color:var(--fg-a95548);font-weight:600}
+.route-bus-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+.route-bus{position:relative;display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:12px;padding:12px 14px;border:1.5px solid var(--bd-e4ebe5);border-radius:12px;background:var(--bg-fbfcfb);cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s}
+.route-bus:hover{border-color:var(--bd-a9d3bc)}
+.route-bus.is-selected{border-color:var(--bd-19865e);background:var(--bg-edf7ef);box-shadow:0 0 0 3px #19865e1a}
+.route-bus input{position:absolute;opacity:0;pointer-events:none}
+.route-bus:has(input:focus-visible){outline:2px solid var(--bd-19865e);outline-offset:2px}
+.route-bus-check{display:grid;place-items:center;width:20px;height:20px;border-radius:50%;border:2px solid var(--bd-d4ddd7);background:var(--bg-ffffff);color:#fff}
+.route-bus.is-selected .route-bus-check{border-color:var(--bd-19865e);background:var(--bg-19865e)}
+.route-bus-main{display:grid;gap:4px;min-width:0}
+.route-bus-title{display:flex;align-items:center;flex-wrap:wrap;gap:6px}
+.route-bus-title b{font-size:14.5px;color:var(--fg-13281f)}
+.route-bus-title em{font-style:normal;padding:1px 7px;border-radius:6px;background:var(--bg-e4f4e8);color:var(--fg-14684a);font-size:11px;font-weight:700}
+.route-bus-title em.is-return{background:var(--bg-fff3dc);color:var(--fg-986f25)}
+.route-bus-stops{display:flex;align-items:center;flex-wrap:wrap;gap:5px;font-size:13px;font-weight:600;color:var(--fg-34483b)}
+.route-bus-stops svg{color:var(--fg-718078)}
+.route-bus-meta{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--fg-718078)}
+.route-bus-meta>span{display:inline-flex;align-items:center;gap:4px}
+.route-bus-fare{display:grid;justify-items:end;gap:1px}
+.route-bus-fare small{font-size:11px;color:var(--fg-718078)}
+.route-bus-fare b{font-size:17px;font-weight:800;color:var(--fg-13281f)}
+.route-buses-more{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:8px;border:1px dashed var(--bd-e4ebe5);border-radius:10px;background:none;font:inherit;font-size:13px;font-weight:700;color:var(--fg-19865e);cursor:pointer}
+.route-buses-more[aria-expanded="true"] svg{transform:rotate(180deg)}
+.route-buses-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;min-width:0}
+.route-buses-actions small{max-width:300px;font-size:12px;line-height:1.4;color:var(--fg-566d5e);text-align:right}
+.route-buses-log{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;padding:10px 16px}
+.route-buses-more{justify-self:center;padding:8px 18px}
+@media(max-width:820px){
+  .route-buses-head{grid-template-columns:auto 1fr}
+  .route-buses-actions{grid-column:1/-1;justify-content:space-between}
+  .route-buses-actions small{text-align:left;max-width:none;flex:1}
+}
+@media(max-width:560px){
+  .route-buses{padding:14px}
+  .route-bus-list{grid-template-columns:1fr}
+  .route-bus{grid-template-columns:auto 1fr;padding:12px}
+  .route-bus-fare{grid-column:2;justify-items:start;grid-auto-flow:column;align-items:baseline;gap:6px}
+  .route-buses-actions{flex-direction:column;align-items:stretch}
+  .route-buses-log{justify-content:center}
+}
+
 /* A coloured pin beside "From" (green) and "To" (red), and the same colour on the pin inside the box. */
 .location-field{--pin:#19865e;--pin-soft:#e4f4e8}
 .location-field.is-end{--pin:#d0412d;--pin-soft:#fdebe7}
@@ -171,6 +304,80 @@ html[data-theme="dark"] .location-field.is-end,html[data-theme="night"] .locatio
 .chat-compose textarea:focus{border-color:var(--bd-20875f)}.chat-compose textarea[aria-invalid]{border-color:var(--bd-f3d7d2)}
 .chat-compose-help{margin:0;padding:0 14px 12px;font-size:12px;color:var(--fg-718078)}.chat-compose-help.error{color:var(--fg-a95548);font-weight:600}
 .friend-unread{display:inline-grid;place-items:center;min-width:19px;height:19px;padding:0 5px;border-radius:10px;background:var(--bg-19865e);color:var(--fg-ffffff);font:700 11px "DM Sans",sans-serif;font-style:normal}
+
+/* ---- Friends page layout ----
+   Two independent columns (a box growing in one never moves the other), boxes as tall as their content,
+   fixed-size placeholders while loading, and count badges that are always there, so nothing jumps. */
+.friends-page .extra-panel{border-radius:16px;padding:20px 22px}
+.friends-shell{display:grid;grid-template-columns:minmax(300px,380px) minmax(0,1fr);gap:18px;align-items:start}
+.friends-side,.friends-main{display:flex;flex-direction:column;gap:16px;min-width:0}
+.friends-page .extra-panel-title{margin-bottom:12px;align-items:center}
+.friends-page .friend-section .extra-panel-title h2{display:flex;align-items:center;gap:8px;margin:3px 0 0;font-size:18px}
+.friends-page .friend-count{display:inline-grid;place-items:center;min-width:26px;height:22px;padding:0 8px!important;border-radius:20px;font-size:12px!important;font-weight:700;background:var(--bg-e4f4e8)!important;color:var(--fg-14684a)!important;margin:0!important}
+
+/* Your friend code: the green card at the top. */
+.friends-page .friend-code-card{background:linear-gradient(135deg,#14674a 0%,#1b8a5f 100%);border:0;color:#fff;box-shadow:0 14px 32px -18px rgba(20,103,74,.7)}
+.friends-page .friend-code-card>small{color:#c8ecd9!important;font-size:11px;letter-spacing:1.4px}
+.friends-page .friend-code-card .friend-code-row{margin:10px 0 8px}
+.friends-page .friend-code-card .friend-code-row>strong{color:#fff;font-size:34px;letter-spacing:6px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-weight:800}
+.friends-page .friend-code-card .extra-button.secondary{background:#fff;color:#14674a;border-color:#fff;display:inline-flex;align-items:center;gap:6px}
+.friends-page .friend-code-card .extra-button.secondary:hover{background:#e9f7ef}
+.friends-page .friend-code-card>p{color:#d6f1e3;margin:0;font-size:13px}
+
+/* Add a friend */
+.friends-page .friend-search-card{display:grid;gap:12px}
+.friend-card-title{margin:3px 0 0;font:700 18px "Manrope","Bangla Digits","Hind Siliguri",sans-serif;letter-spacing:-.3px;color:var(--fg-13281f)}
+.friends-page .friend-search-form{margin-top:0}
+.friends-page .friend-search-form>div{gap:8px}
+.friends-page .friend-search-form input{border-radius:10px;border-width:1.5px;transition:border-color .15s,box-shadow .15s}
+.friends-page .friend-search-form input:focus{box-shadow:0 0 0 3px #19865e1f}
+.friends-page .friend-search-form .extra-button{display:inline-flex;align-items:center;gap:6px;border-radius:10px}
+.friends-page .friend-result{padding:14px;margin-top:0;border:1px solid var(--bd-e4ebe5);border-radius:12px;background:var(--bg-f7faf7)}
+.friends-page .friend-result-actions .extra-button{display:inline-flex;align-items:center;gap:6px}
+
+/* Why friends matter: links the page to SOS. */
+.friend-safety-card{display:flex;align-items:flex-start;gap:12px;background:var(--bg-f7faf7)!important}
+.friend-safety-card>div{display:grid;gap:3px}
+.friend-safety-card b{font-size:14.5px;color:var(--fg-13281f)}
+.friend-safety-card p{margin:0;font-size:13px;line-height:1.55;color:var(--fg-566d5e)}
+
+/* Lists */
+.friend-rows{display:grid}
+.friends-page .person-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:12px;padding:12px 10px;margin:0 -10px;border-top:1px solid var(--bd-eef1ee);border-radius:10px;transition:background .15s}
+.friends-page .friend-rows .person-row:first-child{border-top-color:transparent}
+.friends-page .friend-rows .person-row:hover{background:var(--bg-f7faf7)}
+.person-actions,.friends-page .person-row>.person-actions{display:flex;flex:none;align-items:center;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.person-actions .extra-button{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+.friends-list .friend-rows{max-height:460px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;padding:0 10px;margin:0 -10px}
+.friends-page .extra-avatar{width:42px;height:42px;font-size:16px;font-weight:800}
+.friends-page .extra-avatar.tone-0{background:#e4f4e8;color:#19704d}.friends-page .extra-avatar.tone-1{background:#e6effd;color:#2c5ea8}
+.friends-page .extra-avatar.tone-2{background:#fdeee3;color:#a5541c}.friends-page .extra-avatar.tone-3{background:#f1e9fb;color:#6a3fa8}
+.friends-page .extra-avatar.tone-4{background:#fdf3d6;color:#8a6510}.friends-page .extra-avatar.tone-5{background:#fde7ec;color:#a83a55}
+html[data-theme="dark"] .friends-page .extra-avatar,html[data-theme="night"] .friends-page .extra-avatar{filter:brightness(.82) saturate(1.15)}
+.friend-empty{display:flex;align-items:center;gap:12px;padding:16px;border:1.5px dashed var(--bd-e4ebe5);border-radius:12px;color:var(--fg-9eaba4,#9eaba4)}
+.friend-empty svg{flex:none}
+.friend-empty .extra-empty-copy{margin:0}
+
+/* Placeholders while loading: the same size as real rows. */
+.friend-skeleton{pointer-events:none}
+.friend-skeleton i{width:42px;height:42px;border-radius:50%}
+.friend-skeleton span{display:grid;gap:7px}
+.friend-skeleton b{height:12px;width:45%;border-radius:6px}
+.friend-skeleton small{height:10px;width:30%;border-radius:6px}
+.friend-skeleton i,.friend-skeleton b,.friend-skeleton small{display:block;background:linear-gradient(90deg,var(--bg-eff4ef) 0%,var(--bg-f7faf7) 50%,var(--bg-eff4ef) 100%);background-size:200% 100%;animation:friend-shimmer 1.4s ease-in-out infinite}
+@keyframes friend-shimmer{to{background-position:-200% 0}}
+
+@media(max-width:960px){
+  .friends-shell{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+  .friends-page .extra-panel{padding:16px}
+  .friends-page .friend-code-card .friend-code-row>strong{font-size:28px;letter-spacing:4px}
+  .friends-page .person-row{grid-template-columns:auto minmax(0,1fr)}
+  .friends-page .person-actions{grid-column:1/-1;justify-content:stretch}
+  .friends-page .person-actions .extra-button{flex:1;justify-content:center}
+}
+@media(prefers-reduced-motion:reduce){.friend-skeleton i,.friend-skeleton b,.friend-skeleton small{animation:none}.friends-page .person-row{transition:none}}
 /* Phones: the list first; choosing a conversation shows it full width with a back button. */
 @media(max-width:700px){
   .chat-page .chat-layout.has-chat .chat-sidebar{display:none}.chat-page .chat-layout:not(.has-chat) .chat-main{display:none}
@@ -343,6 +550,20 @@ html[data-theme="dark"] .review-avatar,html[data-theme="night"] .review-avatar{f
 .notifications-page .notification-copy p{margin:2px 0}
 .notification-meta{display:flex;align-items:center;gap:12px;flex-wrap:wrap}.notification-meta .link-button{font-size:13px}
 .notification-map{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:700;color:var(--fg-a95548)}
+/* A shared location (SOS): a small map, the coordinates, and a clear "Open in Google Maps" button. */
+.shared-location{margin-top:8px;max-width:560px;border:1px solid var(--bd-e4ebe5);border-radius:14px;overflow:hidden;background:var(--bg-ffffff);box-shadow:0 6px 18px -14px rgba(22,66,48,.45)}
+.notification-row.sos .shared-location{border-color:#f0c4bb}
+.shared-location-map{display:block;width:100%;height:190px;border:0;background:var(--bg-eef2ef)}
+.shared-location-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;border-top:1px solid var(--bd-eef1ee)}
+.shared-location-pin{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#fdebe7;color:#d0412d;flex:none}
+.shared-location-text{display:grid;gap:1px;flex:1;min-width:120px}
+.shared-location-text b{font-size:13.5px!important;color:var(--fg-13281f)}
+.shared-location-text small{font-size:12px!important;color:var(--fg-566d5e)!important;font-variant-numeric:tabular-nums}
+.shared-location-open{display:inline-flex;align-items:center;gap:6px;padding:9px 14px;border-radius:10px;background:#1a73e8;color:#fff!important;font-size:13px;font-weight:700;text-decoration:none;white-space:nowrap;box-shadow:0 4px 12px -6px rgba(26,115,232,.7);transition:background .15s}
+.shared-location-open:hover{background:#1557b0}
+.shared-location-open:focus-visible{outline:2px solid #1a73e8;outline-offset:2px}
+html[data-theme="dark"] .shared-location-pin,html[data-theme="night"] .shared-location-pin{background:#f07a6626;color:#f07a66}
+@media(max-width:560px){.shared-location-map{height:160px}.shared-location-open{flex:1 1 100%;justify-content:center}}
 .notification-empty{display:grid;justify-items:center;text-align:center;gap:8px;padding:34px 16px;color:var(--fg-718078)}.notification-empty b{font-size:16px;color:var(--fg-34483b)}.notification-empty span{font-size:13.5px;max-width:380px;line-height:1.5}
 .notification-more{margin-top:10px}
 .sos-panel{display:grid;gap:12px}.sos-panel p{margin:4px 0 0}
@@ -357,6 +578,39 @@ html[data-theme="dark"] .review-avatar,html[data-theme="night"] .review-avatar{f
 .sos-permission{display:flex;gap:5px;align-items:flex-start;font-size:12.5px!important;color:var(--fg-566d5e)!important}
 .sos-result{font-size:13px!important;font-weight:600;border-radius:6px;padding:8px 10px}.sos-result.success{display:flex;align-items:center;gap:6px;color:var(--fg-28734f)!important;background:var(--bg-edf7ef)}.sos-result.error{color:var(--fg-a95548)!important;background:var(--bg-fff0ed)}
 .sos-confirm-actions{display:flex;gap:8px;flex-wrap:wrap}
+/* How many people an SOS reaches, said before it is pressed. */
+.sos-reach{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;margin:0;font-size:12.5px;font-weight:600;color:var(--fg-28734f)}
+.sos-reach.is-none{padding:10px 12px;border-radius:10px;border:1px solid #f1d39a;background:#fff8e8;color:#7a5410;line-height:1.45}
+.sos-reach.is-none>span{flex:1;min-width:180px}
+.sos-reach .extra-button,.sos-result .extra-button{display:inline-flex;align-items:center;gap:5px;padding:7px 11px;font-size:12px}
+.sos-result.error{display:grid;gap:8px;justify-items:start;line-height:1.5}
+.sos-main-actions{display:flex;flex-wrap:wrap;gap:8px}
+.sos-main-actions .extra-button{display:inline-flex;align-items:center;gap:6px}
+/* The location found, with ways to share it by hand. */
+.sos-location{display:grid;gap:10px;padding:12px 14px;border-radius:12px;border:1px solid #f0c4bb;background:var(--bg-ffffff)}
+.sos-location-head{display:flex;align-items:center;gap:10px}
+.sos-location-head>div{display:grid;gap:1px}
+.sos-location-head b{font-size:14px;color:var(--fg-13281f)}
+.sos-location-head small{font-size:12px!important;letter-spacing:0!important;font-weight:600!important;color:var(--fg-566d5e)!important;font-variant-numeric:tabular-nums}
+.sos-location-dot{display:grid;place-items:center;width:32px;height:32px;border-radius:50%;background:#fdebe7;color:#c2412d;flex:none}
+.sos-location-actions{display:flex;flex-wrap:wrap;gap:6px}
+.sos-location-actions .extra-button{display:inline-flex;align-items:center;gap:5px;padding:7px 11px;font-size:12px;text-decoration:none}
+.sos-emergency-note{display:flex;align-items:flex-start;gap:8px;margin:0!important;padding:10px 12px;border-radius:10px;background:#fdebe7;color:#8f2a1c!important;font-size:12.5px!important;line-height:1.5!important}
+.sos-emergency-note svg{flex:none;margin-top:2px;color:#c2412d}
+.sos-emergency-note b{font-weight:800;color:#b3321f}
+html[data-theme="dark"] .sos-emergency-note,html[data-theme="night"] .sos-emergency-note{background:#f07a6622;color:#f3b4a9!important}
+html[data-theme="dark"] .sos-emergency-note b,html[data-theme="night"] .sos-emergency-note b{color:#f07a66}
+html[data-theme="dark"] .sos-emergency-note svg,html[data-theme="night"] .sos-emergency-note svg{color:#f07a66}
+html[data-theme="dark"] .sos-reach.is-none,html[data-theme="night"] .sos-reach.is-none{background:#3a2f1a;border-color:#6b5524;color:#f3d58f}
+html[data-theme="dark"] .sos-location,html[data-theme="night"] .sos-location{border-color:#6b3a33}
+html[data-theme="dark"] .sos-location-dot,html[data-theme="night"] .sos-location-dot{background:#f07a6626;color:#f07a66}
+/* "You are here" on the map: a red dot with a pulsing ring. */
+.map-me{position:relative;width:22px;height:22px}
+.map-me i{position:absolute;inset:4px;border-radius:50%;background:#e0412d;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.map-me::before{content:"";position:absolute;inset:0;border-radius:50%;background:#e0412d55;animation:map-me-pulse 1.8s ease-out infinite}
+@keyframes map-me-pulse{from{transform:scale(.6);opacity:1}to{transform:scale(2.4);opacity:0}}
+.leaflet-tooltip.map-me-label{font-weight:700;color:#b3321f;border-color:#f0c4bb}
+@media(prefers-reduced-motion:reduce){.map-me::before{animation:none}}
 @media(max-width:920px){.notifications-layout{grid-template-columns:1fr}}
 @media(max-width:700px){.top-actions>.icon-button.notification-bell{display:grid}.notifications-page .notification-row{flex-wrap:wrap}.notifications-page .notification-copy{flex:1 1 calc(100% - 50px)}.notifications-page .notification-row-actions{margin-left:47px}.sos-note input{font-size:16px}}
 /* ---- Offers: cashback, coupons & discounts (F15) ---- */

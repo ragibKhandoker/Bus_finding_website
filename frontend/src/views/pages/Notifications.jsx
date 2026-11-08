@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertTriangle, Bell, Check, CheckCheck, ExternalLink, Gift, MapPin, RefreshCw, Siren, Trash2, UserPlus, UserRound, Users } from 'lucide-react'
-import { formatDateTime, formatNumber, t } from '../../models/i18n'
+import { AlertTriangle, Bell, Check, CheckCheck, ExternalLink, Gift, MapPin, RefreshCw, Share2, Siren, Trash2, UserPlus, UserRound, Users } from 'lucide-react'
+import { formatDateTime, formatNumber, getLang, t } from '../../models/i18n'
 import { Feedback, Heading, Loading, RequireSignIn } from './MorePages'
 import { errorText } from '../../models/messages'
 import { changed, notificationApi } from '../../models/notifications'
+import { usePersistentState } from '../../controllers/usePersistentState'
 
 export { errorText } from '../../models/messages'
 export { PAGE_SIZE } from '../../models/notifications'
@@ -40,6 +41,34 @@ export const CATEGORY_ICONS = { friend: UserPlus, ride: Users, reward: Gift, sos
 
 export const CATEGORY_LABELS = { friend: 'Friends', ride: 'Ride share', reward: 'Reward', sos: 'SOS', account: 'Account', general: 'Update' }
 
+// The point in a Google Maps link like https://www.google.com/maps?q=23.81,90.41, or null.
+const pointOf = (url) => {
+  try {
+    const [lat, lng] = (new URL(url).searchParams.get('q') || '').split(',').map(Number)
+    return Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? { lat, lng } : null
+  } catch { return null }
+}
+
+// A shared location (e.g. in an SOS): a small map showing the spot, its coordinates, and a clear button that
+// opens it in Google Maps. The map is Google's key-free embed, loaded only when it scrolls into view.
+export function SharedLocation({ url }) {
+  const point = pointOf(url)
+  const embed = point && `https://maps.google.com/maps?${new URLSearchParams({ q: `${point.lat},${point.lng}`, z: '16', hl: getLang() === 'bn' ? 'bn' : 'en', output: 'embed' })}`
+  return <div className="shared-location" data-testid="shared-location">
+    {embed && <iframe className="shared-location-map" title={t('Map of the shared location')} src={embed} loading="lazy" referrerPolicy="no-referrer-when-downgrade" />}
+    <div className="shared-location-bar">
+      <span className="shared-location-pin" aria-hidden="true"><MapPin size={16} /></span>
+      <div className="shared-location-text">
+        <b>{t('Shared location')}</b>
+        {point && <small>{formatNumber(point.lat, { maximumFractionDigits: 5, useGrouping: false })}, {formatNumber(point.lng, { maximumFractionDigits: 5, useGrouping: false })}</small>}
+      </div>
+      <a className="shared-location-open" href={url} target="_blank" rel="noopener noreferrer">
+        <MapPin size={14} aria-hidden="true" /> {t('Open location in Google Maps')} <ExternalLink size={13} aria-hidden="true" />
+      </a>
+    </div>
+  </div>
+}
+
 export function NotificationRow({ item, busy, onRead, onDelete }) {
   const Icon = CATEGORY_ICONS[item.category] || (item.type === 'sos' ? Siren : Bell)
   const sos = item.category === 'sos' || item.type === 'sos'
@@ -51,9 +80,9 @@ export function NotificationRow({ item, busy, onRead, onDelete }) {
       <p>{item.message}</p>
       <div className="notification-meta">
         <small><time dateTime={item.createdAt}>{formatDateTime(item.createdAt)}</time></small>
-        {isMapLink(item.actionUrl) && <a className="notification-map" href={item.actionUrl} target="_blank" rel="noopener noreferrer"><MapPin size={13} aria-hidden="true" /> {t('Open location in Google Maps')} <ExternalLink size={12} aria-hidden="true" /></a>}
         {isAppPath(item.actionUrl) && <button type="button" className="link-button" onClick={() => { if (!item.isRead) onRead(item); openInApp(item.actionUrl) }}>{t('Open')}</button>}
       </div>
+      {isMapLink(item.actionUrl) && <SharedLocation url={item.actionUrl} />}
     </div>
     <div className="notification-row-actions">
       {!item.isRead && <button type="button" className="extra-icon-button" disabled={busy} onClick={() => onRead(item)} aria-label={t('Mark "{title}" as read', { title: item.title })} title={t('Mark as read')}><Check size={15} /></button>}
@@ -62,7 +91,7 @@ export function NotificationRow({ item, busy, onRead, onDelete }) {
   </div>
 }
 
-export function NotificationsPage({ token, user, signedIn, openAuth, notify }) {
+export function NotificationsPage({ token, user, signedIn, openAuth, notify, navigate }) {
   const userId = String(user?.id || user?._id || '')
   const [items, setItems] = useState([])
   const [unread, setUnread] = useState(0)
@@ -148,7 +177,7 @@ export function NotificationsPage({ token, user, signedIn, openAuth, notify }) {
             </>
               : <div className="notification-empty"><Bell size={22} /><b>{t('You are all caught up.')}</b><span>{t('Friend requests, ride updates, rewards and SOS alerts will appear here.')}</span></div>}
       </article>
-      <SosAlert token={token} signedIn={signedIn} openAuth={openAuth} notify={notify} />
+      <SosAlert token={token} signedIn={signedIn} openAuth={openAuth} notify={notify} navigate={navigate} />
     </div>
   </section>
 }
@@ -177,42 +206,111 @@ export function currentPosition(geo = typeof navigator !== 'undefined' ? navigat
 
 // The SOS alert: choose what help you need, confirm, then the browser is asked for your location and the alert
 // goes to your friends and ride companions. It is an in-app alert only.
-export function SosAlert({ token, signedIn, openAuth, notify }) {
-  const [step, setStep] = useState('idle') // idle | confirm | locating | sending | sent | error
-  const [kind, setKind] = useState('General')
-  const [note, setNote] = useState('')
+// Before it is pressed, it says how many people it would reach (and offers to add friends when nobody). Once the
+// real location is found it is shown, with a Google Maps link to share by hand, whether or not an
+// (The site never places phone calls itself: there is deliberately no "call 999" button.)
+// alert could be sent, and handed to onLocated (the map page puts it on the map).
+// navigate: optional, for the "Add friends" button.
+const mapsLink = ({ latitude, longitude }) => `https://www.google.com/maps?q=${latitude.toFixed(6)},${longitude.toFixed(6)}`
+
+function MyLocation({ position, notify }) {
+  const link = mapsLink(position)
+  const share = async () => {
+    const text = t('My current location')
+    try {
+      if (navigator.share) { await navigator.share({ title: text, text, url: link }); return }
+      await navigator.clipboard.writeText(link)
+      notify?.(t('Location link copied. Paste it in a message to someone you trust.'))
+    } catch { /* the share sheet was closed */ }
+  }
+  return <div className="sos-location" data-testid="sos-location">
+    <div className="sos-location-head">
+      <span className="sos-location-dot" aria-hidden="true"><MapPin size={15} /></span>
+      <div><b>{t('Your current location')}</b><small>{formatNumber(position.latitude, { maximumFractionDigits: 5, useGrouping: false })}, {formatNumber(position.longitude, { maximumFractionDigits: 5, useGrouping: false })}</small></div>
+    </div>
+    <div className="sos-location-actions">
+      <a className="extra-button secondary" href={link} target="_blank" rel="noreferrer"><ExternalLink size={13} aria-hidden="true" /> {t('Open in Google Maps')}</a>
+      <button type="button" className="extra-button secondary" onClick={share}><Share2 size={13} aria-hidden="true" /> {typeof navigator !== 'undefined' && navigator.share ? t('Share location') : t('Copy location link')}</button>
+    </div>
+    {/* Advice only, as plain text: the site never places a call itself. */}
+    <p className="sos-emergency-note" data-testid="sos-emergency-note"><AlertTriangle size={15} aria-hidden="true" /> <span><b>{t('In an emergency, call 999.')}</b> {t('Call it yourself from your phone; this website does not call anyone.')}</span></p>
+  </div>
+}
+
+export function SosAlert({ token, signedIn, openAuth, notify, onLocated, navigate }) {
+  const [step, setStep] = useState('idle') // idle | confirm | locating | sending | sent | nobody | error
+  // What help is needed, the note and the location found are kept when leaving the page and coming back.
+  const [kind, setKind] = usePersistentState('sos:kind', 'General')
+  const [note, setNote] = usePersistentState('sos:note', '')
   const [message, setMessage] = useState('')
+  const [position, setPosition] = usePersistentState('sos:position', null)
+  const [reach, setReach] = useState(null) // how many people an SOS would reach; null while unknown
   const sendingRef = useRef(false)
 
+  useEffect(() => {
+    if (!signedIn) { setReach(null); return }
+    let active = true
+    notificationApi.sosRecipients(token).then((data) => { if (active) setReach(Number(data.count) || 0) }).catch(() => { if (active) setReach(null) })
+    return () => { active = false }
+  }, [signedIn, token])
+
+  const found = (spot) => { setPosition(spot); onLocated?.(spot) }
   const start = () => { if (!signedIn) { openAuth(); return } setStep('confirm'); setMessage('') }
   const send = async () => {
     if (sendingRef.current) return
     sendingRef.current = true
     try {
       setStep('locating'); setMessage('')
-      const position = await currentPosition()
+      const spot = await currentPosition()
+      found(spot)
       setStep('sending')
-      const data = await notificationApi.sos({ ...position, serviceName: kind === 'General' ? '' : kind, message: note.trim() || undefined }, token)
+      const data = await notificationApi.sos({ ...spot, serviceName: kind === 'General' ? '' : kind, message: note.trim() || undefined }, token)
       const sent = data.count === 1 ? t('SOS sent to 1 person.') : t('SOS sent to {count} people.', { count: data.count })
-      setStep('sent'); setMessage(sent)
+      setStep('sent'); setMessage(sent); setReach(data.count)
       notify(sent)
       setNote('')
     } catch (e) {
-      setStep('error'); setMessage(errorText(e))
+      // 409: nobody to alert. The location was still found, so it stays on screen to share by hand.
+      setStep(e?.status === 409 ? 'nobody' : 'error'); setMessage(errorText(e))
+      if (e?.status === 409) setReach(0)
     } finally { sendingRef.current = false }
+  }
+  // Only find and show the location, without sending anything (for when nobody would receive an alert).
+  const showLocation = async () => {
+    if (!signedIn) { openAuth(); return }
+    setStep('locating'); setMessage('')
+    try { found(await currentPosition()); setStep('idle') } catch (e) { setStep('error'); setMessage(errorText(e)) }
   }
 
   const working = step === 'locating' || step === 'sending'
+  const confirming = ['confirm', 'locating', 'sending', 'error'].includes(step)
+  const addFriends = navigate && <button type="button" className="extra-button secondary" onClick={() => navigate('Friends')}><UserPlus size={13} aria-hidden="true" /> {t('Add friends')}</button>
   return <article className="extra-panel sos-panel" aria-live="polite">
-    <div>
-      <small>{t('NEED URGENT HELP?')}</small>
-      <h2>{t('SOS alert')}</h2>
+    <div className="sos-intro">
+      <div className="tool-heading"><span className="tool-icon is-sos" aria-hidden="true"><Siren size={19} /></span><div><small>{t('NEED URGENT HELP?')}</small><h2>{t('SOS alert')}</h2></div></div>
       <p>{t('Sends an alert with a Google Maps link to your current location to your friends and the people on your open ride shares. Nobody else sees it.')}</p>
       <p className="sos-warning"><AlertTriangle size={13} aria-hidden="true" /> {t('This does not contact emergency services. In danger, call 999.')}</p>
     </div>
-    {step === 'idle' || step === 'sent' ? <>
+
+    {signedIn && reach === 0 && step !== 'nobody' && <div className="sos-reach is-none" data-testid="sos-reach">
+      <Users size={15} aria-hidden="true" />
+      <span>{t('No one would receive an SOS yet. Add friends so it reaches someone you trust.')}</span>
+      {addFriends}
+    </div>}
+    {signedIn && reach > 0 && !confirming && <p className="sos-reach" data-testid="sos-reach"><Users size={14} aria-hidden="true" /> {reach === 1 ? t('Your SOS will reach 1 person.') : t('Your SOS will reach {count} people.', { count: reach })}</p>}
+
+    {step === 'nobody' && <div className="sos-result error" role="alert">
+      <span>{message}</span>
+      {addFriends}
+    </div>}
+    {position && !working && <MyLocation position={position} notify={notify} />}
+
+    {!confirming ? <>
       {step === 'sent' && <p className="sos-result success" role="status"><Check size={14} aria-hidden="true" /> {message}</p>}
-      <button type="button" className="extra-button sos-button" onClick={start}><Siren size={15} aria-hidden="true" /> {t('Send SOS')}</button>
+      <div className="sos-main-actions">
+        <button type="button" className="extra-button sos-button" onClick={start}><Siren size={15} aria-hidden="true" /> {t('Send SOS')}</button>
+        {signedIn && !position && <button type="button" className="extra-button secondary" onClick={showLocation}><MapPin size={14} aria-hidden="true" /> {t('Show my location')}</button>}
+      </div>
     </> : <div className="sos-confirm">
       <fieldset disabled={working}>
         <legend>{t('What help do you need?')}</legend>

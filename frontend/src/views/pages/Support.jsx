@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from
 import { ArrowLeft, Check, CircleAlert, Clock3, Copy, Eye, EyeOff, Headset, Inbox, KeyRound, Lock, LogOut, Mail, RefreshCw, Send, ShieldAlert, ShieldCheck, Siren, UserRound, X } from 'lucide-react'
 import { apiRequest } from '../../models/api'
 import { formatDate, formatDateTime, formatNumber, formatTime, t } from '../../models/i18n'
+import { usePersistentState } from '../../controllers/usePersistentState'
 import { Heading, RequireSignIn } from './MorePages'
 import '../styles/support.css'
 import { POLL_MS, usePolling } from '../../controllers/usePolling'
@@ -184,8 +185,9 @@ export function ForcePasswordModal({ token, user, initialPassword = '', onDone, 
 
 // ---- The conversation itself, shared by users and admins ----
 
-export function Conversation({ messages, viewerIsAdmin, status, onRetry, onSend, otherName, placeholder }) {
-  const [text, setText] = useState('')
+// draftKey: names the unsent message kept when leaving the page (one per conversation).
+export function Conversation({ messages, viewerIsAdmin, status, onRetry, onSend, otherName, placeholder, draftKey = null }) {
+  const [text, setText] = usePersistentState(draftKey, '')
   const [emergency, setEmergency] = useState(false)
   const [sending, setSending] = useState(false)
   const [error, setError] = useState('')
@@ -254,7 +256,7 @@ export function SupportPage({ token, user, signedIn, openAuth, navigate }) {
     <div className="sp-note emergency"><ShieldAlert size={18} /><span>{t('In danger right now? Call 999 first. Emergency messages here reach the admins quickly but are not an emergency service.')}</span></div>
     <div className="panel sp-panel">
       <header className="sp-head"><span className="sp-avatar admin"><ShieldCheck size={18} /></span><div><b>{t('SmartCommute admin')}</b><small>{t('Usually replies within a day')}</small></div></header>
-      <Conversation messages={messages} viewerIsAdmin={false} status={status} onRetry={() => reload()} onSend={send} otherName={t('Admin')}
+      <Conversation messages={messages} viewerIsAdmin={false} status={status} onRetry={() => reload()} onSend={send} otherName={t('Admin')} draftKey="support:draft"
         placeholder={t('No messages yet. Ask the admin anything about your account, trips or payments.')} />
     </div>
   </section>
@@ -409,7 +411,7 @@ export function AdminSupportInbox({ token, startWith, onStarted }) {
         {selected ? <>
           <header className="sp-head"><button type="button" className="icon-button sp-mobile-back" onClick={() => setSelected(null)} aria-label={t('Back')}><ArrowLeft size={18} /></button>
             <span className="sp-avatar"><UserRound size={18} /></span><div><b>{selected.name}</b><small>{selected.email}</small></div></header>
-          <Conversation messages={thread?.messages || []} viewerIsAdmin status={threadStatus} onRetry={() => reloadThread()} onSend={send} otherName={selected.name}
+          <Conversation messages={thread?.messages || []} viewerIsAdmin status={threadStatus} onRetry={() => reloadThread()} onSend={send} otherName={selected.name} draftKey={`support:admin-draft:${selected._id}`}
             placeholder={t('No messages yet. Write the first one.')} />
         </> : <div className="sp-empty sp-pick"><Headset size={28} /><p>{t('Choose a conversation to read and reply.')}</p></div>}
       </div>
