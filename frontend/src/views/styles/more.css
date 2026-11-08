@@ -325,6 +325,20 @@
 .verify-photo,.verify-reject{flex-basis:100%}.verify-reject{display:grid;gap:6px}.verify-reject label{font-size:12.5px;color:var(--fg-566d5e)}
 .verify-reject textarea{border:1px solid var(--bd-e4ebe5);border-radius:6px;padding:9px 11px;font:14px "DM Sans",sans-serif;color:var(--fg-34483b);background:var(--bg-ffffff);resize:vertical}.verify-reject .extra-button{justify-self:start}
 .verify-page .verification-row{flex-wrap:wrap;gap:8px}
+/* Applicant profile card in the admin review list. */
+.verify-profile{flex-basis:100%;display:grid;gap:14px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--bg-fbfcfb)}
+.verify-profile header{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.verify-profile header>div:nth-child(2){display:grid;gap:2px;flex:1;min-width:160px}
+.verify-profile header b{font-size:15.5px}
+.verify-profile-avatar{display:grid;place-items:center;width:42px;height:42px;border-radius:50%;background:var(--bg-e4f4e8);color:var(--fg-247248);font-weight:800;font-size:15px;flex:none}
+.verify-profile dl{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px 18px;margin:0}
+.verify-profile dl>div{display:grid;gap:2px;min-width:0}
+.verify-profile dt,.verify-profile-bio small{font-size:11.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--fg-718078)}
+.verify-profile dd{margin:0;font-size:14px;font-weight:500;color:var(--ink);overflow-wrap:anywhere}
+.verify-profile-bio{display:grid;gap:2px}
+.verify-profile-bio p{margin:0;font-size:14px;line-height:1.5;color:var(--ink);white-space:pre-wrap;overflow-wrap:anywhere}
+.verify-profile-empty{color:var(--fg-718078);font-weight:400;font-style:italic}
+@media(max-width:560px){.verify-profile{padding:12px}.verify-profile dl{grid-template-columns:1fr 1fr}}
 .ad-verify-card{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:14px;color:var(--fg-19865e)}.ad-verify-card>div{display:grid;gap:3px;flex:1;min-width:180px}
 .ad-verify-card b{font:700 15px var(--font-head);color:var(--fg-34483b)}.ad-verify-card span{font-size:13px;color:var(--fg-566d5e)}
 .pf-verify-link{display:block;margin-top:8px;font-size:13px}

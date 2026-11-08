@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { BadgeCheck, Check, Clock, Eye, FileImage, RefreshCw, ShieldCheck, X } from 'lucide-react'
+import { BadgeCheck, Check, Clock, Eye, FileImage, RefreshCw, ShieldCheck, UserRound, X } from 'lucide-react'
 import { apiBlob, apiRequest } from '../../models/api'
 import { formatDate, t } from '../../models/i18n'
 import { Feedback, Heading, Loading, RequireSignIn } from './MorePages'
@@ -158,6 +158,34 @@ function MyVerification({ token, notify }) {
   </div>
 }
 
+// The applicant's account details, so the admin can check the document photo against them.
+export function ApplicantProfile({ profile }) {
+  const notGiven = <span className="verify-profile-empty">{t('Not given')}</span>
+  const rows = [
+    ['Full name', profile.name],
+    ['Email address', profile.email],
+    ['Phone number', profile.phone],
+    ['Gender', profile.gender && t(profile.gender)],
+    ['Account type', profile.role && t(profile.role.charAt(0).toUpperCase() + profile.role.slice(1))],
+    ['Home area', profile.homeArea && t(profile.homeArea)],
+    ['Work area', profile.workArea && t(profile.workArea)],
+    ['Member since', profile.memberSince && formatDate(profile.memberSince, { day: 'numeric', month: 'long', year: 'numeric' })],
+    ['Last sign-in', profile.lastLoginAt ? formatDate(profile.lastLoginAt) : null],
+  ]
+  return <section className="verify-profile" aria-label={t('Applicant profile')} data-testid="applicant-profile">
+    <header>
+      <span className="verify-profile-avatar" aria-hidden="true">{(profile.name || '?').split(' ').filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('')}</span>
+      <div><b>{profile.name}</b><small>{profile.email}</small></div>
+      <div className="verify-flags">
+        <span className={profile.studentVerified ? 'on' : ''}><BadgeCheck size={14} aria-hidden="true" /> {t('Student')}: {profile.studentVerified ? t('Verified') : t('Not verified')}</span>
+        <span className={profile.nidVerified ? 'on' : ''}><ShieldCheck size={14} aria-hidden="true" /> {t('NID')}: {profile.nidVerified ? t('Verified') : t('Not verified')}</span>
+      </div>
+    </header>
+    <dl>{rows.map(([label, value]) => <div key={label}><dt>{t(label)}</dt><dd>{value || notGiven}</dd></div>)}</dl>
+    <div className="verify-profile-bio"><small>{t('Bio')}</small><p>{profile.bio || notGiven}</p></div>
+  </section>
+}
+
 function ReviewQueue({ token, notify }) {
   const [filter, setFilter] = useState('pending')
   const [items, setItems] = useState([])
@@ -165,6 +193,7 @@ function ReviewQueue({ token, notify }) {
   const [status, setStatus] = useState('loading')
   const [error, setError] = useState('')
   const [open, setOpen] = useState('') // id whose photo is shown
+  const [profileOpen, setProfileOpen] = useState('') // id whose applicant profile is shown
   const [rejecting, setRejecting] = useState('') // id whose reason box is shown
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState('')
@@ -202,11 +231,13 @@ function ReviewQueue({ token, notify }) {
             {item.state === 'rejected' && item.rejectionReason && <small>{t('Reason')}: {item.rejectionReason}</small>}
           </div>
           <StateBadge state={item.state} />
-          {item.hasImage && <button type="button" className="extra-button secondary" onClick={() => setOpen(open === item._id ? '' : item._id)} aria-expanded={open === item._id}><FileImage size={14} aria-hidden="true" /> {open === item._id ? t('Hide photo') : t('View photo')}</button>}
+          {item.profile && <button type="button" className="extra-button secondary" onClick={() => setProfileOpen(profileOpen === item._id ? '' : item._id)} aria-expanded={profileOpen === item._id}><UserRound size={14} aria-hidden="true" /> {profileOpen === item._id ? t('Hide profile') : t('View profile')}</button>}
+          {item.hasImage &&<button type="button" className="extra-button secondary" onClick={() => setOpen(open === item._id ? '' : item._id)} aria-expanded={open === item._id}><FileImage size={14} aria-hidden="true" /> {open === item._id ? t('Hide photo') : t('View photo')}</button>}
           {item.state === 'pending' && <>
             <button type="button" className="extra-button" disabled={busy === item._id} onClick={() => decide(item, true)}><Check size={14} aria-hidden="true" /> {busy === item._id ? t('Saving…') : t('Approve')}</button>
             <button type="button" className="extra-button secondary danger" disabled={busy === item._id} onClick={() => { setRejecting(rejecting === item._id ? '' : item._id); setReason('') }}><X size={14} aria-hidden="true" /> {t('Reject')}</button>
           </>}
+          {profileOpen === item._id && item.profile && <ApplicantProfile profile={item.profile} />}
           {open === item._id && <div className="verify-photo"><PrivateImage path={item.imageUrl} token={token} alt={t('Document photo from {name}', { name: item.userName })} /></div>}
           {rejecting === item._id && <form className="verify-reject" onSubmit={(e) => { e.preventDefault(); decide(item, false) }}>
             <label htmlFor={`reason-${item._id}`}>{t('Reason for rejecting (the user will see it)')}</label>
@@ -219,12 +250,14 @@ function ReviewQueue({ token, notify }) {
 
 export function VerificationPage({ token, user, signedIn, openAuth, notify }) {
   const admin = user?.role?.toLowerCase() === 'admin'
-  const heading = <Heading icon={ShieldCheck} eyebrow={t('ELIGIBILITY & PASSES')} title={t('Account verification')} subtitle={t('Verify your NID or student pass. An admin reviews each document.')} />
+  const heading = admin
+    ? <Heading icon={ShieldCheck} eyebrow={t('ADMIN REVIEW')} title={t('Account verification')} subtitle={t('Review the NID and student pass photos users send, then approve or reject each request.')} />
+    : <Heading icon={ShieldCheck} eyebrow={t('ELIGIBILITY & PASSES')} title={t('Account verification')} subtitle={t('Verify your NID or student pass. An admin reviews each document.')} />
   if (!signedIn) return <section className="extra-page">{heading}<RequireSignIn openAuth={openAuth} /></section>
+  // Admins only review requests; they have no documents of their own to submit.
   return <section className="extra-page verify-page">
     {heading}
-    {admin && <ReviewQueue token={token} notify={notify} />}
-    <MyVerification token={token} notify={notify} />
+    {admin ? <ReviewQueue token={token} notify={notify} /> : <MyVerification token={token} notify={notify} />}
   </section>
 }
 

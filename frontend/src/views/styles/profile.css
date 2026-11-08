@@ -53,6 +53,11 @@
 .pf-field input::placeholder,.pf-field textarea::placeholder{color:var(--fg-9eaba4)}
 .pf-field input:focus,.pf-field select:focus,.pf-field textarea:focus{border-color:var(--bd-19865e);background:var(--bg-ffffff);box-shadow:0 0 0 3px #19865e1f}
 .pf-field input:focus-visible,.pf-field select:focus-visible,.pf-field textarea:focus-visible{outline:0}
+/* The Gender drop-down (SelectMenu) sized and shaped like the other profile inputs. */
+.pf-field .select-menu-button{height:auto;min-height:47px;padding:11px 13px;border-radius:10px;border-color:var(--bd-d9e2dc);background:var(--bg-fbfcfb)}
+.pf-field .select-menu-button:focus-visible{outline:0;border-color:var(--bd-19865e);background:var(--bg-ffffff);box-shadow:0 0 0 3px #19865e1f}
+.pf-field .select-menu-value{font-size:15px;font-weight:500;color:var(--fg-13281f)}
+.pf-field .select-menu-list{z-index:20}
 .pf-actions{display:flex;justify-content:flex-end;gap:10px;padding-top:4px}
 .pf-actions .button{padding:12px 20px;font-size:14px;border-radius:10px}
 

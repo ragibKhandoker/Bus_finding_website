@@ -5,6 +5,7 @@ import { formatDate, formatNumber, t } from '../../models/i18n'
 import { saveSessionUser } from '../../models/session'
 import { errorText } from '../../models/messages'
 import { PageHeading, SignInPrompt } from '../components/common'
+import { SelectMenu } from '../components/AuthModal'
 import { BIO_LIMIT, DHAKA_AREAS, GENDERS, PROFILE_FIELDS, profileFormOf, profileProblem } from '../../models/user'
 import { ADMIN_FOCUS_KEY } from '../../controllers/router'
 import { changed } from '../../models/notifications'
@@ -92,7 +93,7 @@ export function ProfilePage({ user, token, signedIn, updateUser, signOut, openAu
             <label className="pf-field"><span>{t('Full name')}</span><input autoComplete="name" value={form.name} onChange={set('name')} maxLength={100} /></label>
             <label className="pf-field"><span>{t('Email address')}</span><input type="email" autoComplete="email" value={form.email} onChange={set('email')} maxLength={255} /></label>
             <label className="pf-field"><span>{t('Phone number')} <em>{t('Optional')}</em></span><input type="tel" autoComplete="tel" value={form.phone} onChange={set('phone')} placeholder={t('+880 1XXX-XXXXXX')} maxLength={20} /></label>
-            <label className="pf-field"><span>{t('Gender')}</span><select value={form.gender} onChange={set('gender')}>{GENDERS.map((gender) => <option key={gender} value={gender}>{t(gender)}</option>)}</select></label>
+            <div className="pf-field"><span id="pf-gender-label">{t('Gender')}</span><SelectMenu labelledBy="pf-gender-label" value={form.gender} onChange={(gender) => setForm((current) => ({ ...current, gender }))} options={GENDERS.map((gender) => ({ value: gender, label: t(gender) }))} /></div>
             <label className="pf-field"><span>{t('Home area')} <em>{t('Optional')}</em></span><input list="pf-areas" value={form.homeArea} onChange={set('homeArea')} placeholder={t('e.g. Uttara')} maxLength={100} /></label>
             <label className="pf-field"><span>{t('Work or study area')} <em>{t('Optional')}</em></span><input list="pf-areas" value={form.workArea} onChange={set('workArea')} placeholder={t('e.g. Motijheel')} maxLength={100} /></label>
             <label className="pf-field pf-wide"><span>{t('Bio')} <em>{formatNumber(form.bio.length)}/{formatNumber(BIO_LIMIT)}</em></span><textarea rows={3} value={form.bio} onChange={set('bio')} maxLength={BIO_LIMIT} placeholder={t('A line about you and how you usually commute.')} /></label>

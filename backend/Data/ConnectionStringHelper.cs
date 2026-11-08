@@ -11,7 +11,7 @@ public static class ConnectionStringHelper
         if (!connectionString.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase) &&
             !connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
         {
-            return connectionString;
+            return WithTimeouts(new NpgsqlConnectionStringBuilder(connectionString)).ConnectionString;
         }
 
         var uri = new Uri(connectionString);
@@ -36,6 +36,15 @@ public static class ConnectionStringHelper
             builder.ChannelBinding = channelBinding;
         }
 
-        return builder.ConnectionString;
+        return WithTimeouts(builder).ConnectionString;
+    }
+
+    // Neon's free tier suspends an idle database; waking it, or a slow network, can exceed Npgsql's 15 s default
+    // connect timeout. Give it more time unless the connection string already raised it.
+    private static NpgsqlConnectionStringBuilder WithTimeouts(NpgsqlConnectionStringBuilder builder)
+    {
+        if (builder.Timeout <= 15) builder.Timeout = 30;
+        if (builder.KeepAlive == 0) builder.KeepAlive = 30;
+        return builder;
     }
 }

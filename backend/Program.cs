@@ -41,7 +41,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
         "your Neon connection string, or set the ConnectionStrings__DefaultConnection environment variable.");
 }
 builder.Services.AddDbContext<AppDbContext>(options => options
-    .UseNpgsql(ConnectionStringHelper.ToNpgsql(connectionString), npgsql => npgsql.EnableRetryOnFailure(3))
+    .UseNpgsql(ConnectionStringHelper.ToNpgsql(connectionString), npgsql => npgsql.EnableRetryOnFailure(6, TimeSpan.FromSeconds(10), null))
     .UseSnakeCaseNamingConvention());
 
 // ---- Authentication (JWT) ----

@@ -152,8 +152,45 @@ public class VerificationViewModel : EntityViewModel
             RejectionReason = v.RejectionReason,
             CreatedAt = v.CreatedAt,
             ReviewedAt = v.ReviewedAt,
+            Profile = v.User is { } u ? VerificationProfileViewModel.From(u) : null,
         };
     }
+
+    // The applicant's current profile; only filled in when the user was loaded (the admin review list).
+    public VerificationProfileViewModel? Profile { get; init; }
+}
+
+// What an admin sees of an applicant's account while reviewing their document. No password or session data.
+public class VerificationProfileViewModel
+{
+    public string Name { get; init; } = "";
+    public string Email { get; init; } = "";
+    public string? Phone { get; init; }
+    public string Gender { get; init; } = "";
+    public string Role { get; init; } = "";
+    public string? HomeArea { get; init; }
+    public string? WorkArea { get; init; }
+    public string? Bio { get; init; }
+    public bool StudentVerified { get; init; }
+    public bool NidVerified { get; init; }
+    public DateTime MemberSince { get; init; }
+    public DateTime? LastLoginAt { get; init; }
+
+    public static VerificationProfileViewModel From(User u) => new()
+    {
+        Name = u.Name,
+        Email = u.Email,
+        Phone = u.Phone,
+        Gender = u.Gender,
+        Role = u.Role,
+        HomeArea = u.HomeArea,
+        WorkArea = u.WorkArea,
+        Bio = u.Bio,
+        StudentVerified = u.Pass,
+        NidVerified = u.IdentityVerified,
+        MemberSince = u.CreatedAt,
+        LastLoginAt = u.LastLoginAt,
+    };
 }
 
 public class UploadImageRequest

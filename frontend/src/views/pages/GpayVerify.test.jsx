@@ -241,6 +241,26 @@ describe('VerificationPage', () => {
     await waitFor(() => expect(calls.find((c) => c.path === '/verify/reject')?.body).toEqual({ verificationId: 'v2', reason: 'Blurry photo' }))
   })
 
+  it("shows an admin the applicant's profile and no submit form of their own", async () => {
+    const profile = { name: 'Nadia Islam', email: 'nadia@example.com', phone: '01712345678', gender: 'Female', role: 'commuter', homeArea: 'Mirpur', workArea: null, bio: 'BRACU student', studentVerified: false, nidVerified: true, memberSince: '2026-01-15T00:00:00Z' }
+    routes['GET /verify/all'] = () => reply(200, { success: true, pending: 1, data: [request('v1', 'pending', { profile })] })
+    const user = userEvent.setup()
+    renderPage(admin)
+
+    const row = (await screen.findAllByTestId('verification-request'))[0]
+    expect(screen.queryByRole('form', { name: 'Submit a document' })).toBeNull()
+    expect(screen.queryByTestId('my-verification')).toBeNull()
+    await user.click(within(row).getByRole('button', { name: /View profile/ }))
+    const card = within(row).getByTestId('applicant-profile')
+    expect(within(card).getByText('01712345678')).toBeTruthy()
+    expect(within(card).getByText('Mirpur')).toBeTruthy()
+    expect(within(card).getByText('BRACU student')).toBeTruthy()
+    expect(within(card).getByText(/NID: Verified/)).toBeTruthy()
+    expect(within(card).getAllByText('Not given').length).toBeGreaterThan(0)
+    await user.click(within(row).getByRole('button', { name: /Hide profile/ }))
+    expect(within(row).queryByTestId('applicant-profile')).toBeNull()
+  })
+
   it('does not show the review queue to ordinary users', async () => {
     routes['GET /verify/my-status'] = status(null)
     renderPage()

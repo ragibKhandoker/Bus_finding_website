@@ -120,7 +120,9 @@ public class VerificationService(AppDbContext db, ImageStorageService images, No
         pageSize = Math.Clamp(pageSize, 1, 100);
         var query = db.Verifications.Where(v => stored == null || v.Status == stored);
         var total = await query.CountAsync();
-        var items = await query.OrderByDescending(v => v.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize).AsNoTracking().ToListAsync();
+        // The applicant's account comes along so the admin can check the document against their profile.
+        var items = await query.OrderByDescending(v => v.CreatedAt).Skip((page - 1) * pageSize).Take(pageSize)
+            .Include(v => v.User).AsNoTracking().ToListAsync();
         var pending = await db.Verifications.CountAsync(v => v.Status == VerificationStatus.Hold);
         return ServiceResult<VerificationPage>.Ok(new VerificationPage(items, total, page, pageSize, pending));
     }
