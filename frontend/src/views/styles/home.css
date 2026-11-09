@@ -71,7 +71,7 @@
 
 .hp-services{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}
 .hp-service{display:flex;flex-direction:column;align-items:flex-start;text-align:left;background:var(--bg-ffffff);border:1px solid var(--hp-border);border-radius:20px;padding:28px;color:var(--hp-ink);transition:transform .2s,box-shadow .2s,border-color .2s}
-.hp-service:hover{transform:translateY(-4px);border-color:var(--bd-bfdcca);box-shadow:0 24px 48px -24px #13402c40}
+.hp-service:hover{border-color:var(--bd-bfdcca);box-shadow:0 24px 48px -24px #13402c40}
 .hp-service-icon{width:50px;height:50px;border-radius:14px;display:grid;place-items:center;margin-bottom:22px}
 .hp-service-icon.green{background:var(--bg-e2f4e9);color:var(--fg-14805a)}
 .hp-service-icon.orange{background:var(--bg-fdeee5);color:var(--fg-c4683f)}
@@ -322,7 +322,7 @@ html[data-theme="dark"] :is(select option,select optgroup),html[data-theme="nigh
 .hp-route{background:var(--bg-ffffff);border:1px solid var(--bd-e2e9e4);border-radius:18px;padding:18px 20px;transition:border-color .2s,box-shadow .2s,transform .2s}
 .hp-route:hover{border-color:var(--bd-bfdcca);box-shadow:0 18px 40px -26px #13402c4d}
 .hp-route-tile{display:flex;flex-direction:column;width:100%;text-align:left;color:inherit;font:inherit;cursor:pointer}
-.hp-route-tile:hover{transform:translateY(-2px)}
+.hp-route-tile:hover{border-color:var(--bd-bfdcca)}
 .hp-route-head{display:flex;align-items:center;gap:12px}
 .hp-route-head>span:last-child{min-width:0}
 .hp-route-head b{display:block;font:750 17px var(--font-head);color:var(--fg-13281f)}
@@ -404,15 +404,13 @@ html[data-theme="dark"] :is(select option,select optgroup),html[data-theme="nigh
 .hp-hero-copy>:nth-child(4){animation-delay:.21s}
 .hp-hero-copy>:nth-child(5){animation-delay:.28s}
 .hp-preview{animation-delay:.18s}
-/* Parallax: the map and the two floating cards move at different speeds while the hero scrolls away. */
-.hp-motion .hp-map{translate:0 calc(var(--hp-y,0px)*.05)}
-.hp-motion .hp-float-trip{translate:0 calc(var(--hp-y,0px)*-.12)}
-.hp-motion .hp-float-ride{translate:0 calc(var(--hp-y,0px)*-.22)}
-/* "backwards" fill only holds the start frame, so card hover lifts still work once the rise has played. */
+/* No movement while scrolling: nothing drifts at its own speed (no parallax), and sections below the hero fade
+   in where they stand the first time they are scrolled to, without sliding. */
+@keyframes hp-fade-in{from{opacity:0}to{opacity:1}}
 .hp-motion :is(.hp-section,.hp-cta):not(.is-in) :is(.hp-section-head,.hp-services>*,.hp-steps>*,.hp-tools>*,.hp-routes),
 .hp-motion .hp-cta:not(.is-in){opacity:0}
 .hp-motion .is-in :is(.hp-section-head,.hp-services>*,.hp-steps>*,.hp-tools>*,.hp-routes),
-.hp-motion .hp-cta.is-in{animation:hp-rise .85s cubic-bezier(.16,1,.3,1) backwards}
+.hp-motion .hp-cta.is-in{animation:hp-fade-in .6s ease-out backwards}
 .hp-motion .is-in :is(.hp-services,.hp-steps,.hp-tools)>*,.hp-motion .is-in .hp-routes{animation-delay:.12s}
 .hp-motion .is-in :is(.hp-services,.hp-steps,.hp-tools)>:nth-child(2){animation-delay:.2s}
 .hp-motion .is-in :is(.hp-services,.hp-steps,.hp-tools)>:nth-child(3){animation-delay:.28s}
@@ -442,7 +440,7 @@ html[data-theme="dark"] :is(select option,select optgroup),html[data-theme="nigh
 .trip-unavailable button{border:0;background:none;padding:0;color:var(--fg-14805a);font-weight:700;font-size:inherit}
 .trip-gmaps{text-decoration:none}
 .results-with-map{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px;align-items:start}
-.results-map{position:sticky;top:88px}
+.results-map{position:static}
 .bus-result.selected{border-color:var(--bd-7fc7a3);box-shadow:0 0 0 3px #19865e1a}
 .return-badge{background:var(--bg-fff3e6);color:var(--fg-b4692e)}
 .bus-card-actions{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-top:10px}
@@ -463,6 +461,43 @@ html[data-theme="dark"] :is(select option,select optgroup),html[data-theme="nigh
 .gmap-pin{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;border:3px solid var(--bd-ffffff);box-shadow:0 3px 8px #13281f59;font:800 12px var(--font-head);color:var(--fg-ffffff)}
 .gmap-pin.gmap-start{background:var(--bg-19865e)}
 .gmap-pin.gmap-end{background:var(--bg-e5533d)}
+
+/* ---- Live map while riding (LiveRide) ---- */
+.live-ride-start{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:8px;padding:12px 14px;border:1px dashed var(--bd-bfdcca);border-radius:12px;background:var(--bg-ffffff)}
+.live-ride-start>div{display:grid;gap:2px;flex:1;min-width:200px}
+.live-ride-start b{font-size:14px;color:var(--fg-13281f)}
+.live-ride-start small{font-size:12.5px;line-height:1.45;color:var(--fg-6f8178)}
+.live-ride-start .button{display:inline-flex;align-items:center;gap:6px}
+.live-ride-start-icon{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;background:#e6effd;color:#1a73e8;flex:none}
+.live-ride{display:grid;gap:10px;margin-top:8px;padding:12px;border:1px solid var(--bd-bfdcca);border-radius:14px;background:var(--bg-ffffff)}
+.live-ride-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.live-ride-badge{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:20px;background:#e6effd;color:#1a5fc4;font-size:12px;font-weight:800;letter-spacing:.06em}
+.live-ride-badge i{width:8px;height:8px;border-radius:50%;background:#1a73e8;animation:live-blink 1.4s ease-in-out infinite}
+@keyframes live-blink{50%{opacity:.25}}
+.live-ride-tools{display:flex;gap:8px;flex-wrap:wrap}
+.live-ride-tools .button{display:inline-flex;align-items:center;gap:6px}
+.live-ride-map{position:relative}
+.live-trip-map{position:relative;z-index:0;height:clamp(280px,42vh,420px);border-radius:10px;overflow:hidden;background:var(--bg-eef2ef)}
+.live-ride-overlay{position:absolute;left:10px;right:10px;bottom:10px;z-index:500;display:flex;align-items:center;gap:8px;margin:0;padding:10px 12px;border-radius:10px;background:rgba(255,255,255,.95);color:var(--fg-34483b,#34483b);font-size:13px;font-weight:600;box-shadow:0 6px 18px -8px rgba(0,0,0,.35)}
+.live-ride-overlay.is-error{color:#a94435}
+.live-ride-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.live-ride-stats>div{display:grid;gap:2px;padding:10px 12px;border-radius:11px;background:var(--bg-f4faf6);border:1px solid var(--bd-e2e9e4)}
+.live-ride-stats small{font-size:11.5px;font-weight:700;letter-spacing:.03em;color:var(--fg-6f8178)}
+.live-ride-stats b{display:flex;align-items:center;gap:5px;font:800 16px var(--font-head);color:var(--fg-13281f);overflow-wrap:anywhere}
+.live-ride-stats em{font-style:normal;font-size:12.5px;font-weight:600;color:var(--fg-14684a)}
+.live-ride-stats>.live-ride-arrived{grid-column:1/-1;display:flex;align-items:center;gap:8px;background:#e4f4e8;color:#14684a;font-weight:700;font-size:14px}
+.live-ride-stats>.live-ride-off{grid-column:1/-1;background:#fff8e8;border-color:#f1d39a;color:#7a5410;font-size:13px;font-weight:600}
+/* The rider: a blue dot with a pulsing ring, like a phone's map. */
+.live-me{position:relative;width:24px;height:24px}
+.live-me i{position:absolute;inset:5px;border-radius:50%;background:#1a73e8;border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.35)}
+.live-me::before{content:"";position:absolute;inset:0;border-radius:50%;background:#1a73e855;animation:live-pulse 2s ease-out infinite}
+@keyframes live-pulse{from{transform:scale(.6);opacity:1}to{transform:scale(2.6);opacity:0}}
+html[data-theme="dark"] .live-ride-overlay,html[data-theme="night"] .live-ride-overlay{background:rgba(24,32,28,.95);color:#e7efe9}
+html[data-theme="dark"] .live-ride-start-icon,html[data-theme="night"] .live-ride-start-icon,html[data-theme="dark"] .live-ride-badge,html[data-theme="night"] .live-ride-badge{background:#1a73e826;color:#8ab4f8}
+html[data-theme="dark"] .live-ride-stats>.live-ride-arrived,html[data-theme="night"] .live-ride-stats>.live-ride-arrived{background:#4cc38a22;color:#7fd3ad}
+html[data-theme="dark"] .live-ride-stats>.live-ride-off,html[data-theme="night"] .live-ride-stats>.live-ride-off{background:#3a2f1a;border-color:#6b5524;color:#f3d58f}
+@media(max-width:600px){.live-trip-map{height:280px}.live-ride-tools{width:100%}.live-ride-tools .button{flex:1;justify-content:center}}
+@media(prefers-reduced-motion:reduce){.live-ride-badge i,.live-me::before{animation:none}}
 .gmap-pin.gmap-ride{width:20px;height:20px;border-width:2px;background:var(--bg-19865e);font-size:10px}
 .gmap-pin.gmap-stop{width:10px;height:10px;border-width:2px;background:var(--bg-7fc7a3);box-shadow:none}
 .gmap-legend{display:flex;flex-wrap:wrap;gap:6px 16px;list-style:none;margin:10px 2px 0;padding:0;font-size:12px;color:var(--fg-6f8178)}
@@ -780,8 +815,5 @@ html[data-theme="dark"] .board-blocked-icon,html[data-theme="night"] .board-bloc
 .hp-photo figcaption:before{content:"";width:8px;height:8px;border-radius:50%;background:rgb(240 98 170);flex:none}
 .hp-photo-fleet figcaption{right:14px;top:14px}
 .hp-photo-driver figcaption,.hp-photo-city figcaption{left:10px;bottom:10px;font-size:11.5px;padding:5px 10px}
-.hp-motion .hp-photo-fleet{translate:0 calc(var(--hp-y,0px)*.05)}
-.hp-motion .hp-photo-driver{translate:0 calc(var(--hp-y,0px)*-.14)}
-.hp-motion .hp-photo-city{translate:0 calc(var(--hp-y,0px)*-.2)}
 @media(max-width:1024px){.hp-photo-fleet{left:0}.hp-photo-city{right:0}}
 @media(max-width:700px){.hp-photo-fleet{bottom:48px;border-radius:20px}.hp-photo-driver,.hp-photo-city{width:48%;border-width:4px;border-radius:16px}.hp-photo-fleet figcaption{right:10px;top:10px;font-size:11.5px}.hp-photo-driver figcaption,.hp-photo-city figcaption{font-size:10.5px;padding:4px 8px;left:6px;bottom:6px}}

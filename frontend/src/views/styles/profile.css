@@ -1,6 +1,6 @@
 /* ---- Profile page ---- */
 .pf-layout{display:grid;grid-template-columns:320px minmax(0,1fr);gap:24px;align-items:start}
-.pf-card{position:sticky;top:96px;overflow:hidden;background:var(--bg-ffffff);border:1px solid var(--bd-e2e9e4);border-radius:20px;padding:0 22px 22px;display:flex;flex-direction:column;align-items:center;text-align:center}
+.pf-card{position:relative;overflow:hidden;background:var(--bg-ffffff);border:1px solid var(--bd-e2e9e4);border-radius:20px;padding:0 22px 22px;display:flex;flex-direction:column;align-items:center;text-align:center}
 .pf-cover{align-self:stretch;height:84px;margin:0 -22px;background:linear-gradient(135deg,var(--bg-0f3527),var(--bg-19865e) 70%,var(--bg-2bb07d))}
 .pf-avatar{width:88px;height:88px;margin-top:-44px;border-radius:50%;border:4px solid var(--bd-ffffff);background:var(--bg-e2f4e9);color:var(--fg-14805a);display:grid;place-items:center;font:800 30px var(--font-head);box-shadow:0 8px 20px -8px #13402c66}
 .pf-name{margin-top:12px;font:800 20px var(--font-head);letter-spacing:-.02em;color:var(--fg-13281f)}

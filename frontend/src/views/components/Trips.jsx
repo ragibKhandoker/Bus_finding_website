@@ -6,6 +6,8 @@ import { errorText } from '../../models/messages'
 import { announceTripChange, destinationsFrom, stopsOf } from '../../models/trips'
 import { formatClock, useActiveTrip, useElapsed } from '../../controllers/useTrips'
 import { SelectMenu } from './AuthModal'
+import { LiveRide } from './LiveRide'
+import { PERSIST_PREFIX } from '../../controllers/usePersistentState'
 
 export { errorText } from '../../models/messages'
 export { TRIP_CHANGED_EVENT } from '../../models/trips'
@@ -52,6 +54,8 @@ export function ActiveTripPanel({ token, signedIn, notify, onCompleted }) {
     setEnding(true); setError('')
     try {
       const data = await request(`/individual-bus/${encodeURIComponent(trip.individualBusId)}/end-trip`, { token, method: 'POST', body: JSON.stringify({ destination }) })
+      // The ride is over: the live map switches off, so it does not start by itself on the next trip.
+      try { sessionStorage.removeItem(`${PERSIST_PREFIX}trip:live-map`) } catch { /* storage blocked */ }
       setFinished({ trip: data.data, wallet: data.wallet })
       notify?.(t('Trip completed! You earned {gems} gems.', { gems: data.gemsEarned ?? data.data.gemsEarned }))
       announceTripChange()
@@ -96,6 +100,7 @@ export function ActiveTripPanel({ token, signedIn, notify, onCompleted }) {
         </div>
         <i className="trip-live-dot" aria-hidden="true" />
       </div>}
+      <LiveRide route={route} source={trip.source} destination={destination || trip.destination} />
       <div className="trip-panel-end">
         <StopSelect label={t('Getting off at')} value={destination} stops={choices} onChange={setDestination} tone="end" />
         <button type="button" className={`button button-dark${ending ? ' is-loading' : ''}`} onClick={end} disabled={ending} aria-busy={ending}>
