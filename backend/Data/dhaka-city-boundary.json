@@ -1,0 +1,12 @@
+{
+  "_about": "Which bus routes count as Dhaka City routes for the Favourite Bus module. The buses table has no city field, so a route is a Dhaka City route only when EVERY stop passes both checks: (1) its name is not in outsideCityStops, the stops in the route data known to lie outside the two city corporations (DNCC and DSCC), and (2) it lies inside cityBounds, a safety net so a new stop with an unknown name far outside the city is never counted as Dhaka City. Edit this file to correct a classification; it is read when the server starts.",
+  "cityBounds": { "minLat": 23.66, "maxLat": 23.92, "minLng": 90.32, "maxLng": 90.52 },
+  "outsideCityStops": {
+    "Gazipur": ["Tongi", "Station Road", "Mill Gate", "Board Bazar", "Gazipur", "Gazipur Chourasta", "Gazipur Bypass", "Shib Bari", "Joydebpur", "Konabari", "Kashimpur", "Sura Bari", "Baromi", "Rajendrapur", "Sreepur", "Palli Bidyut", "Jarun"],
+    "Savar and Ashulia": ["Savar", "Savar Cantonment", "Hemayetpur", "Amin Bazar", "Aminbazar", "Birulia", "Ashulia", "Ashulia Bazar", "Jamgora", "Zirabo", "Shimultola", "Fantasy Kingdom", "Baipayl", "Nobinagar", "Nobinagar Baipayl", "Nobinagar Chandra", "Chandra", "Zirani Bazar", "Nandan Park", "Narshinghapur"],
+    "Dhamrai and Manikganj": ["Dhamrai", "Dhamra", "Kalampur", "Manikganj", "Paturia"],
+    "Narayanganj": ["Chashara", "Shibu Market", "Jalkuri", "Metro Hall", "Madanpur", "Meghna Ghat", "Kanchpur", "Chittagong Road", "Chittagong Road (Narayanganj)", "Sanarpar", "Adamjee School", "Adamjee College", "Tarabo", "Kanchan Bridge", "Vulta"],
+    "Keraniganj and Nawabganj": ["Keraniganj", "Hasnabad", "Ghatar Char", "Ghatarchor", "Kuchimura", "Nawabganj", "Shonbari Sreenagar"],
+    "Munshiganj": ["Maowa"]
+  }
+}

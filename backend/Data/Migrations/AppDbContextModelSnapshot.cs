@@ -81,6 +81,69 @@ namespace SmartCommute.Server.Data.Migrations
                     b.ToTable("buses", (string)null);
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.BusAvailabilityAlert", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bus_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("FromStop")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("from_stop");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<DateTime?>("LastNotifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_notified_at");
+
+                    b.Property<int?>("LastSeatsFree")
+                        .HasColumnType("integer")
+                        .HasColumnName("last_seats_free");
+
+                    b.Property<string>("ToStop")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("to_stop");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_bus_availability_alerts");
+
+                    b.HasIndex("BusId")
+                        .HasDatabaseName("ix_bus_availability_alerts_bus_id");
+
+                    b.HasIndex("IsActive")
+                        .HasDatabaseName("ix_bus_availability_alerts_is_active");
+
+                    b.HasIndex("UserId", "BusId", "FromStop", "ToStop")
+                        .IsUnique()
+                        .HasDatabaseName("ix_bus_availability_alerts_user_id_bus_id_from_stop_to_stop");
+
+                    b.ToTable("bus_availability_alerts", (string)null);
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.BusBoarding", b =>
                 {
                     b.Property<Guid>("Id")
@@ -114,6 +177,114 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasDatabaseName("ix_bus_boardings_user_id_ended_at");
 
                     b.ToTable("bus_boardings", (string)null);
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.BusFareHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("BaseFare")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("base_fare");
+
+                    b.Property<Guid>("BusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bus_id");
+
+                    b.Property<decimal>("PerKmFare")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("per_km_fare");
+
+                    b.Property<decimal?>("PreviousBaseFare")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("previous_base_fare");
+
+                    b.Property<decimal?>("PreviousPerKmFare")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("previous_per_km_fare");
+
+                    b.Property<DateTime>("RecordedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("recorded_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_bus_fare_history");
+
+                    b.HasIndex("BusId", "RecordedAt")
+                        .HasDatabaseName("ix_bus_fare_history_bus_id_recorded_at");
+
+                    b.ToTable("bus_fare_history", (string)null);
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.BusReminder", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bus_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("DepartureAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("departure_at");
+
+                    b.Property<bool>("IsEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_enabled");
+
+                    b.Property<int>("LeadMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("lead_minutes");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sent_at");
+
+                    b.Property<string>("StopName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("stop_name");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_bus_reminders");
+
+                    b.HasIndex("BusId")
+                        .HasDatabaseName("ix_bus_reminders_bus_id");
+
+                    b.HasIndex("DepartureAt")
+                        .HasDatabaseName("ix_bus_reminders_due")
+                        .HasFilter("is_enabled AND sent_at IS NULL");
+
+                    b.HasIndex("UserId", "DepartureAt")
+                        .HasDatabaseName("ix_bus_reminders_user_id_departure_at");
+
+                    b.ToTable("bus_reminders", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_bus_reminders_lead_minutes", "lead_minutes IN (15, 30, 60)");
+                        });
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.BusStop", b =>
@@ -156,6 +327,41 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasDatabaseName("ix_bus_stops_bus_id_order");
 
                     b.ToTable("bus_stops", (string)null);
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.BusWatchState", b =>
+                {
+                    b.Property<Guid>("BusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bus_id");
+
+                    b.Property<int>("ActiveVehicles")
+                        .HasColumnType("integer")
+                        .HasColumnName("active_vehicles");
+
+                    b.Property<decimal>("BaseFare")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("base_fare");
+
+                    b.Property<DateTime>("CheckedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("checked_at");
+
+                    b.Property<decimal>("PerKmFare")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("per_km_fare");
+
+                    b.PrimitiveCollection<List<string>>("StopNames")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("stop_names");
+
+                    b.HasKey("BusId")
+                        .HasName("pk_bus_watch_states");
+
+                    b.ToTable("bus_watch_states", (string)null);
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.Chat", b =>
@@ -368,6 +574,67 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasDatabaseName("ix_favorite_buses_user_id_bus_id");
 
                     b.ToTable("favorite_buses", (string)null);
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.FavoriteCollection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("name");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_favorite_collections");
+
+                    b.HasIndex("UserId", "Name")
+                        .IsUnique()
+                        .HasDatabaseName("ix_favorite_collections_user_id_name");
+
+                    b.ToTable("favorite_collections", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_favorite_collections_name", "length(btrim(name)) > 0");
+                        });
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.FavoriteCollectionBus", b =>
+                {
+                    b.Property<Guid>("CollectionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("collection_id");
+
+                    b.Property<Guid>("FavoriteBusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("favorite_bus_id");
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("added_at");
+
+                    b.HasKey("CollectionId", "FavoriteBusId")
+                        .HasName("pk_favorite_collection_buses");
+
+                    b.HasIndex("FavoriteBusId")
+                        .HasDatabaseName("ix_favorite_collection_buses_favorite_bus_id");
+
+                    b.ToTable("favorite_collection_buses", (string)null);
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.FriendRequest", b =>
@@ -714,7 +981,7 @@ namespace SmartCommute.Server.Data.Migrations
 
                     b.ToTable("notifications", null, t =>
                         {
-                            t.HasCheckConstraint("ck_notifications_category", "category IN ('general', 'account', 'friend', 'ride', 'reward', 'sos')");
+                            t.HasCheckConstraint("ck_notifications_category", "category IN ('general', 'account', 'friend', 'ride', 'reward', 'sos', 'bus-favourite', 'bus-fare', 'bus-availability', 'bus-reminder', 'bus-route')");
                         });
                 });
 
@@ -991,6 +1258,41 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasDatabaseName("ix_ratings_bus_id_user_id");
 
                     b.ToTable("ratings", (string)null);
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.RecentlyViewedBus", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bus_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTime>("ViewedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("viewed_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_recently_viewed_buses");
+
+                    b.HasIndex("BusId")
+                        .HasDatabaseName("ix_recently_viewed_buses_bus_id");
+
+                    b.HasIndex("UserId", "BusId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_recently_viewed_buses_user_id_bus_id");
+
+                    b.HasIndex("UserId", "ViewedAt")
+                        .HasDatabaseName("ix_recently_viewed_buses_user_id_viewed_at");
+
+                    b.ToTable("recently_viewed_buses", (string)null);
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.Review", b =>
@@ -1894,6 +2196,27 @@ namespace SmartCommute.Server.Data.Migrations
                     b.ToTable("wallet_transactions", (string)null);
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.BusAvailabilityAlert", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.Bus", "Bus")
+                        .WithMany()
+                        .HasForeignKey("BusId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_bus_availability_alerts_buses_bus_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_bus_availability_alerts_users_user_id");
+
+                    b.Navigation("Bus");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.BusBoarding", b =>
                 {
                     b.HasOne("SmartCommute.Server.Models.IndividualBus", "IndividualBus")
@@ -1915,6 +2238,39 @@ namespace SmartCommute.Server.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.BusFareHistory", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.Bus", "Bus")
+                        .WithMany()
+                        .HasForeignKey("BusId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_bus_fare_history_buses_bus_id");
+
+                    b.Navigation("Bus");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.BusReminder", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.Bus", "Bus")
+                        .WithMany()
+                        .HasForeignKey("BusId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_bus_reminders_buses_bus_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_bus_reminders_users_user_id");
+
+                    b.Navigation("Bus");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.BusStop", b =>
                 {
                     b.HasOne("SmartCommute.Server.Models.Bus", "Bus")
@@ -1923,6 +2279,18 @@ namespace SmartCommute.Server.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_bus_stops_buses_bus_id");
+
+                    b.Navigation("Bus");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.BusWatchState", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.Bus", "Bus")
+                        .WithOne()
+                        .HasForeignKey("SmartCommute.Server.Models.BusWatchState", "BusId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_bus_watch_states_buses_bus_id");
 
                     b.Navigation("Bus");
                 });
@@ -1998,6 +2366,39 @@ namespace SmartCommute.Server.Data.Migrations
                     b.Navigation("Bus");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.FavoriteCollection", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_favorite_collections_users_user_id");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.FavoriteCollectionBus", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.FavoriteCollection", "Collection")
+                        .WithMany("Buses")
+                        .HasForeignKey("CollectionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_favorite_collection_buses_favorite_collections_collection_id");
+
+                    b.HasOne("SmartCommute.Server.Models.FavoriteBus", "FavoriteBus")
+                        .WithMany()
+                        .HasForeignKey("FavoriteBusId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_favorite_collection_buses_favorite_buses_favorite_bus_id");
+
+                    b.Navigation("Collection");
+
+                    b.Navigation("FavoriteBus");
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.FriendRequest", b =>
@@ -2198,6 +2599,27 @@ namespace SmartCommute.Server.Data.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_ratings_users_user_id");
+
+                    b.Navigation("Bus");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.RecentlyViewedBus", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.Bus", "Bus")
+                        .WithMany()
+                        .HasForeignKey("BusId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_recently_viewed_buses_buses_bus_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_recently_viewed_buses_users_user_id");
 
                     b.Navigation("Bus");
 
@@ -2418,6 +2840,11 @@ namespace SmartCommute.Server.Data.Migrations
             modelBuilder.Entity("SmartCommute.Server.Models.Chat", b =>
                 {
                     b.Navigation("Messages");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.FavoriteCollection", b =>
+                {
+                    b.Navigation("Buses");
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.Review", b =>

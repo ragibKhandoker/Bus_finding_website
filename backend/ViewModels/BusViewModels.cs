@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.Json.Serialization;
 using SmartCommute.Server.Models;
+using SmartCommute.Server.Services;
 
 namespace SmartCommute.Server.ViewModels;
 
@@ -34,6 +35,10 @@ public class BusViewModel : EntityViewModel
 
     public List<BusStopViewModel> Stops { get; init; } = [];
 
+    // Whether the route runs only inside Dhaka City (see DhakaCityArea); only these buses can be favourited,
+    // compared, tracked or reminded about.
+    public bool IsDhakaCity { get; init; }
+
     // Set only on route search results: how this bus serves the searched trip.
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public RouteMatchViewModel? Match { get; init; }
@@ -43,7 +48,7 @@ public class BusViewModel : EntityViewModel
     {
         Id = Id, BusName = BusName, RouteNumber = RouteNumber, Operator = Operator, Frequency = Frequency,
         BusType = BusType, BaseFare = BaseFare, PerKmFare = PerKmFare, RunsBothWays = RunsBothWays, Stops = Stops,
-        Match = match,
+        IsDhakaCity = IsDhakaCity, Match = match,
     };
 
     public static BusViewModel From(Bus b) => new()
@@ -58,6 +63,7 @@ public class BusViewModel : EntityViewModel
         PerKmFare = b.PerKmFare,
         RunsBothWays = b.RunsBothWays,
         Stops = b.Stops.OrderBy(s => s.Order).Select(BusStopViewModel.From).ToList(),
+        IsDhakaCity = DhakaCityArea.Default.IsCityRoute(b),
     };
 }
 

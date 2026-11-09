@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertTriangle, Bell, Check, CheckCheck, ExternalLink, Gift, MapPin, RefreshCw, Share2, Siren, Trash2, UserPlus, UserRound, Users } from 'lucide-react'
+import { AlarmClock, AlertTriangle, Armchair, Bell, Check, CheckCheck, ExternalLink, Gift, Heart, MapPin, RefreshCw, Route, Share2, Siren, Trash2, TrendingUp, UserPlus, UserRound, Users } from 'lucide-react'
 import { formatDateTime, formatNumber, getLang, t } from '../../models/i18n'
 import { Feedback, Heading, Loading, RequireSignIn } from './MorePages'
 import { errorText } from '../../models/messages'
@@ -38,9 +38,9 @@ export const isMapLink = (url) => /^https:\/\/www\.google\.com\/maps\?q=-?\d/.te
 
 export const isAppPath = (url) => /^\/[a-z0-9/-]*$/i.test(url || '')
 
-export const CATEGORY_ICONS = { friend: UserPlus, ride: Users, reward: Gift, sos: Siren, account: UserRound }
+export const CATEGORY_ICONS = { friend: UserPlus, ride: Users, reward: Gift, sos: Siren, account: UserRound, 'bus-favourite': Heart, 'bus-fare': TrendingUp, 'bus-availability': Armchair, 'bus-reminder': AlarmClock, 'bus-route': Route }
 
-export const CATEGORY_LABELS = { friend: 'Friends', ride: 'Ride share', reward: 'Reward', sos: 'SOS', account: 'Account', general: 'Update' }
+export const CATEGORY_LABELS = { friend: 'Friends', ride: 'Ride share', reward: 'Reward', sos: 'SOS', account: 'Account', general: 'Update', 'bus-favourite': 'Favourite buses', 'bus-fare': 'Bus fare', 'bus-availability': 'Bus availability', 'bus-reminder': 'Departure reminder', 'bus-route': 'Route update' }
 
 // The point in a Google Maps link like https://www.google.com/maps?q=23.81,90.41, or null.
 const pointOf = (url) => {

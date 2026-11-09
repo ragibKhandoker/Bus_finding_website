@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { apiRequest } from '../models/api'
 import { t } from '../models/i18n'
 import { errorText } from '../models/messages'
-import { addFavorite, busIdOf, removeFavorite } from '../models/favorites'
+import { addFavorite, busIdOf, checkFavorite, myFavorites, removeFavorite } from '../models/favorites'
 
 // The user's favourites, loaded once. toggle(bus) adds after the server confirms, and removes at once (put
 // back if the server refuses). A bus with a request in flight ignores further clicks.
@@ -18,7 +17,7 @@ export function useFavoriteBuses({ token, user, signedIn, notify, openAuth }) {
     if (!signedIn || !user?.id) { setItems([]); setStatus('idle'); return }
     setStatus('loading')
     try {
-      const data = await apiRequest(`/api/favbus/user/${encodeURIComponent(user.id)}`, { token })
+      const data = await myFavorites(token)
       setItems(data.data || []); setStatus('ready')
     } catch (e) { setStatus(errorText(e)) }
   }, [signedIn, token, user?.id])
@@ -60,7 +59,7 @@ export function useFavoriteBuses({ token, user, signedIn, notify, openAuth }) {
   return { items, status, reload: load, toggle, isFavorite: (bus) => ids.has(busIdOf(bus)), isPending: (bus) => pending.has(busIdOf(bus)) }
 }
 
-// Favourite state of a single bus, read with GET /api/favbus/check, for pages that show one bus.
+// Favourite state of a single bus, read with GET /api/favourites/check/{busId}, for pages that show one bus.
 export function useFavoriteStatus({ busId, token, signedIn, notify, openAuth }) {
   const [favorite, setFavorite] = useState(false)
   const [pending, setPending] = useState(false)
@@ -68,7 +67,7 @@ export function useFavoriteStatus({ busId, token, signedIn, notify, openAuth }) 
   useEffect(() => {
     if (!signedIn || !busId) { setFavorite(false); return }
     let cancelled = false
-    apiRequest(`/api/favbus/check?${new URLSearchParams({ busId })}`, { token })
+    checkFavorite(busId, token)
       .then((data) => { if (!cancelled) setFavorite(Boolean(data.isFavourite)) })
       .catch(() => {})
     return () => { cancelled = true }

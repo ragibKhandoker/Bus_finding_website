@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowRight, BusFront, ChevronDown, Map as MapIcon, MapPin, R
 import { BusReviews } from '../components/Reviews'
 import { useFavoriteStatus } from '../../controllers/useFavorites'
 import { FavoriteButton } from './Favorites'
+import { canFavourite, favouriteApi } from '../../models/favorites'
 import { apiRequest as request } from '../../models/api'
 import { formatNumber, t } from '../../models/i18n'
 import { BUS_TYPES, coordinate, googleMapsPlace, googleMapsRouteDirections, money, routeLengthKm, sortedStops } from '../helpers'
@@ -61,6 +62,9 @@ export function BusDetailPage({ routeNumber, token, user, signedIn, notify, navi
   }, [routeNumber])
   useEffect(() => { load() }, [load])
   const favorite = useFavoriteStatus({ busId: state.bus?._id, token, signedIn, notify, openAuth })
+  // Opening a Dhaka City bus adds it to the user's recently viewed buses (the server refuses any other).
+  const viewedId = state.bus && signedIn && canFavourite(state.bus) ? state.bus._id : null
+  useEffect(() => { if (viewedId) favouriteApi.recordView(viewedId, token).catch(() => {}) }, [viewedId, token])
   // Opened from the list: step back to it, exactly like the browser's Back button (same search, same scroll
   // position, and no extra entry, so Forward still leads here). Opened directly or from another page: open the list.
   const backToList = () => {
@@ -91,7 +95,9 @@ export function BusDetailPage({ routeNumber, token, user, signedIn, notify, navi
           <h1>{t(bus.busName)}</h1>
           <p>{[bus.operator, bus.busType, bus.frequency].filter(Boolean).map((text) => t(text)).join(' · ')}</p>
         </div>
-        <FavoriteButton active={favorite.favorite} pending={favorite.pending} onClick={favorite.toggle} withLabel className="route-hero-favorite" />
+        {canFavourite(bus)
+          ? <FavoriteButton active={favorite.favorite} pending={favorite.pending} onClick={favorite.toggle} withLabel className="route-hero-favorite" />
+          : <span className="route-outside-city" title={t('Favourite buses are for routes inside Dhaka City.')}>{t('Outside Dhaka City')}</span>}
       </div>
       {first && <div className="hp-route-ends route-hero-ends"><span><i className="start" />{t(first.name)}</span><ArrowRight size={16} /><span><i className="end" />{t(last.name)}</span></div>}
       <div className="route-facts">

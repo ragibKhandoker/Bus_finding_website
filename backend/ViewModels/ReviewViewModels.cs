@@ -29,6 +29,9 @@ public class FavoriteBusViewModel : EntityViewModel
     public string? FirstStop { get; init; }
     public string? LastStop { get; init; }
 
+    // Whether the bus runs only inside Dhaka City; the favourite bus tools only work with these.
+    public bool IsDhakaCity { get; init; }
+
     public static FavoriteBusViewModel From(FavoriteBus f, BusViewModel? bus = null) => new()
     {
         Id = f.Id.ToString(),
@@ -45,6 +48,7 @@ public class FavoriteBusViewModel : EntityViewModel
         StopCount = bus?.Stops.Count,
         FirstStop = bus?.Stops.FirstOrDefault()?.Name,
         LastStop = bus?.Stops.LastOrDefault()?.Name,
+        IsDhakaCity = bus?.IsDhakaCity ?? false,
     };
 }
 

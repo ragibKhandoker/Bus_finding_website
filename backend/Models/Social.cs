@@ -21,7 +21,15 @@ public static class NotificationCategories
     public const string Reward = "reward";
     public const string Sos = "sos";
 
-    public static readonly string[] All = [General, Account, Friend, Ride, Reward, Sos];
+    // The Smart Favourite Bus module (Dhaka City buses).
+    public const string BusFavourite = "bus-favourite";
+    public const string BusFare = "bus-fare";
+    public const string BusAvailability = "bus-availability";
+    public const string BusReminder = "bus-reminder";
+    public const string BusRoute = "bus-route";
+    public static readonly string[] Bus = [BusFavourite, BusFare, BusAvailability, BusReminder, BusRoute];
+
+    public static readonly string[] All = [General, Account, Friend, Ride, Reward, Sos, .. Bus];
 }
 
 public class Notification

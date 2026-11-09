@@ -6,6 +6,7 @@ import { ActiveTripPanel, useBoardControls } from '../components/Trips'
 import { BusReviews } from '../components/Reviews'
 import { useFavoriteBuses } from '../../controllers/useFavorites'
 import { FavoriteButton } from './Favorites'
+import { canFavourite } from '../../models/favorites'
 import { apiRequest as request } from '../../models/api'
 import { formatNumber, t, toEnglish } from '../../models/i18n'
 import { formatDuration, getStops, googleMapsDirections, money, sortedStops } from '../helpers'
@@ -334,6 +335,6 @@ export function BusCard({ bus, user, token, signedIn, openAuth, selected, onSele
         <button className={selected ? 'bus-map-toggle active' : 'bus-map-toggle'} onClick={onSelect} aria-pressed={selected}><MapIcon size={13} /> {selected ? t('Shown on map') : t('Show on map')}</button>
         {onDetails && <button className="bus-details-link" onClick={onDetails}>{t('View details')} <ArrowRight size={12} /></button>}
       </div>
-    </div><div className="bus-result-side"><FavoriteButton active={favorite} pending={favoritePending} onClick={onFavorite} /><span className="fare-label">{t('STARTS FROM')}</span><b>{money(bus.base_fare)}</b><small>{t('per ride')}</small>{board.button}<button className="button button-outline button-small" onClick={onAddTrip} title={t('Add a trip you already took to your history')}>{t('Log trip')}</button></div>{board.form}<BusReviews bus={bus} user={user} token={token} signedIn={signedIn} notify={notify} openAuth={openAuth} />
+    </div><div className="bus-result-side">{canFavourite(bus) && <FavoriteButton active={favorite} pending={favoritePending} onClick={onFavorite} />}<span className="fare-label">{t('STARTS FROM')}</span><b>{money(bus.base_fare)}</b><small>{t('per ride')}</small>{board.button}<button className="button button-outline button-small" onClick={onAddTrip} title={t('Add a trip you already took to your history')}>{t('Log trip')}</button></div>{board.form}<BusReviews bus={bus} user={user} token={token} signedIn={signedIn} notify={notify} openAuth={openAuth} />
   </article>
 }

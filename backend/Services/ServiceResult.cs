@@ -13,4 +13,8 @@ public record ServiceResult<T>(int StatusCode, string Message, T? Value = defaul
     public static ServiceResult<T> Forbidden(string message = "You are not allowed to do that.") => new(StatusCodes.Status403Forbidden, message);
     public static ServiceResult<T> NotFound(string message) => new(StatusCodes.Status404NotFound, message);
     public static ServiceResult<T> Conflict(string message) => new(StatusCodes.Status409Conflict, message);
+    public static ServiceResult<T> Unprocessable(string message) => new(StatusCodes.Status422UnprocessableEntity, message);
+
+    // The same failure for a different value type.
+    public ServiceResult<TOther> As<TOther>() => new(StatusCode, Message);
 }

@@ -208,6 +208,13 @@ builder.Services.AddScoped<AdminService>();
 builder.Services.AddScoped<StatusService>();
 builder.Services.AddScoped<BusService>();
 builder.Services.AddScoped<FavoriteBusService>();
+// Smart Favourite Bus module (Dhaka City buses only).
+builder.Services.AddScoped<DhakaBusGuard>();
+builder.Services.AddScoped<FavouriteMonitor>();
+builder.Services.AddScoped<FavoriteCollectionService>();
+builder.Services.AddScoped<FavouriteInsightsService>();
+builder.Services.AddScoped<BusAlertService>();
+builder.Services.AddHostedService<FavouriteMonitorHostedService>();
 builder.Services.AddScoped<StopService>();
 builder.Services.AddScoped<VerificationService>();
 builder.Services.AddScoped<SupportService>();

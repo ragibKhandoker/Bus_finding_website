@@ -35,6 +35,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<VerificationImage> VerificationImages => Set<VerificationImage>();
     public DbSet<PasswordResetRequest> PasswordResetRequests => Set<PasswordResetRequest>();
     public DbSet<SupportMessage> SupportMessages => Set<SupportMessage>();
+    public DbSet<FavoriteCollection> FavoriteCollections => Set<FavoriteCollection>();
+    public DbSet<FavoriteCollectionBus> FavoriteCollectionBuses => Set<FavoriteCollectionBus>();
+    public DbSet<BusWatchState> BusWatchStates => Set<BusWatchState>();
+    public DbSet<BusFareHistory> BusFareHistory => Set<BusFareHistory>();
+    public DbSet<BusAvailabilityAlert> BusAvailabilityAlerts => Set<BusAvailabilityAlert>();
+    public DbSet<BusReminder> BusReminders => Set<BusReminder>();
+    public DbSet<RecentlyViewedBus> RecentlyViewedBuses => Set<RecentlyViewedBus>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -221,6 +228,60 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         b.Entity<FavoriteBus>(e => e.HasIndex(x => new { x.UserId, x.BusId }).IsUnique());
 
+        // ---- Smart Favourite Bus module ----
+        b.Entity<FavoriteCollection>(e =>
+        {
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.UserId, x.Name }).IsUnique();
+            e.ToTable(t => t.HasCheckConstraint("ck_favorite_collections_name", "length(btrim(name)) > 0"));
+        });
+
+        b.Entity<FavoriteCollectionBus>(e =>
+        {
+            e.HasKey(x => new { x.CollectionId, x.FavoriteBusId });
+            e.HasOne(x => x.Collection).WithMany(c => c.Buses).HasForeignKey(x => x.CollectionId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.FavoriteBus).WithMany().HasForeignKey(x => x.FavoriteBusId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.FavoriteBusId);
+        });
+
+        b.Entity<BusWatchState>(e =>
+        {
+            e.HasKey(x => x.BusId);
+            e.HasOne(x => x.Bus).WithOne().HasForeignKey<BusWatchState>(x => x.BusId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        b.Entity<BusFareHistory>(e =>
+        {
+            e.HasOne(x => x.Bus).WithMany().HasForeignKey(x => x.BusId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.BusId, x.RecordedAt });
+        });
+
+        b.Entity<BusAvailabilityAlert>(e =>
+        {
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Bus).WithMany().HasForeignKey(x => x.BusId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.UserId, x.BusId, x.FromStop, x.ToStop }).IsUnique();
+            e.HasIndex(x => x.IsActive);
+        });
+
+        b.Entity<BusReminder>(e =>
+        {
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Bus).WithMany().HasForeignKey(x => x.BusId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.UserId, x.DepartureAt });
+            // The monitor's query: enabled reminders not sent yet.
+            e.HasIndex(x => x.DepartureAt).HasFilter("is_enabled AND sent_at IS NULL").HasDatabaseName("ix_bus_reminders_due");
+            e.ToTable(t => t.HasCheckConstraint("ck_bus_reminders_lead_minutes", "lead_minutes IN (15, 30, 60)"));
+        });
+
+        b.Entity<RecentlyViewedBus>(e =>
+        {
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Bus).WithMany().HasForeignKey(x => x.BusId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.UserId, x.BusId }).IsUnique();
+            e.HasIndex(x => new { x.UserId, x.ViewedAt });
+        });
+
         b.Entity<Review>(e =>
         {
             e.HasMany(x => x.Replies).WithOne(x => x.Review).HasForeignKey(x => x.ReviewId).OnDelete(DeleteBehavior.Cascade);
@@ -248,7 +309,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(x => new { x.UserId, x.IsRead, x.CreatedAt });
             e.HasIndex(x => new { x.UserId, x.CreatedAt });
             e.ToTable(t => t.HasCheckConstraint("ck_notifications_category",
-                "category IN ('general', 'account', 'friend', 'ride', 'reward', 'sos')"));
+                "category IN ('general', 'account', 'friend', 'ride', 'reward', 'sos', 'bus-favourite', 'bus-fare', 'bus-availability', 'bus-reminder', 'bus-route')"));
         });
 
         b.Entity<Chat>(e =>

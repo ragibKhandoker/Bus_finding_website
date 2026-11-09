@@ -30,6 +30,8 @@
   <ItemGroup>
     <!-- Bus routes the seeder adds to a fresh database (see Data/SeedData.cs). -->
     <EmbeddedResource Include="Data\dhaka-bus-routes.json" LogicalName="SmartCommute.Server.Data.dhaka-bus-routes.json" />
+    <!-- Which routes count as Dhaka City routes for the Favourite Bus module (see Services/DhakaCityArea.cs). -->
+    <EmbeddedResource Include="Data\dhaka-city-boundary.json" LogicalName="SmartCommute.Server.Data.dhaka-city-boundary.json" />
   </ItemGroup>
 
 </Project>
