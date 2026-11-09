@@ -45,6 +45,11 @@ public class User
     [MaxLength(20)]
     public string? Phone { get; set; }
 
+    // The number the user uses WhatsApp on, international digits only ("8801712345678"); null when they have not
+    // said they use WhatsApp. Shown only to the people they share an approved ride with.
+    [MaxLength(20)]
+    public string? WhatsApp { get; set; }
+
     [MaxLength(200)]
     public string? Bio { get; set; }
 

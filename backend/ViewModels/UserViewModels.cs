@@ -16,6 +16,7 @@ public class UserViewModel : EntityViewModel
     public bool IdentityVerified { get; init; }
     public string FriendCode { get; init; } = "";
     public string Phone { get; init; } = "";
+    public string WhatsApp { get; init; } = "";
     public string Bio { get; init; } = "";
     public string HomeArea { get; init; } = "";
     public string WorkArea { get; init; } = "";
@@ -35,6 +36,7 @@ public class UserViewModel : EntityViewModel
         IdentityVerified = u.IdentityVerified,
         FriendCode = u.FriendCode,
         Phone = u.Phone ?? "",
+        WhatsApp = u.WhatsApp ?? "",
         Bio = u.Bio ?? "",
         HomeArea = u.HomeArea ?? "",
         WorkArea = u.WorkArea ?? "",
@@ -144,6 +146,10 @@ public class UpdateProfileRequest
     [StringLength(20, ErrorMessage = "Phone number must be at most 20 characters.")]
     [RegularExpression(@"^\s*(\+?[0-9][0-9 \-]{5,18})?\s*$", ErrorMessage = "Please enter a valid phone number.")]
     public string? Phone { get; set; }
+
+    // Checked and normalised by WhatsAppNumber; blank removes it.
+    [StringLength(20, ErrorMessage = "WhatsApp number must be at most 20 characters.")]
+    public string? WhatsApp { get; set; }
 
     [StringLength(200, ErrorMessage = "Bio must be at most 200 characters.")]
     public string? Bio { get; set; }

@@ -87,7 +87,7 @@ describe('Favourite bus dashboard', () => {
     const { notify } = renderDashboard()
     await user.click(await screen.findByRole('tab', { name: /Reminders/ }))
     await user.selectOptions(await screen.findByRole('combobox', { name: 'Favourite bus' }), 'b1')
-    await waitFor(() => expect(screen.getByRole('option', { name: 'Farmgate' })).toBeTruthy())
+    await waitFor(() => expect(screen.getByRole('option', { name: /Farmgate/ })).toBeTruthy())
     await user.selectOptions(screen.getByRole('combobox', { name: 'Stop you leave from' }), 'Farmgate')
     await user.selectOptions(screen.getByRole('combobox', { name: 'Remind me' }), '30')
     await user.click(screen.getByRole('button', { name: /Add reminder/ }))

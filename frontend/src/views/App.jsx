@@ -11,13 +11,15 @@ import { NotificationBell, NotificationsPage } from './pages/Notifications'
 import { FriendsPage } from './pages/Friends'
 import { ChatPage } from './pages/Chat'
 import { RidePage } from './pages/RideShare'
+import { RideDetailsPage } from './pages/RideDetails'
+import { MyRidesPage } from './pages/MyRides'
 import { ForcePasswordModal, RESET_STORAGE_KEY, SupportPage } from './pages/Support'
 import { FavouriteDashboard as FavoritesPage } from './pages/FavouriteDashboard'
 import { UNAUTHORIZED_EVENT, apiRequest as request, isTokenExpired, tokenExpiry } from '../models/api'
 import { formatNumber, getLang, setLang, t } from '../models/i18n'
 import { getTheme, setTheme, syncThemeColor } from '../models/theme'
 import { continueLastSession, endSession, forgetLastSession, loadSession, saveSessionUser, startSession } from '../models/session'
-import { ADMIN_FOCUS_KEY, NAVIGATE_EVENT, PAGE_LOADER_MS, PAGE_LOADER_NAMES, PAGE_PATHS, busPath, currentUrl, historyIndex, pageFromPath, pushEntry, replaceEntry, routeFromPath } from '../controllers/router'
+import { ADMIN_FOCUS_KEY, NAVIGATE_EVENT, PAGE_LOADER_MS, PAGE_LOADER_NAMES, PAGE_PATHS, busPath, currentUrl, historyIndex, pageFromPath, paramFromPath, pushEntry, replaceEntry, ridePath } from '../controllers/router'
 import { ThemeMenu } from './components/common'
 import { BusDetailPage, BusRoutesPage } from './pages/BusRoutesPage'
 import { HomePage } from './pages/HomePage'
@@ -59,8 +61,8 @@ export function App() {
   const [token, setToken] = useState(initialSession.token)
   const [user, setUser] = useState(initialSession.user)
   const [page, setPage] = useState(() => pageFromPath(window.location.pathname))
-  // The route shown on the 'Bus details' page.
-  const [routeNumber, setRouteNumber] = useState(() => routeFromPath(window.location.pathname))
+  // The item a detail page shows: the route on 'Bus details', the ride id on 'Ride details'.
+  const [routeNumber, setRouteNumber] = useState(() => paramFromPath(window.location.pathname))
   const [mobileMenu, setMobileMenu] = useState(false)
   const [moreMenu, setMoreMenu] = useState(false)
   // Close the More menu on a click/tap outside it or on Escape.
@@ -88,7 +90,7 @@ export function App() {
   // (only for redirects). 'Bus details' also takes the route to show; search adds an address query ("?with=…").
   // Opening the page already shown (e.g. clicking the active tab again) adds no entry.
   const showPage = useCallback((target, { replace = false, route = null, search = '' } = {}) => {
-    const path = target === 'Bus details' && route ? busPath(route) : PAGE_PATHS[target] || '/'
+    const path = target === 'Bus details' && route ? busPath(route) : target === 'Ride details' && route ? ridePath(route) : PAGE_PATHS[target] || '/'
     const same = search ? currentUrl() === path + search : window.location.pathname === path
     if (!same) {
       if (replace) replaceEntry(path + search, { page: target, scrollY: 0, busView: undefined })
@@ -104,7 +106,7 @@ export function App() {
   useEffect(() => {
     const { pathname, search } = window.location
     const page = pageFromPath(pathname)
-    const path = routeFromPath(pathname) ? pathname : PAGE_PATHS[page]
+    const path = paramFromPath(pathname) ? pathname : PAGE_PATHS[page]
     replaceEntry(path === pathname ? window.location.href : path + (page === 'Home' ? '' : search), { idx: historyIndex() })
   }, [])
   // Back and forward: show whichever page the browser moved to.
@@ -112,7 +114,7 @@ export function App() {
     let timers = []
     const onPop = (event) => {
       setPage(pageFromPath(window.location.pathname))
-      setRouteNumber(routeFromPath(window.location.pathname))
+      setRouteNumber(paramFromPath(window.location.pathname))
       setMobileMenu(false)
       setMoreMenu(false)
       setAuthMode('')
@@ -188,8 +190,8 @@ export function App() {
   useEffect(() => {
     const onOpen = (event) => {
       const url = new URL(String(event.detail || '/'), window.location.origin)
-      const route = routeFromPath(url.pathname)
-      const target = route ? 'Bus details' : pageFromPath(url.pathname)
+      const route = paramFromPath(url.pathname)
+      const target = pageFromPath(url.pathname)
       showPage(target, { route, search: target === 'Home' ? '' : url.search })
       window.scrollTo(0, 0)
     }
@@ -206,7 +208,7 @@ export function App() {
     navigate('Admin')
   }
   // A short loading screen each time the page changes (tabs, links, back and forward), then the page fades in.
-  const pageKey = page === 'Bus details' ? `${page}:${routeNumber}` : page
+  const pageKey = page === 'Bus details' || page === 'Ride details' ? `${page}:${routeNumber}` : page
   const [loadingPage, setLoadingPage] = useState('')
   const shownKey = useRef(pageKey)
   // Scroll motion on every page: cards rise into view, and the header lifts once the page is scrolled.
@@ -234,7 +236,7 @@ export function App() {
         </button>
         <nav className={mobileMenu ? 'nav-links open' : 'nav-links'}>
           {['Home', 'Find a bus', 'Bus routes', 'Ride share', 'My trips'].map((item) => (
-            <button key={item} className={page === item || (item === 'Bus routes' && page === 'Bus details') ? 'nav-link active' : 'nav-link'} onClick={() => navigate(item)}>{t(item)}</button>
+            <button key={item} className={page === item || (item === 'Bus routes' && page === 'Bus details') || (item === 'Ride share' && (page === 'Ride details' || page === 'My rides')) ? 'nav-link active' : 'nav-link'} onClick={() => navigate(item)}>{t(item)}</button>
           ))}
           <div className="more-nav-wrap" ref={moreRef}>
             <button className={['Friends', 'Messages', 'Notifications', 'Offers', 'Map', 'Favourites', 'Wallet', 'GPay', 'Verification', 'Admin'].includes(page) ? 'nav-link active' : 'nav-link'} aria-expanded={moreMenu} onClick={() => setMoreMenu(!moreMenu)}>{t('More')} <ChevronDown size={13} /></button>
@@ -265,7 +267,9 @@ export function App() {
         {page === 'Find a bus' && <BusPage token={token} signedIn={signedIn} user={user} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
         {page === 'Bus routes' && <BusRoutesPage navigate={navigate} />}
         {page === 'Bus details' && <BusDetailPage key={routeNumber} routeNumber={routeNumber} token={token} user={user} signedIn={signedIn} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
-        {page === 'Ride share' && <RidePage token={token} user={user} signedIn={signedIn} notify={notify} openAuth={() => setAuthMode('login')} />}
+        {page === 'Ride share' && <RidePage token={token} user={user} signedIn={signedIn} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
+        {page === 'Ride details' && <RideDetailsPage key={routeNumber} rideId={routeNumber} token={token} user={user} signedIn={signedIn} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
+        {page === 'My rides' && <MyRidesPage token={token} user={user} signedIn={signedIn} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
         {page === 'My trips' && <TripsPage token={token} signedIn={signedIn} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
         {page === 'Wallet' && <WalletPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Profile' && <ProfilePage user={user} token={token} signedIn={signedIn} navigate={navigate} updateUser={setUser} signOut={signOut} openAuth={() => setAuthMode('login')} notify={notify} />}

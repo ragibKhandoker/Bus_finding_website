@@ -18,7 +18,7 @@ public class RideRequestTests(TestServerFixture server)
 
     private static async Task<string> CreateRide(HttpClient host, int maxParticipants = 4)
     {
-        var response = await host.PostAsJsonAsync("/api/rideshare", new { source = "Mirpur 10", destination = $"Motijheel {Guid.NewGuid():N}"[..20], maxParticipants, genderPreference = "Any" });
+        var response = await host.PostAsJsonAsync("/api/rideshare", RideTestData.Body($"Motijheel {Guid.NewGuid():N}"[..20], maxParticipants: maxParticipants));
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         return (await JsonOf(response)).GetProperty("data").GetProperty("_id").GetString()!;
     }

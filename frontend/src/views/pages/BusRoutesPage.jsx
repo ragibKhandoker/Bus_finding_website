@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, ArrowRight, BusFront, ChevronDown, Map as MapIcon, MapPin, Route, Search } from 'lucide-react'
 import { BusReviews } from '../components/Reviews'
+import { BusPhoto } from '../components/BusPhoto'
 import { useFavoriteStatus } from '../../controllers/useFavorites'
 import { FavoriteButton } from './Favorites'
 import { canFavourite, favouriteApi } from '../../models/favorites'
@@ -88,7 +89,9 @@ export function BusDetailPage({ routeNumber, token, user, signedIn, notify, navi
   const planTrip = () => { sessionStorage.setItem('bus_query', JSON.stringify({ mode: 'route', from: first.name, to: last.name, auto: true })); navigate('Find a bus') }
   return <div className="page inner-page route-detail">
     {back}
-    <section className="panel route-hero">
+    <section className="panel route-hero has-photo">
+      <BusPhoto bus={bus} isAdmin={signedIn && user?.role?.toLowerCase() === 'admin'} token={token} notify={notify} />
+      <div className="route-hero-main">
       <div className="route-hero-head">
         <span className="hp-route-no route-hero-no">{bus.routeNumber}</span>
         <div>
@@ -110,6 +113,7 @@ export function BusDetailPage({ routeNumber, token, user, signedIn, notify, navi
         <button className="button button-green button-small" onClick={planTrip}><Search size={14} /> {t('Search buses on this route')}</button>
         {directions && <a className="button button-outline button-small" href={directions} target="_blank" rel="noreferrer"><MapIcon size={14} /> {t('Open on the map')}</a>}
       </div>}
+      </div>
     </section>
     <section className="panel route-stops-panel">
       <div className="results-heading"><div><div className="eyebrow">{t('STOPS IN ORDER')}</div><h2>{t('Where this bus stops')}</h2></div><span className="result-count">{t('{count} stops', { count: stops.length })}</span></div>

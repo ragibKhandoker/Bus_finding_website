@@ -27,6 +27,47 @@ public class AdminController(
         return Ok(new { success = true, count = users.Count, data = users.Select(AdminUserViewModel.From) });
     }
 
+    // ---- Ride share reports ----
+
+    // Reports about rides and riders, open ones first. ?status=open|reviewed|dismissed narrows the list.
+    [HttpGet("ride-reports")]
+    public async Task<IActionResult> RideReports([FromQuery] string? status, [FromServices] RideCommunityService community)
+    {
+        var list = await community.ReportsAsync(string.IsNullOrWhiteSpace(status) ? null : status.Trim().ToLowerInvariant());
+        return Ok(new { success = true, count = list.Count, data = list.Select(RideReportViewModel.From) });
+    }
+
+    // Body: { "status": "reviewed" | "dismissed", "note": "…", "cancelRide": true }. cancelRide also cancels the
+    // reported ride (its riders are told).
+    [HttpPost("ride-reports/{reportId:guid}/resolve")]
+    public async Task<IActionResult> ResolveRideReport(Guid reportId, ResolveRideReportRequest request, [FromServices] RideCommunityService community)
+    {
+        var result = await community.ResolveReportAsync(CurrentUserId, reportId, request.Status?.Trim().ToLowerInvariant(), request.Note, request.CancelRide);
+        return result.Succeeded
+            ? Ok(new { success = true, message = result.Message, data = RideReportViewModel.From(result.Value!) })
+            : Error(result.StatusCode, result.Message);
+    }
+
+    // ---- Bus photos ----
+
+    // Body: { "image": "data:image/jpeg;base64,...", "credit": "Photo: ..." }. Replaces the route's photo.
+    [HttpPut("buses/{busId:guid}/photo")]
+    [RequestSizeLimit(12 * 1024 * 1024)]
+    public async Task<IActionResult> SaveBusPhoto(Guid busId, BusPhotoRequest request, [FromServices] BusPhotoService photos)
+    {
+        var result = await photos.SaveAsync(busId, request.Image, request.Credit, CurrentUserId);
+        return result.Succeeded
+            ? Ok(new { success = true, message = result.Message, data = result.Value })
+            : Error(result.StatusCode, result.Message);
+    }
+
+    [HttpDelete("buses/{busId:guid}/photo")]
+    public async Task<IActionResult> DeleteBusPhoto(Guid busId, [FromServices] BusPhotoService photos)
+    {
+        var result = await photos.DeleteAsync(busId);
+        return result.Succeeded ? Ok(new { success = true, message = result.Message }) : Error(result.StatusCode, result.Message);
+    }
+
     // ---- Forgot-password requests ----
 
     // status: pending (default), sent, completed, dismissed or all.

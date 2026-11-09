@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   AlarmClock, ArrowDown, ArrowRight, ArrowUp, Bell, BellRing, BusFront, Check, CheckCheck, Clock3, FolderHeart, FolderPlus,
-  GitCompareArrows, Heart, HeartOff, History, LineChart, Minus, Pencil, RefreshCw, Search, Trash2, X,
+  ArrowUpDown, CalendarClock, GitCompareArrows, Heart, HeartOff, History, LineChart, Minus, Pencil, RefreshCw, Search, Trash2, X,
 } from 'lucide-react'
 import { formatDate, formatDateTime, formatNumber, t } from '../../models/i18n'
 import { errorText } from '../../models/messages'
@@ -213,8 +213,15 @@ function CompareSection({ favourites, selected, onSelect, token }) {
         </label>)}</div>
         <StopSuggestions />
         <div className="fd-trip">
-          <input value={trip.from} onChange={(e) => setTrip({ ...trip, from: e.target.value })} list="stop-suggestions" placeholder={t('From (optional), e.g. Mirpur 10')} aria-label={t('From')} />
-          <input value={trip.to} onChange={(e) => setTrip({ ...trip, to: e.target.value })} list="stop-suggestions" placeholder={t('To (optional), e.g. Motijheel')} aria-label={t('To')} />
+          <div className="fd-stop-pair">
+            <Field label="Starting stop (optional)" dot="start">
+              <input value={trip.from} onChange={(e) => setTrip({ ...trip, from: e.target.value })} list="stop-suggestions" placeholder={t('e.g. Mirpur 10')} aria-label={t('From')} />
+            </Field>
+            <SwapButton disabled={!trip.from && !trip.to} onClick={() => setTrip({ from: trip.to, to: trip.from })} />
+            <Field label="Destination stop (optional)" dot="end">
+              <input value={trip.to} onChange={(e) => setTrip({ ...trip, to: e.target.value })} list="stop-suggestions" placeholder={t('e.g. Motijheel')} aria-label={t('To')} />
+            </Field>
+          </div>
           <button type="submit" className="extra-button" disabled={selected.length < 2 || result.status === 'loading'}>
             {result.status === 'loading' ? <span className="favorite-spinner" /> : <GitCompareArrows size={14} />} {t('Compare')}
           </button>
@@ -284,18 +291,36 @@ function FaresSection({ state, reload, token }) {
 
 const LEAD_CHOICES = [[15, '15 minutes before'], [30, '30 minutes before'], [60, '1 hour before']]
 
-function StopSelect({ stops, value, onChange, label }) {
-  return <select className="fd-select" value={value} onChange={(e) => onChange(e.target.value)} aria-label={t(label)} required>
-    <option value="">{t(label)}</option>
-    {stops.map((s) => <option key={`${s.order}-${s.name}`} value={s.name}>{t(s.name)}</option>)}
-  </select>
+// A labelled form field: the label above, an icon (or a start/end dot) inside the box. The control inside keeps its
+// own aria-label, so its accessible name stays exactly the label.
+function Field({ label, icon: Icon, dot, children, className = '' }) {
+  return <label className={`fd-input${className ? ` ${className}` : ''}`}>
+    <small>{t(label)}</small>
+    <span className="fd-input-box">{dot ? <i className={`fd-input-dot ${dot}`} aria-hidden="true" /> : Icon && <Icon size={15} aria-hidden="true" />}{children}</span>
+  </label>
+}
+
+// The bus's stops in route order, numbered as on the route page. Disabled until a bus is chosen.
+function StopSelect({ stops, value, onChange, label, dot, exclude }) {
+  return <Field label={label} dot={dot}>
+    <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={t(label)} required disabled={!stops.length}>
+      <option value="">{t(stops.length ? 'Select a stop' : 'Choose a bus first')}</option>
+      {stops.map((s, i) => <option key={`${s.order}-${s.name}`} value={s.name} disabled={s.name === exclude}>{`${formatNumber((s.order ?? i) + 1)} · ${t(s.name)}`}</option>)}
+    </select>
+  </Field>
+}
+
+function SwapButton({ onClick, disabled }) {
+  return <button type="button" className="fd-swap" onClick={onClick} disabled={disabled} aria-label={t('Swap starting and destination stops')} title={t('Swap')}><ArrowUpDown size={15} /></button>
 }
 
 function BusSelect({ favourites, value, onChange }) {
-  return <select className="fd-select" value={value} onChange={(e) => onChange(e.target.value)} aria-label={t('Favourite bus')} required>
-    <option value="">{t('Choose a favourite bus')}</option>
-    {favourites.map((bus) => <option key={bus.busId} value={bus.busId}>{t(bus.busName)}{bus.routeNumber ? ` (${bus.routeNumber})` : ''}</option>)}
-  </select>
+  return <Field label="Favourite bus" icon={BusFront}>
+    <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={t('Favourite bus')} required>
+      <option value="">{t('Choose a favourite bus')}</option>
+      {favourites.map((bus) => <option key={bus.busId} value={bus.busId}>{t(bus.busName)}{bus.routeNumber ? ` (${bus.routeNumber})` : ''}</option>)}
+    </select>
+  </Field>
 }
 
 function RemindersSection({ state, reload, token, notify, favourites, stopsOf }) {
@@ -318,14 +343,17 @@ function RemindersSection({ state, reload, token, notify, favourites, stopsOf })
   const statusLabel = { upcoming: 'Upcoming', sent: 'Sent', past: 'Departed', disabled: 'Off' }
   return <Section title="Departure reminders" subtitle={t('The route data has no timetable, so set your own departure time. All times are Bangladesh time (GMT+6).')}>
     {city.length === 0 ? <Empty icon={AlarmClock} title="Save a Dhaka City bus first" text="Reminders are for your favourite buses." />
-      : <form className="fd-form" onSubmit={save}>
+      : <form className="fd-form fd-form-reminder" onSubmit={save}>
         <BusSelect favourites={city} value={form.busId} onChange={(busId) => setForm({ ...form, busId, stopName: '' })} />
-        <StopSelect stops={stopsOf(form.busId)} value={form.stopName} onChange={(stopName) => setForm({ ...form, stopName })} label="Stop you leave from" />
-        <label className="fd-field"><small>{t('Departure (Bangladesh time)')}</small>
-          <input type="datetime-local" value={form.departureAt} min={dhakaInputValue()} onChange={(e) => setForm({ ...form, departureAt: e.target.value })} required /></label>
-        <select className="fd-select" value={form.leadMinutes} onChange={(e) => setForm({ ...form, leadMinutes: e.target.value })} aria-label={t('Remind me')}>
-          {LEAD_CHOICES.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
-        </select>
+        <StopSelect stops={stopsOf(form.busId)} value={form.stopName} onChange={(stopName) => setForm({ ...form, stopName })} label="Stop you leave from" dot="start" />
+        <Field label="Departure (Bangladesh time)" icon={CalendarClock}>
+          <input type="datetime-local" value={form.departureAt} min={dhakaInputValue()} onChange={(e) => setForm({ ...form, departureAt: e.target.value })} aria-label={t('Departure (Bangladesh time)')} required />
+        </Field>
+        <Field label="Remind me" icon={Bell}>
+          <select value={form.leadMinutes} onChange={(e) => setForm({ ...form, leadMinutes: e.target.value })} aria-label={t('Remind me')}>
+            {LEAD_CHOICES.map(([value, label]) => <option key={value} value={value}>{t(label)}</option>)}
+          </select>
+        </Field>
         <div className="fd-form-actions">
           <button type="submit" className="extra-button" disabled={busy || !form.busId || !form.stopName}>{busy ? <span className="favorite-spinner" /> : <AlarmClock size={14} />} {t(form.id ? 'Save changes' : 'Add reminder')}</button>
           {form.id && <button type="button" className="extra-button secondary" onClick={() => setForm(blank())}>{t('Cancel')}</button>}
@@ -369,10 +397,13 @@ function AlertsSection({ state, reload, token, notify, favourites, stopsOf }) {
   return <Section title="Bus availability alerts" subtitle={t('Get a notification when your bus fills up or seats free up again.')}>
     <p className="fd-note">{t('Seats come from riders boarding and leaving through SmartCommute, on the route’s buses in service. Alerts for a travel date need a seat-booking system, which the app does not have yet.')}</p>
     {city.length === 0 ? <Empty icon={BellRing} title="Save a Dhaka City bus first" text="Alerts are for your favourite buses." />
-      : <form className="fd-form" onSubmit={save}>
+      : <form className="fd-form fd-form-alert" onSubmit={save}>
         <BusSelect favourites={city} value={form.busId} onChange={(busId) => setForm({ busId, fromStop: '', toStop: '' })} />
-        <StopSelect stops={stopsOf(form.busId)} value={form.fromStop} onChange={(fromStop) => setForm({ ...form, fromStop })} label="Starting stop" />
-        <StopSelect stops={stopsOf(form.busId)} value={form.toStop} onChange={(toStop) => setForm({ ...form, toStop })} label="Destination stop" />
+        <div className="fd-stop-pair">
+          <StopSelect stops={stopsOf(form.busId)} value={form.fromStop} onChange={(fromStop) => setForm({ ...form, fromStop })} label="Starting stop" dot="start" exclude={form.toStop} />
+          <SwapButton disabled={!form.fromStop && !form.toStop} onClick={() => setForm({ ...form, fromStop: form.toStop, toStop: form.fromStop })} />
+          <StopSelect stops={stopsOf(form.busId)} value={form.toStop} onChange={(toStop) => setForm({ ...form, toStop })} label="Destination stop" dot="end" exclude={form.fromStop} />
+        </div>
         <div className="fd-form-actions"><button type="submit" className="extra-button" disabled={busy || !form.busId || !form.fromStop || !form.toStop}>{busy ? <span className="favorite-spinner" /> : <BellRing size={14} />} {t('Add alert')}</button></div>
       </form>}
     {isError(state.status) && <ErrorBox message={state.status} onRetry={reload} />}

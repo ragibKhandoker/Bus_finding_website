@@ -23,7 +23,7 @@ public class RideShareTests(TestServerFixture server)
 
     private static async Task<string> CreateRide(HttpClient client, string destination, string preference = "Any")
     {
-        var response = await Post(client, new { source = "Mirpur 10", destination, maxParticipants = 3, genderPreference = preference });
+        var response = await Post(client, RideTestData.Body(destination, preference));
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         return (await JsonOf(response)).GetProperty("data").GetProperty("_id").GetString()!;
     }
@@ -48,7 +48,8 @@ public class RideShareTests(TestServerFixture server)
         var (other, _) = await server.CreateUserAsync();
         var destination = Place("Dhanmondi");
 
-        var response = await Post(client, new { source = "  Mirpur 10 ", destination = $" {destination} ", maxParticipants = 3, genderPreference = "female", userId = other.Id, userName = "Someone Else" });
+        var response = await Post(client, RideTestData.Body($" {destination} ", "female").With("source", "  Mirpur 10 ")
+            .With("userId", other.Id).With("userName", "Someone Else").With("vehicleType", "cng").With("pickupDetails", "Gate 2"));
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var ride = (await JsonOf(response)).GetProperty("data");
         Assert.Equal("Mirpur 10", ride.GetProperty("source").GetString());
@@ -59,6 +60,11 @@ public class RideShareTests(TestServerFixture server)
         Assert.Equal(host.Id.ToString(), ride.GetProperty("host").GetProperty("id").GetString());
         Assert.Equal(host.Name, ride.GetProperty("host").GetProperty("name").GetString());
         Assert.False(ride.GetProperty("host").TryGetProperty("email", out _));
+        Assert.Equal("CNG", ride.GetProperty("vehicleType").GetString());
+        Assert.Equal("OPEN", ride.GetProperty("state").GetString());
+        Assert.Equal("host", ride.GetProperty("viewer").GetProperty("role").GetString());
+        Assert.Equal("Gate 2", ride.GetProperty("pickupDetails").GetString());
+        Assert.Equal(JsonValueKind.String, ride.GetProperty("departureAt").ValueKind);
 
         await using var scope = server.Scope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -66,6 +72,11 @@ public class RideShareTests(TestServerFixture server)
         Assert.Equal(host.Id, saved.UserId);
         Assert.Equal(RideStatus.Active, saved.Status);
         Assert.True(saved.CreatedAt > DateTime.UtcNow.AddMinutes(-1));
+        Assert.Equal(RideTestData.MotijheelLat, saved.DestinationLat);
+
+        // Someone else reading the ride does not see the pickup details.
+        var publicView = (await JsonOf(await server.ClientFor(null).GetAsync($"/api/rideshare/{saved.Id}"))).GetProperty("data");
+        Assert.Equal(JsonValueKind.Null, publicView.GetProperty("pickupDetails").ValueKind);
     }
 
     [SkippableFact]
@@ -76,7 +87,7 @@ public class RideShareTests(TestServerFixture server)
         var postId = await CreateRide(hostClient, Place("Gulshan"));
         foreach (var client in new[] { server.ClientFor(null), server.ClientFor("not.a.token") })
         {
-            Assert.Equal(HttpStatusCode.Unauthorized, (await Post(client, new { source = "A", destination = "B", maxParticipants = 2, genderPreference = "Any" })).StatusCode);
+            Assert.Equal(HttpStatusCode.Unauthorized, (await Post(client, RideTestData.Body())).StatusCode);
             Assert.Equal(HttpStatusCode.Unauthorized, (await client.DeleteAsync($"/api/rideshare/{postId}")).StatusCode);
             Assert.Equal(HttpStatusCode.Unauthorized, (await Complete(client, postId)).StatusCode);
             Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsJsonAsync("/api/riderequests/send", new { ridePostId = postId })).StatusCode);
@@ -107,6 +118,25 @@ public class RideShareTests(TestServerFixture server)
         {
             Assert.Equal(HttpStatusCode.BadRequest, (await Post(client, body)).StatusCode);
         }
+        var valid = RideTestData.Body("Banani");
+        Dictionary<string, object?>[] invalidAdvanced =
+        [
+            valid.With("destination", "Savar").With("destinationLat", RideTestData.SavarLat).With("destinationLng", RideTestData.SavarLng),
+            valid.With("destination", "Mirpur 10").With("destinationLat", RideTestData.MirpurLat).With("destinationLng", RideTestData.MirpurLng),
+            valid.With("departureAt", RideTestData.DepartureIn(TimeSpan.FromHours(-2))),
+            valid.Without("departureAt"),
+            valid.With("costPerPerson", -5),
+            valid.Without("costPerPerson"),
+            valid.With("vehicleType", "Bus"),
+            valid.With("vehicleType", "Bike"),
+            valid.With("destination", "A place that is not a stop").Without("destinationLat").Without("destinationLng"),
+        ];
+        foreach (var body in invalidAdvanced)
+        {
+            Assert.Equal(HttpStatusCode.BadRequest, (await Post(client, body)).StatusCode);
+        }
+        // A known Dhaka bus stop without coordinates is looked up.
+        Assert.Equal(HttpStatusCode.Created, (await Post(client, valid.With("destination", "Motijheel").Without("destinationLat").Without("destinationLng"))).StatusCode);
         var fraction = await client.PostAsync("/api/rideshare", new StringContent(
             """{"source":"Mirpur","destination":"Banani","maxParticipants":2.5,"genderPreference":"Any"}""", System.Text.Encoding.UTF8, "application/json"));
         Assert.Equal(HttpStatusCode.BadRequest, fraction.StatusCode);

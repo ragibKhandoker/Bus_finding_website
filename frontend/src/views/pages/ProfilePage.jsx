@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { ArrowRight, BadgeCheck, CalendarDays, Check, CircleAlert, Copy, KeyRound, Lock, LogOut, Inbox, LayoutDashboard, Mail, Siren, Pencil, Phone, Plus, Route, ShieldCheck, Users, X } from 'lucide-react'
+import { ArrowRight, BadgeCheck, CalendarDays, Check, CircleAlert, Copy, KeyRound, Lock, LogOut, Inbox, LayoutDashboard, Mail, MessageCircle, Siren, Pencil, Phone, Plus, Route, ShieldCheck, Users, X } from 'lucide-react'
 import { apiRequest as request } from '../../models/api'
 import { formatDate, formatNumber, t } from '../../models/i18n'
 import { usePersistentState } from '../../controllers/usePersistentState'
@@ -7,7 +7,7 @@ import { saveSessionUser } from '../../models/session'
 import { errorText } from '../../models/messages'
 import { PageHeading, SignInPrompt } from '../components/common'
 import { SelectMenu } from '../components/AuthModal'
-import { BIO_LIMIT, DHAKA_AREAS, GENDERS, PROFILE_FIELDS, profileFormOf, profileProblem } from '../../models/user'
+import { BIO_LIMIT, DHAKA_AREAS, GENDERS, PROFILE_FIELDS, formatWhatsApp, profileFormOf, profileProblem } from '../../models/user'
 import { ADMIN_FOCUS_KEY } from '../../controllers/router'
 import { changed } from '../../models/notifications'
 
@@ -53,7 +53,7 @@ export function ProfilePage({ user, token, signedIn, updateUser, signOut, openAu
   const completeness = Math.round((filled / PROFILE_FIELDS.length) * 100)
   const memberSince = formatDate(user.createdAt, { month: 'long', year: 'numeric' })
   const details = [
-    ['Full name', user.name], ['Email address', user.email], ['Phone number', user.phone], ['Gender', user.gender && t(user.gender)],
+    ['Full name', user.name], ['Email address', user.email], ['Phone number', user.phone], ['WhatsApp number', formatWhatsApp(user.whatsApp)], ['Gender', user.gender && t(user.gender)],
     ['Home area', user.homeArea && t(user.homeArea)], ['Work or study area', user.workArea && t(user.workArea)],
   ]
   // An empty detail is a dashed "+ Not added" chip, so it never reads like a real value; it opens the edit form.
@@ -73,6 +73,7 @@ export function ProfilePage({ user, token, signedIn, updateUser, signOut, openAu
         <ul className="pf-facts">
           {(user.homeArea || user.workArea) && <li><Route size={15} /><span>{user.homeArea ? t(user.homeArea) : '—'} <ArrowRight size={12} /> {user.workArea ? t(user.workArea) : '—'}</span></li>}
           {user.phone && <li><Phone size={15} /><span>{user.phone}</span></li>}
+          {user.whatsApp && <li><MessageCircle size={15} /><span>{t('WhatsApp')} · {formatWhatsApp(user.whatsApp)}</span></li>}
           {memberSince && <li><CalendarDays size={15} /><span>{t('Member since {date}', { date: memberSince })}</span></li>}
         </ul>
         {user.friendCode && <button className="pf-code" onClick={copyCode} title={t('Copy friend code')}><span><small>{t('Friend code')}</small><b>{user.friendCode}</b></span><Copy size={15} /></button>}
@@ -95,6 +96,10 @@ export function ProfilePage({ user, token, signedIn, updateUser, signOut, openAu
             <label className="pf-field"><span>{t('Full name')}</span><input autoComplete="name" value={form.name} onChange={set('name')} maxLength={100} /></label>
             <label className="pf-field"><span>{t('Email address')}</span><input type="email" autoComplete="email" value={form.email} onChange={set('email')} maxLength={255} /></label>
             <label className="pf-field"><span>{t('Phone number')} <em>{t('Optional')}</em></span><input type="tel" autoComplete="tel" value={form.phone} onChange={set('phone')} placeholder={t('+880 1XXX-XXXXXX')} maxLength={20} /></label>
+            <label className="pf-field"><span>{t('WhatsApp number')} <em>{t('Optional')}</em>
+              {form.phone.trim() && form.whatsApp.trim() !== form.phone.trim() && <button type="button" className="pf-same" onClick={() => setForm((current) => ({ ...current, whatsApp: current.phone }))}>{t('Same as phone')}</button>}</span>
+              <input type="tel" inputMode="tel" value={form.whatsApp} onChange={set('whatsApp')} placeholder={t('01XXX-XXXXXX')} maxLength={20} />
+              <small className="pf-hint">{t('Only the host and approved riders of a ride you share can open a WhatsApp chat with you.')}</small></label>
             <div className="pf-field"><span id="pf-gender-label">{t('Gender')}</span><SelectMenu labelledBy="pf-gender-label" value={form.gender} onChange={(gender) => setForm((current) => ({ ...current, gender }))} options={GENDERS.map((gender) => ({ value: gender, label: t(gender) }))} /></div>
             <label className="pf-field"><span>{t('Home area')} <em>{t('Optional')}</em></span><input list="pf-areas" value={form.homeArea} onChange={set('homeArea')} placeholder={t('e.g. Uttara')} maxLength={100} /></label>
             <label className="pf-field"><span>{t('Work or study area')} <em>{t('Optional')}</em></span><input list="pf-areas" value={form.workArea} onChange={set('workArea')} placeholder={t('e.g. Motijheel')} maxLength={100} /></label>

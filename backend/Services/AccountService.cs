@@ -188,6 +188,14 @@ public class AccountService(
         {
             user.Phone = OptionalText(request.Phone);
         }
+        if (request.WhatsApp is not null)
+        {
+            if (WhatsAppNumber.Normalize(request.WhatsApp) is not { } whatsApp)
+            {
+                return ServiceResult<User>.BadRequest("Enter a valid WhatsApp number, like 01712-345678 or +8801712345678.");
+            }
+            user.WhatsApp = whatsApp.Length == 0 ? null : whatsApp;
+        }
         if (request.Bio is not null)
         {
             user.Bio = OptionalText(request.Bio);

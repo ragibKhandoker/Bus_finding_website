@@ -184,3 +184,121 @@ html[data-theme="dark"] .fd-page,html[data-theme="night"] .fd-page{--fd-up:#f07a
 @media(prefers-reduced-motion:reduce){.fd-panel,.fd-stat-skeleton,.fd-skeleton i,.fd-skeleton b,.fd-skeleton small{animation:none}}
 
 .route-outside-city{display:inline-flex;align-items:center;padding:6px 12px;border-radius:999px;border:1px dashed var(--line);color:var(--muted);font-size:12px;font-weight:700}
+
+/* ---- Surface hierarchy ----
+   Page (deeper tint) → section tray (light tint) → card (white, border + shadow).
+   Each level differs clearly in colour and has a visible border, so boxes never blend into the background. */
+.app-shell:has(.fd-page) main{background:var(--fd-page-bg,transparent)}
+.app-shell:has(.fd-page){--fd-page-bg:color-mix(in srgb,var(--paper) 93%,var(--ink) 7%)}
+.fd-page{
+  --fd-tray:color-mix(in srgb,var(--paper) 45%,var(--surface));
+  --fd-inset:color-mix(in srgb,var(--paper) 70%,var(--surface));
+  --fd-border:color-mix(in srgb,var(--ink) 15%,transparent);
+  --fd-border-strong:color-mix(in srgb,var(--ink) 24%,transparent);
+  --fd-shadow:0 1px 2px rgba(16,44,32,.07),0 4px 14px -4px rgba(16,44,32,.12);
+  --fd-shadow-hover:0 2px 4px rgba(16,44,32,.08),0 14px 30px -10px rgba(16,44,32,.26);
+}
+html[data-theme="dark"] .app-shell:has(.fd-page),html[data-theme="night"] .app-shell:has(.fd-page){--fd-page-bg:color-mix(in srgb,var(--paper) 88%,#000 12%)}
+html[data-theme="dark"] .fd-page,html[data-theme="night"] .fd-page{
+  --fd-tray:color-mix(in srgb,var(--paper) 55%,var(--surface));
+  --fd-inset:color-mix(in srgb,var(--paper) 40%,var(--surface));
+  --fd-border:color-mix(in srgb,var(--ink) 16%,transparent);
+  --fd-border-strong:color-mix(in srgb,var(--ink) 26%,transparent);
+  --fd-shadow:0 1px 2px rgba(0,0,0,.35),0 6px 18px -6px rgba(0,0,0,.55);
+  --fd-shadow-hover:0 2px 4px rgba(0,0,0,.4),0 16px 32px -12px rgba(0,0,0,.7);
+}
+
+/* Top bar elements: stats and tabs are solid cards */
+.fd-stat,.fd-tabs{background:var(--surface);border:1px solid var(--fd-border);box-shadow:var(--fd-shadow)}
+.fd-stat{border-radius:14px;transition:border-color .2s,box-shadow .2s,transform .2s}
+.fd-stat:hover{box-shadow:var(--fd-shadow-hover);transform:translateY(-1px);border-color:color-mix(in srgb,var(--green) 35%,transparent)}
+.fd-stat.is-current{border-color:var(--green);box-shadow:0 0 0 3px var(--fd-soft),var(--fd-shadow)}
+.fd-stat.is-current .fd-stat-icon{background:var(--green);color:#fff}
+
+/* Section = tray that holds the cards */
+.fd-page .fd-section{background:var(--fd-tray);border:1px solid var(--fd-border);border-radius:16px;padding:20px;box-shadow:none}
+.fd-section-head{padding-bottom:14px;border-bottom:1px solid var(--fd-border)}
+
+/* Cards and rows inside the tray: solid surface, clear border, soft shadow */
+.fd-section .fav-card,.fd-collection,.fd-fare-row,.fd-reminder,.fd-alert-row,.fd-notification,.fd-recent-row,.fd-skeleton span,.fd-form{
+  background:var(--surface);border:1px solid var(--fd-border);box-shadow:var(--fd-shadow)}
+.fd-section .fav-card{border-radius:14px;padding:16px;transition:border-color .2s,box-shadow .2s,transform .2s}
+.fd-section .fav-card:hover,.fd-collection:hover,.fd-fare-row:hover,.fd-reminder:hover,.fd-alert-row:hover,.fd-notification:hover,.fd-recent-row:hover{
+  border-color:color-mix(in srgb,var(--green) 45%,transparent);box-shadow:var(--fd-shadow-hover)}
+.fd-section .fav-card:hover{transform:translateY(-2px)}
+.fd-section .fav-card.is-selected{border-color:var(--green);box-shadow:0 0 0 3px var(--fd-soft),var(--fd-shadow)}
+.fd-section .fav-card .fav-card-head{padding-bottom:12px;border-bottom:1px solid var(--fd-border)}
+.fd-notification.unread{background:color-mix(in srgb,var(--green) 6%,var(--surface));border-color:color-mix(in srgb,var(--green) 35%,transparent);box-shadow:inset 3px 0 0 var(--green),var(--fd-shadow)}
+.fd-outside{background:var(--surface);border:1px dashed var(--fd-border-strong)}
+
+/* Inside a card: fact tiles and chips are tinted so they read as separate */
+.fd-section .fav-card .fav-facts span{background:var(--fd-inset);border:1px solid var(--fd-border)}
+.fd-collection .fd-chips li{background:var(--fd-inset);border:1px solid var(--fd-border)}
+
+/* Inputs: visible borders everywhere */
+.fd-select,.fd-inline-form input,.fd-trip input,.fd-field input{background:var(--surface);border-color:var(--fd-border-strong)}
+.fd-select:hover,.fd-inline-form input:hover,.fd-trip input:hover,.fd-field input:hover{border-color:color-mix(in srgb,var(--green) 50%,transparent)}
+.fd-pill{background:var(--surface);border-color:var(--fd-border-strong)}
+.fd-page .extra-button.secondary{background:var(--surface);border-color:var(--fd-border-strong)}
+
+/* Comparison table */
+.fd-table-wrap{border-color:var(--fd-border);background:var(--surface);box-shadow:var(--fd-shadow)}
+.fd-compare-table th,.fd-compare-table td{border-bottom-color:var(--fd-border)}
+.fd-compare-table tbody tr:nth-child(even){background:var(--fd-inset)}
+
+@media(max-width:560px){.fd-page .fd-section{padding:14px;border-radius:14px}.fd-section .fav-card{padding:13px}}
+@media(prefers-reduced-motion:reduce){.fd-stat:hover,.fd-section .fav-card:hover{transform:none}}
+
+/* ---- Labelled form fields (Field, StopSelect, BusSelect) ----
+   Every control: a label above, an icon or start/end dot inside, one height, a custom arrow on selects. */
+.fd-input{display:grid;gap:6px;min-width:0;align-content:end}
+.fd-input>small{font-size:11.5px;font-weight:700;letter-spacing:.02em;color:var(--muted)}
+.fd-input-box{position:relative;display:flex;align-items:center;min-width:0}
+.fd-input-box>svg,.fd-input-dot{position:absolute;left:13px;pointer-events:none}
+.fd-input-box>svg{color:var(--muted);transition:color .2s}
+.fd-input-box:focus-within>svg{color:var(--green)}
+.fd-input-dot{width:10px;height:10px;border-radius:50%;box-shadow:0 0 0 3px var(--surface),0 0 0 4px currentColor;color:var(--fd-border-strong)}
+.fd-input-dot.start{background:#19865e;color:color-mix(in srgb,#19865e 45%,transparent)}
+.fd-input-dot.end{background:#e5533d;color:color-mix(in srgb,#e5533d 45%,transparent)}
+.fd-input-box select,.fd-input-box input{width:100%;min-width:0;height:44px;padding:0 14px 0 38px;border:1px solid var(--fd-border-strong);border-radius:11px;
+  background-color:var(--surface);color:var(--ink);font:inherit;font-size:13.5px;font-weight:500;transition:border-color .2s,box-shadow .2s,background-color .2s}
+.fd-input-box select{appearance:none;-webkit-appearance:none;padding-right:36px;cursor:pointer;text-overflow:ellipsis;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a9a92' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 13px center}
+.fd-input-box input::placeholder{color:var(--muted);opacity:.75}
+.fd-input-box select:hover:not(:disabled),.fd-input-box input:hover{border-color:color-mix(in srgb,var(--green) 50%,transparent)}
+.fd-input-box select:focus,.fd-input-box input:focus{outline:0;border-color:var(--green);box-shadow:0 0 0 3px var(--fd-soft)}
+.fd-input-box select:disabled{cursor:not-allowed;color:var(--muted);background-color:var(--fd-inset)}
+.fd-input-box input[type="datetime-local"]{padding-right:10px}
+html[data-theme="dark"] .fd-input-box input[type="datetime-local"],html[data-theme="night"] .fd-input-box input[type="datetime-local"]{color-scheme:dark}
+
+/* Starting and destination stop side by side, with a swap button between them */
+.fd-stop-pair{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);gap:10px;align-items:end;min-width:0}
+.fd-swap{display:grid;place-items:center;width:44px;height:44px;border:1px solid var(--fd-border-strong);border-radius:50%;background:var(--surface);color:var(--green);
+  transition:transform .3s cubic-bezier(.22,.61,.36,1),border-color .2s,background-color .2s}
+.fd-swap svg{transform:rotate(90deg)}
+.fd-swap:hover:not(:disabled){border-color:var(--green);background:var(--fd-soft);transform:rotate(180deg)}
+.fd-swap:disabled{opacity:.45;cursor:not-allowed}
+
+/* Form layouts */
+.fd-page .fd-form{gap:14px 12px;padding:16px;align-items:end}
+.fd-form-alert{grid-template-columns:minmax(200px,1fr) minmax(0,2.2fr) auto}
+.fd-form-reminder{grid-template-columns:repeat(4,minmax(0,1fr))}
+.fd-form-reminder .fd-form-actions{grid-column:1/-1;justify-content:flex-end}
+.fd-page .fd-form .extra-button,.fd-page .fd-trip .extra-button{height:44px;padding:0 18px;border-radius:11px;font-size:13px}
+.fd-page .fd-form .extra-button.secondary{background:var(--surface)}
+.fd-page .fd-trip{grid-template-columns:minmax(0,1fr) auto;gap:12px;align-items:end}
+
+@media(max-width:900px){
+  .fd-form-alert{grid-template-columns:1fr}
+  .fd-form-reminder{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .fd-form-alert .fd-form-actions{justify-content:flex-end}
+}
+@media(max-width:620px){
+  .fd-form-reminder,.fd-page .fd-trip{grid-template-columns:1fr}
+  .fd-stop-pair{grid-template-columns:1fr;gap:6px}
+  .fd-swap{justify-self:center;width:36px;height:36px}
+  .fd-swap svg{transform:none}
+  .fd-page .fd-form .fd-form-actions .extra-button,.fd-page .fd-trip .extra-button{flex:1;width:100%}
+}
+@media(prefers-reduced-motion:reduce){.fd-swap:hover:not(:disabled){transform:none}}

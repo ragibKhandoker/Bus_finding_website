@@ -199,6 +199,15 @@ public class UploadImageRequest
     public string Image { get; set; } = "";
 }
 
+public class BusPhotoRequest
+{
+    [Required(ErrorMessage = "Choose a JPEG, PNG or WebP image.")]
+    public string Image { get; set; } = "";
+
+    [MaxLength(200, ErrorMessage = "The photo credit must be at most 200 characters.")]
+    public string? Credit { get; set; }
+}
+
 // documentType is "student_pass" (the default, needs institution name and ID) or "nid". imageId comes from
 // upload-image and must be the caller's own upload.
 public class SubmitVerificationRequest

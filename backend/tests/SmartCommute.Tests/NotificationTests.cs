@@ -146,7 +146,7 @@ public class NotificationTests(TestServerFixture server)
         var friendNote = Assert.Single(await Of(bob.Id), n => n.Category == NotificationCategories.Friend);
         Assert.Equal(alice.Id, friendNote.SenderId);
 
-        var ride = await aliceClient.PostAsJsonAsync("/api/rideshare", new { source = "Mirpur", destination = "Banani", maxParticipants = 3, genderPreference = "Any" });
+        var ride = await aliceClient.PostAsJsonAsync("/api/rideshare", RideTestData.Body("Banani"));
         var rideId = (await JsonOf(ride)).GetProperty("data").GetProperty("_id").GetString();
         var join = await bobClient.PostAsJsonAsync("/api/riderequests", new { ridePostId = rideId });
         var requestId = (await JsonOf(join)).GetProperty("data").GetProperty("_id").GetString();
@@ -175,7 +175,7 @@ public class NotificationTests(TestServerFixture server)
         var (rider, riderClient) = await server.CreateUserAsync();
         var (stranger, _) = await server.CreateUserAsync();
         await MakeFriends(sender, friend);
-        var ride = await senderClient.PostAsJsonAsync("/api/rideshare", new { source = "Mirpur", destination = "Uttara", maxParticipants = 3, genderPreference = "Any" });
+        var ride = await senderClient.PostAsJsonAsync("/api/rideshare", RideTestData.Body("Uttara"));
         var rideId = (await JsonOf(ride)).GetProperty("data").GetProperty("_id").GetString();
         var join = await riderClient.PostAsJsonAsync("/api/riderequests", new { ridePostId = rideId });
         await senderClient.PutAsync($"/api/riderequests/accept/{(await JsonOf(join)).GetProperty("data").GetProperty("_id").GetString()}", null);

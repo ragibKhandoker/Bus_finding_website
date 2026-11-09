@@ -379,6 +379,30 @@ html[data-theme="dark"] :is(select option,select optgroup),html[data-theme="nigh
 .route-facts b{font:750 19px var(--font-head);color:var(--fg-13281f)}
 .route-hero-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
 .route-hero-actions a{text-decoration:none}
+/* Route photo beside the description (BusPhoto): right column on wide screens, on top on phones. */
+.route-hero.has-photo{display:grid;grid-template-columns:minmax(0,1fr) minmax(300px,380px);gap:26px;align-items:start}
+.route-hero.has-photo>.bus-photo{order:2}
+.route-hero-main{min-width:0}
+.bus-photo{margin:0;display:grid;gap:8px}
+/* No real photo yet: visitors see no photo column at all. */
+.route-hero.has-photo:not(:has(.bus-photo)){display:block}
+.bus-photo-frame{position:relative;aspect-ratio:4/3;overflow:hidden;border-radius:14px;border:1px solid var(--line);background:var(--bg-f2f6f3);box-shadow:0 1px 2px rgba(16,44,32,.06),0 12px 28px -16px rgba(16,44,32,.3)}
+.bus-photo-frame img{display:block;width:100%;height:100%;object-fit:cover}
+.bus-photo-empty{display:grid;place-content:center;justify-items:center;gap:6px;width:100%;padding:16px;border:1.5px dashed var(--line);box-shadow:none;background:color-mix(in srgb,var(--green) 4%,var(--surface));color:var(--muted);font:inherit;text-align:center;cursor:pointer;transition:border-color .2s,background-color .2s}
+.bus-photo-empty:hover{border-color:var(--green);background:color-mix(in srgb,var(--green) 8%,var(--surface))}
+.bus-photo-empty svg{color:var(--green)}
+.bus-photo-empty b{color:var(--ink);font-size:14px}
+.bus-photo-empty span{font-size:12px}
+.bus-photo figcaption{display:flex;flex-wrap:wrap;gap:2px 8px;font-size:11.5px;line-height:1.45;color:var(--muted)}
+.bus-photo-caption{color:var(--ink);font-weight:600}
+.bus-photo figcaption a{display:inline-flex;align-items:center;gap:4px;color:inherit;text-decoration:underline;text-decoration-color:var(--line);text-underline-offset:2px}
+.bus-photo figcaption a:hover{color:var(--green)}
+.bus-photo-admin{display:grid;gap:8px;padding-top:4px}
+.bus-photo-admin>div{display:flex;flex-wrap:wrap;gap:8px}
+.bus-photo-admin input{height:36px;padding:0 10px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);font:inherit;font-size:13px}
+.bus-photo-admin input:focus{outline:0;border-color:var(--green);box-shadow:0 0 0 3px color-mix(in srgb,var(--green) 15%,transparent)}
+.bus-photo-remove{color:var(--fg-c95f53)}
+@media(max-width:900px){.route-hero.has-photo{grid-template-columns:1fr;gap:18px}.route-hero.has-photo>.bus-photo{order:0}.bus-photo-frame{aspect-ratio:16/10}}
 .route-stops-panel{margin-top:18px;padding:22px 26px;border-radius:18px}
 .route-stops-panel .hp-route-stops{margin-top:6px}
 .route-note{margin:16px 0 0;font-size:12.5px;color:var(--fg-7d8e85)}

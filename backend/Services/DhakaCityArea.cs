@@ -46,6 +46,9 @@ public sealed class DhakaCityArea
         return new DhakaCityArea(bounds, outside);
     }
 
+    // Whether a point lies inside the Dhaka City bounds (used for ride share places, which have no stop name).
+    public bool InCity(double lat, double lng) => _bounds.Contains(lat, lng);
+
     public bool IsCityStop(string name, double lat, double lng) =>
         _bounds.Contains(lat, lng) && !_outside.Contains(BusRouteMatcher.Normalize(name));
 

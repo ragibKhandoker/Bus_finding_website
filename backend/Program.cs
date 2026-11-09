@@ -55,6 +55,7 @@ builder.Services.Configure<RewardOptions>(builder.Configuration.GetSection("Rewa
 builder.Services.Configure<GeoOptions>(builder.Configuration.GetSection("Geo"));
 builder.Services.Configure<RideShareOptions>(builder.Configuration.GetSection("RideShare"));
 builder.Services.Configure<VerificationOptions>(builder.Configuration.GetSection("Verification"));
+builder.Services.Configure<BusPhotoOptions>(builder.Configuration.GetSection("BusPhotos"));
 builder.Services.Configure<GoogleMapsOptions>(builder.Configuration.GetSection("GoogleMaps"));
 
 builder.Services
@@ -194,6 +195,8 @@ builder.Services.AddScoped<FriendService>();
 builder.Services.AddScoped<ChatService>();
 builder.Services.AddScoped<RideShareService>();
 builder.Services.AddScoped<RideRequestService>();
+builder.Services.AddScoped<RideCommunityService>();
+builder.Services.AddScoped<RideLifecycle>();
 builder.Services.AddScoped<ReviewService>();
 builder.Services.AddScoped<OfferService>();
 builder.Services.AddScoped<GpayService>();
@@ -202,6 +205,7 @@ builder.Services.AddScoped<TripService>();
 builder.Services.AddScoped<FareService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<ImageStorageService>();
+builder.Services.AddScoped<BusPhotoService>();
 builder.Services.AddScoped<PasswordResetService>();
 builder.Services.AddScoped<AccountService>();
 builder.Services.AddScoped<AdminService>();
@@ -215,6 +219,7 @@ builder.Services.AddScoped<FavoriteCollectionService>();
 builder.Services.AddScoped<FavouriteInsightsService>();
 builder.Services.AddScoped<BusAlertService>();
 builder.Services.AddHostedService<FavouriteMonitorHostedService>();
+builder.Services.AddHostedService<RideLifecycleHostedService>();
 builder.Services.AddScoped<StopService>();
 builder.Services.AddScoped<VerificationService>();
 builder.Services.AddScoped<SupportService>();
@@ -255,6 +260,22 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
     if (status >= 500)
     {
         app.Logger.LogError(error, "Unhandled exception for {Method} {Path}", context.Request.Method, context.Request.Path);
+        // In development the full error is also kept in App_Data/logs/server-errors.log (git-ignored), so it can be
+        // read later instead of being copied out of the console.
+        if (app.Environment.IsDevelopment())
+        {
+            try
+            {
+                var folder = Path.Combine(app.Environment.ContentRootPath, "App_Data", "logs");
+                Directory.CreateDirectory(folder);
+                await File.AppendAllTextAsync(Path.Combine(folder, "server-errors.log"),
+                    $"==== {DateTime.UtcNow:O} {context.Request.Method} {context.Request.Path}{context.Request.QueryString} user={context.User.Identity?.Name ?? "-"}{Environment.NewLine}{error}{Environment.NewLine}{Environment.NewLine}");
+            }
+            catch (IOException)
+            {
+                // Logging must never break the error response.
+            }
+        }
     }
     context.Response.StatusCode = status;
     await context.Response.WriteAsJsonAsync(new ErrorResponse(message));

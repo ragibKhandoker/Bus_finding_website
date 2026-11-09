@@ -20,6 +20,29 @@ public class BusController(BusService buses) : ApiControllerBase
         return Ok(new { success = true, count = all.Count, data = all });
     }
 
+    // Which routes have an uploaded photo: [{ busId, url, credit, updatedAt }]. Public, like the routes themselves.
+    [AllowAnonymous]
+    [HttpGet("photos")]
+    public async Task<IActionResult> Photos([FromServices] BusPhotoService photos) =>
+        Ok(new { success = true, data = await photos.AllAsync(HttpContext.RequestAborted) });
+
+    // The uploaded photo of one route. Each version has its own URL (?v=...), so it may be cached for a long time.
+    [AllowAnonymous]
+    [HttpGet("{busId:guid}/photo")]
+    public async Task<IActionResult> Photo(Guid busId, [FromServices] BusPhotoService photos)
+    {
+        var stored = await photos.OpenAsync(busId, HttpContext.RequestAborted);
+        if (stored is null)
+        {
+            return NotFoundError("This bus has no photo.");
+        }
+        Response.Headers.CacheControl = "public, max-age=604800";
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        // The web app runs on another origin in development, so the image must be allowed to load there.
+        Response.Headers["Cross-Origin-Resource-Policy"] = "cross-origin";
+        return File(stored.Content, stored.ContentType);
+    }
+
     // One route with its stops, for the route's own page. Route numbers are matched without regard to case.
     [AllowAnonymous]
     [HttpGet("route/{routeNumber}")]

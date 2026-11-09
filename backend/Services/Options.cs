@@ -35,6 +35,16 @@ public class VerificationOptions
     public string StoragePath { get; set; } = "App_Data/verification-images";
 }
 
+public class BusPhotoOptions
+{
+    // Largest bus photo accepted, in bytes.
+    public int MaxImageBytes { get; set; } = 5 * 1024 * 1024;
+
+    // Where bus photos are kept, relative to the app folder. They are public, but served through BusController so
+    // only checked files with random names can ever be fetched.
+    public string StoragePath { get; set; } = "App_Data/bus-photos";
+}
+
 public class GeoOptions
 {
     public string NominatimBaseUrl { get; set; } = "https://nominatim.openstreetmap.org";

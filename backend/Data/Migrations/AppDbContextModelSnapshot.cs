@@ -223,6 +223,63 @@ namespace SmartCommute.Server.Data.Migrations
                     b.ToTable("bus_fare_history", (string)null);
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.BusPhoto", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bus_id");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("content_type");
+
+                    b.Property<string>("Credit")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("credit");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size_bytes");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("storage_key");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UploadedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("uploaded_by_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_bus_photos");
+
+                    b.HasIndex("BusId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_bus_photos_bus_id");
+
+                    b.HasIndex("StorageKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_bus_photos_storage_key");
+
+                    b.HasIndex("UploadedById")
+                        .HasDatabaseName("ix_bus_photos_uploaded_by_id");
+
+                    b.ToTable("bus_photos", (string)null);
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.BusReminder", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1435,6 +1492,43 @@ namespace SmartCommute.Server.Data.Migrations
                     b.ToTable("review_replies", (string)null);
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.RideMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("RidePostId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ride_post_id");
+
+                    b.Property<Guid>("SenderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sender_id");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("text");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ride_messages");
+
+                    b.HasIndex("SenderId")
+                        .HasDatabaseName("ix_ride_messages_sender_id");
+
+                    b.HasIndex("RidePostId", "CreatedAt")
+                        .HasDatabaseName("ix_ride_messages_ride_post_id_created_at");
+
+                    b.ToTable("ride_messages", (string)null);
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.RidePost", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1442,9 +1536,29 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("cancel_reason");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("cancelled_at");
+
                     b.Property<DateTime?>("CompletedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("completed_at");
+
+                    b.Property<string>("ContactPreference")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("contact_preference");
+
+                    b.Property<decimal?>("CostPerPerson")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("cost_per_person");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1454,15 +1568,31 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
 
+                    b.Property<DateTime?>("DepartureAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("departure_at");
+
                     b.Property<string>("Destination")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("destination");
 
+                    b.Property<double?>("DestinationLat")
+                        .HasColumnType("double precision")
+                        .HasColumnName("destination_lat");
+
+                    b.Property<double?>("DestinationLng")
+                        .HasColumnType("double precision")
+                        .HasColumnName("destination_lng");
+
                     b.Property<double?>("Distance")
                         .HasColumnType("double precision")
                         .HasColumnName("distance");
+
+                    b.Property<DateTime?>("ExpiredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expired_at");
 
                     b.Property<decimal?>("Fare")
                         .HasPrecision(12, 2)
@@ -1481,15 +1611,37 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("character varying(10)")
                         .HasColumnName("gender_preference");
 
+                    b.Property<string>("Instructions")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("instructions");
+
                     b.Property<int>("MaxParticipants")
                         .HasColumnType("integer")
                         .HasColumnName("max_participants");
+
+                    b.Property<string>("PickupDetails")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("pickup_details");
+
+                    b.Property<DateTime?>("ReminderSentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reminder_sent_at");
 
                     b.Property<string>("Source")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
                         .HasColumnName("source");
+
+                    b.Property<double?>("SourceLat")
+                        .HasColumnType("double precision")
+                        .HasColumnName("source_lat");
+
+                    b.Property<double?>("SourceLng")
+                        .HasColumnType("double precision")
+                        .HasColumnName("source_lng");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -1511,12 +1663,22 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("user_name");
 
+                    b.Property<string>("VehicleType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("vehicle_type");
+
                     b.HasKey("Id")
                         .HasName("pk_ride_posts");
 
                     b.HasIndex("CreatedAt")
                         .HasDatabaseName("ix_ride_posts_open")
                         .HasFilter("status = 'active' AND deleted_at IS NULL");
+
+                    b.HasIndex("DepartureAt")
+                        .HasDatabaseName("ix_ride_posts_live_departure")
+                        .HasFilter("status IN ('active', 'full') AND deleted_at IS NULL");
 
                     b.HasIndex("Status", "CreatedAt")
                         .HasDatabaseName("ix_ride_posts_status_created_at");
@@ -1526,13 +1688,94 @@ namespace SmartCommute.Server.Data.Migrations
 
                     b.ToTable("ride_posts", null, t =>
                         {
+                            t.HasCheckConstraint("ck_ride_posts_contact_preference", "contact_preference IN ('chat', 'phone', 'both')");
+
+                            t.HasCheckConstraint("ck_ride_posts_cost", "cost_per_person IS NULL OR cost_per_person >= 0");
+
                             t.HasCheckConstraint("ck_ride_posts_gender_preference", "gender_preference IN ('Any', 'Male', 'Female')");
 
                             t.HasCheckConstraint("ck_ride_posts_max_participants", "max_participants BETWEEN 2 AND 20");
 
-                            t.HasCheckConstraint("ck_ride_posts_places_not_blank", "source ~ '\\S' AND destination ~ '\\S'");
+                            t.HasCheckConstraint("ck_ride_posts_status", "status IN ('active', 'full', 'completed', 'cancelled', 'expired')");
 
-                            t.HasCheckConstraint("ck_ride_posts_status", "status IN ('active', 'completed')");
+                            t.HasCheckConstraint("ck_ride_posts_vehicle_type", "vehicle_type IN ('Car', 'Bike', 'CNG', 'Other')");
+                        });
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.RideReport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AdminNote")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("admin_note");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid?>("ReportedUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reported_user_id");
+
+                    b.Property<Guid>("ReporterId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reporter_id");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<Guid?>("ReviewedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewed_by_id");
+
+                    b.Property<Guid?>("RidePostId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ride_post_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ride_reports");
+
+                    b.HasIndex("ReportedUserId")
+                        .HasDatabaseName("ix_ride_reports_reported_user_id");
+
+                    b.HasIndex("RidePostId")
+                        .HasDatabaseName("ix_ride_reports_ride_post_id");
+
+                    b.HasIndex("ReporterId", "CreatedAt")
+                        .HasDatabaseName("ix_ride_reports_reporter_id_created_at");
+
+                    b.HasIndex("Status", "CreatedAt")
+                        .HasDatabaseName("ix_ride_reports_status_created_at");
+
+                    b.ToTable("ride_reports", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_ride_reports_status", "status IN ('open', 'reviewed', 'dismissed')");
+
+                            t.HasCheckConstraint("ck_ride_reports_target", "ride_post_id IS NOT NULL OR reported_user_id IS NOT NULL");
                         });
                 });
 
@@ -1546,6 +1789,15 @@ namespace SmartCommute.Server.Data.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("note");
+
+                    b.Property<bool>("RemovedByHost")
+                        .HasColumnType("boolean")
+                        .HasColumnName("removed_by_host");
 
                     b.Property<string>("RequesterGender")
                         .IsRequired()
@@ -1586,11 +1838,65 @@ namespace SmartCommute.Server.Data.Migrations
                     b.HasIndex("RidePostId", "RequesterId")
                         .IsUnique()
                         .HasDatabaseName("ix_ride_requests_one_live_per_rider")
-                        .HasFilter("status <> 'rejected'");
+                        .HasFilter("status IN ('pending', 'accepted')");
 
                     b.ToTable("ride_requests", null, t =>
                         {
-                            t.HasCheckConstraint("ck_ride_requests_status", "status IN ('pending', 'accepted', 'rejected')");
+                            t.HasCheckConstraint("ck_ride_requests_status", "status IN ('pending', 'accepted', 'rejected', 'cancelled')");
+                        });
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.RideReview", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Comment")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("comment");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("Rating")
+                        .HasColumnType("integer")
+                        .HasColumnName("rating");
+
+                    b.Property<Guid>("ReviewedUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewed_user_id");
+
+                    b.Property<Guid>("ReviewerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewer_id");
+
+                    b.Property<Guid>("RidePostId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ride_post_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ride_reviews");
+
+                    b.HasIndex("ReviewerId")
+                        .HasDatabaseName("ix_ride_reviews_reviewer_id");
+
+                    b.HasIndex("ReviewedUserId", "CreatedAt")
+                        .HasDatabaseName("ix_ride_reviews_reviewed_user_id_created_at");
+
+                    b.HasIndex("RidePostId", "ReviewerId", "ReviewedUserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_ride_reviews_ride_post_id_reviewer_id_reviewed_user_id");
+
+                    b.ToTable("ride_reviews", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_ride_reviews_not_self", "reviewer_id <> reviewed_user_id");
+
+                            t.HasCheckConstraint("ck_ride_reviews_rating", "rating BETWEEN 1 AND 5");
                         });
                 });
 
@@ -1858,6 +2164,11 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
+                    b.Property<string>("WhatsApp")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("whats_app");
+
                     b.Property<string>("WorkArea")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
@@ -1879,6 +2190,41 @@ namespace SmartCommute.Server.Data.Migrations
                             t.HasCheckConstraint("ck_users_friend_code_format", "friend_code ~ '^[A-Z0-9]{5}$'");
 
                             t.HasCheckConstraint("ck_users_role", "role IN ('commuter', 'driver', 'admin')");
+                        });
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.UserBlock", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BlockedId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("blocked_id");
+
+                    b.Property<Guid>("BlockerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("blocker_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_user_blocks");
+
+                    b.HasIndex("BlockedId")
+                        .HasDatabaseName("ix_user_blocks_blocked_id");
+
+                    b.HasIndex("BlockerId", "BlockedId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_user_blocks_blocker_id_blocked_id");
+
+                    b.ToTable("user_blocks", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_user_blocks_not_self", "blocker_id <> blocked_id");
                         });
                 });
 
@@ -2248,6 +2594,26 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasConstraintName("fk_bus_fare_history_buses_bus_id");
 
                     b.Navigation("Bus");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.BusPhoto", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.Bus", "Bus")
+                        .WithMany()
+                        .HasForeignKey("BusId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_bus_photos_buses_bus_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "UploadedBy")
+                        .WithMany()
+                        .HasForeignKey("UploadedById")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_bus_photos_users_uploaded_by_id");
+
+                    b.Navigation("Bus");
+
+                    b.Navigation("UploadedBy");
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.BusReminder", b =>
@@ -2689,6 +3055,27 @@ namespace SmartCommute.Server.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.RideMessage", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.RidePost", "RidePost")
+                        .WithMany()
+                        .HasForeignKey("RidePostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ride_messages_ride_posts_ride_post_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ride_messages_users_sender_id");
+
+                    b.Navigation("RidePost");
+
+                    b.Navigation("Sender");
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.RidePost", b =>
                 {
                     b.HasOne("SmartCommute.Server.Models.User", "User")
@@ -2699,6 +3086,34 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasConstraintName("fk_ride_posts_users_user_id");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.RideReport", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.User", "ReportedUser")
+                        .WithMany()
+                        .HasForeignKey("ReportedUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_ride_reports_users_reported_user_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "Reporter")
+                        .WithMany()
+                        .HasForeignKey("ReporterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ride_reports_users_reporter_id");
+
+                    b.HasOne("SmartCommute.Server.Models.RidePost", "RidePost")
+                        .WithMany()
+                        .HasForeignKey("RidePostId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_ride_reports_ride_posts_ride_post_id");
+
+                    b.Navigation("ReportedUser");
+
+                    b.Navigation("Reporter");
+
+                    b.Navigation("RidePost");
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.RideRequest", b =>
@@ -2718,6 +3133,36 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasConstraintName("fk_ride_requests_ride_posts_ride_post_id");
 
                     b.Navigation("Requester");
+
+                    b.Navigation("RidePost");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.RideReview", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.User", "ReviewedUser")
+                        .WithMany()
+                        .HasForeignKey("ReviewedUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ride_reviews_users_reviewed_user_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "Reviewer")
+                        .WithMany()
+                        .HasForeignKey("ReviewerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ride_reviews_users_reviewer_id");
+
+                    b.HasOne("SmartCommute.Server.Models.RidePost", "RidePost")
+                        .WithMany()
+                        .HasForeignKey("RidePostId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ride_reviews_ride_posts_ride_post_id");
+
+                    b.Navigation("ReviewedUser");
+
+                    b.Navigation("Reviewer");
 
                     b.Navigation("RidePost");
                 });
@@ -2760,6 +3205,27 @@ namespace SmartCommute.Server.Data.Migrations
                     b.Navigation("IndividualBus");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.UserBlock", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.User", "Blocked")
+                        .WithMany()
+                        .HasForeignKey("BlockedId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_blocks_users_blocked_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "Blocker")
+                        .WithMany()
+                        .HasForeignKey("BlockerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_blocks_users_blocker_id");
+
+                    b.Navigation("Blocked");
+
+                    b.Navigation("Blocker");
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.UserSession", b =>

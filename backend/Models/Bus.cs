@@ -85,3 +85,30 @@ public class BusBoarding
     public DateTime BoardedAt { get; set; } = DateTime.UtcNow;
     public DateTime? EndedAt { get; set; }
 }
+
+// The photo shown on a bus route's page, uploaded by an admin. One per route; uploading again replaces it.
+// The file lives in BusPhotos:StoragePath and is served publicly by GET /bus/{busId}/photo.
+public class BusPhoto
+{
+    public Guid Id { get; set; }
+    public Guid BusId { get; set; }
+    public Bus? Bus { get; set; }
+
+    // File name inside the storage folder: "<random id>.<ext>", never from the user.
+    [MaxLength(100)]
+    public string StorageKey { get; set; } = "";
+
+    [MaxLength(30)]
+    public string ContentType { get; set; } = "";
+
+    public long SizeBytes { get; set; }
+
+    // Who took the photo or where it is from, shown under it (for example "Photo: Dewan Paribahan").
+    [MaxLength(200)]
+    public string? Credit { get; set; }
+
+    public Guid? UploadedById { get; set; }
+    public User? UploadedBy { get; set; }
+
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}

@@ -79,3 +79,6 @@
   .pf-field input,.pf-field select,.pf-field textarea{font-size:16px}
   .pf-actions .button{flex:1}
 }
+.pf-same{margin-left:auto;padding:0;border:0;background:none;color:var(--fg-14805a);font-size:12px;font-weight:700}
+.pf-same:hover{text-decoration:underline}
+.pf-hint{font-size:11.5px;color:var(--muted);line-height:1.4}

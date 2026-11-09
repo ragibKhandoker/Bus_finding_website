@@ -5,6 +5,7 @@ export const PAGE_PATHS = {
   'Home': '/', 'Find a bus': '/find-a-bus', 'Bus routes': '/bus-routes', 'Ride share': '/ride-share', 'My trips': '/my-trips', 'Wallet': '/wallet',
   'Profile': '/profile', 'Friends': '/friends', 'Messages': '/messages', 'Notifications': '/notifications', 'Offers': '/offers',
   'Map': '/map', 'Favourites': '/favourites', 'GPay': '/gpay', 'Verification': '/verification', 'Admin': '/admin', 'Support': '/support',
+  'My rides': '/ride-share/my',
 }
 
 // Each route also has its own page, e.g. /bus-routes/DBR-12.
@@ -15,8 +16,20 @@ export const routeFromPath = (path) => {
   return match ? decodeURIComponent(match[1]) : null
 }
 
+// Each ride share post has its own page too, e.g. /ride-share/3f2a…-….
+export const ridePath = (rideId) => `/ride-share/${encodeURIComponent(rideId)}`
+
+export const rideFromPath = (path) => {
+  const match = path.match(/^\/ride-share\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i)
+  return match ? match[1].toLowerCase() : null
+}
+
+// The item a detail page shows: a bus route number or a ride id.
+export const paramFromPath = (path) => routeFromPath(path) || rideFromPath(path)
+
 export const pageFromPath = (path) => {
   if (routeFromPath(path)) return 'Bus details'
+  if (rideFromPath(path)) return 'Ride details'
   const clean = path.replace(/\/+$/, '').toLowerCase() || '/'
   return Object.keys(PAGE_PATHS).find((page) => PAGE_PATHS[page] === clean) || 'Home'
 }
@@ -57,7 +70,7 @@ export const PAGE_LOADER_MS = 550
 
 // The name shown while a page loads, using the wording from the menus.
 export const PAGE_LOADER_NAMES = {
-  'Bus details': 'Bus routes', 'Wallet': 'My wallet', 'Profile': 'Account', 'Offers': 'Offers & rewards', 'Map': 'Map & fare calculator',
+  'Bus details': 'Bus routes', 'Ride details': 'Ride share', 'Wallet': 'My wallet', 'Profile': 'Account', 'Offers': 'Offers & rewards', 'Map': 'Map & fare calculator',
   'Favourites': 'Favourite buses', 'GPay': 'GPay & recharge', 'Verification': 'Account verification', 'Admin': 'Admin · Users', 'Support': 'Contact admin',
 }
 

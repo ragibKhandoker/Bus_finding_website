@@ -12,6 +12,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Bus> Buses => Set<Bus>();
     public DbSet<BusStop> BusStops => Set<BusStop>();
     public DbSet<IndividualBus> IndividualBuses => Set<IndividualBus>();
+    public DbSet<BusPhoto> BusPhotos => Set<BusPhoto>();
     public DbSet<BusBoarding> BusBoardings => Set<BusBoarding>();
     public DbSet<Wallet> Wallets => Set<Wallet>();
     public DbSet<WalletTransaction> WalletTransactions => Set<WalletTransaction>();
@@ -23,6 +24,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<FareRecord> Fares => Set<FareRecord>();
     public DbSet<RidePost> RidePosts => Set<RidePost>();
     public DbSet<RideRequest> RideRequests => Set<RideRequest>();
+    public DbSet<RideMessage> RideMessages => Set<RideMessage>();
+    public DbSet<RideReview> RideReviews => Set<RideReview>();
+    public DbSet<RideReport> RideReports => Set<RideReport>();
+    public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
     public DbSet<FavoriteBus> FavoriteBuses => Set<FavoriteBus>();
     public DbSet<Review> Reviews => Set<Review>();
     public DbSet<ReviewReply> ReviewReplies => Set<ReviewReply>();
@@ -202,28 +207,77 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.HasMany(x => x.Requests).WithOne(x => x.RidePost).HasForeignKey(x => x.RidePostId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.Property(x => x.CostPerPerson).HasPrecision(10, 2);
             e.HasIndex(x => new { x.Status, x.CreatedAt });
             // The open-rides list: only open, undeleted posts, newest first.
             e.HasIndex(x => x.CreatedAt).HasFilter("status = 'active' AND deleted_at IS NULL").HasDatabaseName("ix_ride_posts_open");
+            // RideLifecycle's expiry and reminder checks: live rides by departure.
+            e.HasIndex(x => x.DepartureAt).HasFilter("status IN ('active', 'full') AND deleted_at IS NULL").HasDatabaseName("ix_ride_posts_live_departure");
             e.HasIndex(x => new { x.UserId, x.CreatedAt });
             e.ToTable(t =>
             {
-                t.HasCheckConstraint("ck_ride_posts_status", "status IN ('active', 'completed')");
+                t.HasCheckConstraint("ck_ride_posts_status", "status IN ('active', 'full', 'completed', 'cancelled', 'expired')");
                 t.HasCheckConstraint("ck_ride_posts_gender_preference", "gender_preference IN ('Any', 'Male', 'Female')");
                 t.HasCheckConstraint("ck_ride_posts_max_participants", "max_participants BETWEEN 2 AND 20");
-                t.HasCheckConstraint("ck_ride_posts_places_not_blank", @"source ~ '\S' AND destination ~ '\S'");
+                t.HasCheckConstraint("ck_ride_posts_vehicle_type", "vehicle_type IN ('Car', 'Bike', 'CNG', 'Other')");
+                t.HasCheckConstraint("ck_ride_posts_contact_preference", "contact_preference IN ('chat', 'phone', 'both')");
+                t.HasCheckConstraint("ck_ride_posts_cost", "cost_per_person IS NULL OR cost_per_person >= 0");
             });
         });
 
         b.Entity<RideRequest>(e =>
         {
             e.HasOne(x => x.Requester).WithMany().HasForeignKey(x => x.RequesterId).OnDelete(DeleteBehavior.Cascade);
-            // One live (pending or accepted) request per rider per ride. A rejected rider may ask again, which adds a
-            // new row, so rejected rows are left out of the uniqueness.
-            e.HasIndex(x => new { x.RidePostId, x.RequesterId }).IsUnique().HasFilter("status <> 'rejected'")
+            // One live (pending or approved) request per rider per ride. A rider who was rejected or who cancelled
+            // may ask again, which adds a new row, so those rows are left out of the uniqueness.
+            e.HasIndex(x => new { x.RidePostId, x.RequesterId }).IsUnique().HasFilter("status IN ('pending', 'accepted')")
                 .HasDatabaseName("ix_ride_requests_one_live_per_rider");
             e.HasIndex(x => new { x.RequesterId, x.CreatedAt });
-            e.ToTable(t => t.HasCheckConstraint("ck_ride_requests_status", "status IN ('pending', 'accepted', 'rejected')"));
+            e.ToTable(t => t.HasCheckConstraint("ck_ride_requests_status", "status IN ('pending', 'accepted', 'rejected', 'cancelled')"));
+        });
+
+        b.Entity<RideMessage>(e =>
+        {
+            e.HasOne(x => x.RidePost).WithMany().HasForeignKey(x => x.RidePostId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Sender).WithMany().HasForeignKey(x => x.SenderId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.RidePostId, x.CreatedAt });
+        });
+
+        b.Entity<RideReview>(e =>
+        {
+            e.HasOne(x => x.RidePost).WithMany().HasForeignKey(x => x.RidePostId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Reviewer).WithMany().HasForeignKey(x => x.ReviewerId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.ReviewedUser).WithMany().HasForeignKey(x => x.ReviewedUserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.RidePostId, x.ReviewerId, x.ReviewedUserId }).IsUnique();
+            e.HasIndex(x => new { x.ReviewedUserId, x.CreatedAt });
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_ride_reviews_rating", "rating BETWEEN 1 AND 5");
+                t.HasCheckConstraint("ck_ride_reviews_not_self", "reviewer_id <> reviewed_user_id");
+            });
+        });
+
+        b.Entity<RideReport>(e =>
+        {
+            e.HasOne(x => x.RidePost).WithMany().HasForeignKey(x => x.RidePostId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.Reporter).WithMany().HasForeignKey(x => x.ReporterId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.ReportedUser).WithMany().HasForeignKey(x => x.ReportedUserId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(x => new { x.Status, x.CreatedAt });
+            e.HasIndex(x => new { x.ReporterId, x.CreatedAt });
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_ride_reports_status", "status IN ('open', 'reviewed', 'dismissed')");
+                t.HasCheckConstraint("ck_ride_reports_target", "ride_post_id IS NOT NULL OR reported_user_id IS NOT NULL");
+            });
+        });
+
+        b.Entity<UserBlock>(e =>
+        {
+            e.HasOne(x => x.Blocker).WithMany().HasForeignKey(x => x.BlockerId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Blocked).WithMany().HasForeignKey(x => x.BlockedId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.BlockerId, x.BlockedId }).IsUnique();
+            e.HasIndex(x => x.BlockedId);
+            e.ToTable(t => t.HasCheckConstraint("ck_user_blocks_not_self", "blocker_id <> blocked_id"));
         });
 
         b.Entity<FavoriteBus>(e => e.HasIndex(x => new { x.UserId, x.BusId }).IsUnique());
@@ -344,6 +398,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 t.HasCheckConstraint("ck_verifications_status", "status IN ('hold', 'approved', 'rejected')");
                 t.HasCheckConstraint("ck_verifications_document_type", "document_type IN ('student_pass', 'nid')");
             });
+        });
+
+        b.Entity<BusPhoto>(e =>
+        {
+            e.HasOne(x => x.Bus).WithMany().HasForeignKey(x => x.BusId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.UploadedBy).WithMany().HasForeignKey(x => x.UploadedById).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(x => x.BusId).IsUnique();
+            e.HasIndex(x => x.StorageKey).IsUnique();
         });
 
         b.Entity<VerificationImage>(e =>

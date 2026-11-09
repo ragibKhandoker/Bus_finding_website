@@ -7,6 +7,9 @@ namespace SmartCommute.Server.Services;
 
 public record StoredImage(Stream Content, string ContentType);
 
+// An uploaded image that passed every check: Bytes[..Length] is the file, Extension starts with a dot.
+public record DecodedImage(byte[] Bytes, int Length, string ContentType, string Extension);
+
 // Stores verification document images (NID, student pass) in a private folder (Verification:StoragePath, outside
 // wwwroot), so they are never served as public files; VerifyController streams them only to the owner and admins.
 // A file is accepted only when its declared type is JPEG, PNG or WebP, its first bytes really are that format, and
@@ -51,9 +54,10 @@ public partial class ImageStorageService(IWebHostEnvironment env, IOptions<Verif
         return null;
     }
 
-    // Checks and stores an image sent as a data URL ("data:image/png;base64,..."). The record is added to the
-    // context and saved here. Throws ArgumentException with a message for the user when the image is refused.
-    public async Task<VerificationImage> SaveAsync(Guid userId, string dataUrl)
+    // Checks and decodes an image sent as a data URL ("data:image/png;base64,..."): the declared type must be JPEG,
+    // PNG or WebP, the bytes must really be that format, and the size at most maxBytes. Throws ArgumentException
+    // with a message for the user when the image is refused.
+    public static DecodedImage Decode(string dataUrl, int maxBytes)
     {
         if (string.IsNullOrWhiteSpace(dataUrl) || !dataUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase))
         {
@@ -76,9 +80,9 @@ public partial class ImageStorageService(IWebHostEnvironment env, IOptions<Verif
 
         // Base64 is 4 characters per 3 bytes; refuse an oversized upload before decoding it.
         var payload = dataUrl.AsSpan(comma + 1).Trim();
-        if ((long)payload.Length * 3 / 4 > MaxBytes + 3)
+        if ((long)payload.Length * 3 / 4 > maxBytes + 3)
         {
-            throw new ArgumentException($"The image must be at most {MaxBytes / (1024 * 1024)} MB.");
+            throw new ArgumentException($"The image must be at most {maxBytes / (1024 * 1024)} MB.");
         }
         var bytes = new byte[payload.Length * 3 / 4 + 3];
         if (!Convert.TryFromBase64Chars(payload, bytes, out var length))
@@ -89,14 +93,22 @@ public partial class ImageStorageService(IWebHostEnvironment env, IOptions<Verif
         {
             throw new ArgumentException("The image is empty.");
         }
-        if (length > MaxBytes)
+        if (length > maxBytes)
         {
-            throw new ArgumentException($"The image must be at most {MaxBytes / (1024 * 1024)} MB.");
+            throw new ArgumentException($"The image must be at most {maxBytes / (1024 * 1024)} MB.");
         }
         if (Sniff(bytes.AsSpan(0, length)) != declared)
         {
             throw new ArgumentException("That file is not a real JPEG, PNG or WebP image.");
         }
+        return new DecodedImage(bytes, length, declared, extension);
+    }
+
+    // Checks and stores a verification image sent as a data URL. The record is added to the context and saved here.
+    // Throws ArgumentException with a message for the user when the image is refused.
+    public async Task<VerificationImage> SaveAsync(Guid userId, string dataUrl)
+    {
+        var (bytes, length, declared, extension) = Decode(dataUrl, MaxBytes);
 
         Directory.CreateDirectory(Folder);
         var key = $"{Guid.NewGuid():N}{extension}";
@@ -132,7 +144,7 @@ public partial class ImageStorageService(IWebHostEnvironment env, IOptions<Verif
         return OpenFile(LegacyFolder, name, type);
     }
 
-    private static StoredImage? OpenFile(string folder, string key, string contentType)
+    internal static StoredImage? OpenFile(string folder, string key, string contentType)
     {
         if (!StorageKeyFormat().IsMatch(key))
         {

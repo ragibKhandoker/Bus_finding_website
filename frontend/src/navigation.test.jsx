@@ -87,7 +87,7 @@ describe('More → Friends navigation', () => {
     await user.click(within(document.querySelector('nav.nav-links.open')).getByRole('button', { name: 'Ride share' }))
     expect(window.location.pathname).toBe('/ride-share')
     expect(document.querySelector('nav.nav-links.open')).toBeNull()
-    expect(await screen.findByRole('tab', { name: /Open rides/ })).toBeTruthy()
+    expect(await screen.findByRole('heading', { level: 2, name: 'Available rides' })).toBeTruthy()
   })
 
   it('shows the unread count on the bell, which opens Notifications', async () => {
