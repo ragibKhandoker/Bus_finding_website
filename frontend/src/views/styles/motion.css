@@ -1,0 +1,65 @@
+/* Motion: smooth hovers, press feedback and gentle scroll reveals across the whole site. Loaded last, so it only
+   adds movement on top of the existing look (no colours or layout change here). Everything switches off when the
+   device asks for reduced motion. */
+:root{--ease-smooth:cubic-bezier(.22,.61,.36,1)}
+
+/* ---- One easing for everything that moves, so the site feels consistent ---- */
+.panel,.hp-service,.hp-tool,.hp-route,.route-bus,.ap-task,.adm-kpi,.review-list .review-item{
+  transition:transform .3s var(--ease-smooth),box-shadow .3s var(--ease-smooth),border-color .3s var(--ease-smooth),background-color .3s var(--ease-smooth)}
+.button,.extra-button,.icon-button,.lang-toggle,.theme-toggle,.profile-chip,.swap-button,.favorite{
+  transition:transform .22s var(--ease-smooth),background-color .22s var(--ease-smooth),border-color .22s var(--ease-smooth),box-shadow .22s var(--ease-smooth),color .22s var(--ease-smooth),filter .22s var(--ease-smooth)}
+/* Rows in lists and menus: the hover colour fades in instead of snapping. */
+.chat-contact,.person-row,.fare-history-row,.more-nav-menu button,.theme-menu button,.trip-row-head,.ad-row,.sp-thread,
+.location-list>button,.adm-tab,.segmented button,.site-footer button,.route-back,.hp-route-stops a{
+  transition:background-color .2s var(--ease-smooth),color .2s var(--ease-smooth),border-color .2s var(--ease-smooth)}
+
+/* ---- Hover lift, only where there is a real pointer (no sticky hover on phones) ---- */
+@media (hover:hover) and (pointer:fine){
+  .bus-result.panel:hover,.ride-card.panel:hover,.hp-tool:hover,.hp-route:hover,.route-bus:hover,.ap-task:hover,.adm-kpi:hover{transform:translateY(-3px)}
+  .hp-service:hover{transform:translateY(-4px)}
+  .button:not(:disabled):not(.is-loading):hover,.extra-button:not(:disabled):hover{transform:translateY(-1px)}
+  .icon-button:hover,.lang-toggle:hover,.theme-toggle:hover,.profile-chip:hover{transform:translateY(-1px)}
+  /* Arrows nudge toward where they lead. */
+  .more-nav-menu button svg,.route-back svg,.button svg:last-child:not(:first-child){transition:transform .22s var(--ease-smooth)}
+  .more-nav-menu button:hover svg,.button:not(:disabled):hover svg.lucide-arrow-right:last-child{transform:translateX(3px)}
+  .route-back:hover svg{transform:translateX(-3px)}
+}
+
+/* ---- Press feedback: a small give under the finger or click ---- */
+.button:not(:disabled):active,.extra-button:not(:disabled):active,.icon-button:active,.lang-toggle:active,.theme-toggle:active,.profile-chip:active,.swap-button:active{transform:scale(.97);transition-duration:.08s}
+.hp-service:active,.hp-tool:active,.hp-route:active,.route-bus:active{transform:scale(.99);transition-duration:.08s}
+
+/* ---- Navigation bar (desktop): an underline slides in on hover, and the active one draws in ---- */
+@media (min-width:861px){
+  .nav-link{transition:color .2s var(--ease-smooth)}
+  .nav-link:not(.active)::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;border-radius:3px 3px 0 0;background:var(--green);opacity:.45;transform:scaleX(0);transition:transform .3s var(--ease-smooth)}
+  .nav-link:not(.active):hover::after{transform:scaleX(1)}
+  .nav-link.active::after{animation:nav-underline-in .35s var(--ease-smooth)}
+}
+@keyframes nav-underline-in{from{transform:scaleX(0)}}
+
+/* The More menu opens with a short fade and drop. */
+.more-nav-menu{animation:menu-drop-in .2s var(--ease-smooth);transform-origin:top right}
+@keyframes menu-drop-in{from{opacity:0;transform:translateY(-6px)}}
+
+/* The sticky header lifts off the page once it is scrolled (is-scrolled is set in useHeaderShadow). */
+.topbar{transition:box-shadow .3s var(--ease-smooth),border-color .3s var(--ease-smooth)}
+.topbar.is-scrolled{box-shadow:0 8px 24px -18px rgba(22,66,48,.35)}
+html[data-theme="dark"] .topbar.is-scrolled,html[data-theme="night"] .topbar.is-scrolled{box-shadow:0 8px 24px -14px rgba(0,0,0,.6)}
+
+/* ---- Scroll reveal: cards below the screen rise in as they are reached (see useRevealOnScroll) ---- */
+.reveal-pending{opacity:0}
+/* backwards, not both: once finished it leaves no transform behind, so hover lifts keep working. */
+.reveal-in{animation:reveal-up .6s var(--ease-smooth) backwards}
+@keyframes reveal-up{from{opacity:0;transform:translateY(18px)}}
+
+/* Inner scrolling lists glide, and the page keeps clear of the sticky header when the browser scrolls to something. */
+.friend-rows,.fare-history,.review-list.is-expanded{scroll-behavior:smooth}
+html{scroll-padding-top:90px}
+
+@media(prefers-reduced-motion:reduce){
+  .reveal-pending{opacity:1}
+  .reveal-in,.more-nav-menu,.nav-link.active::after{animation:none}
+  .panel,.hp-service,.hp-tool,.hp-route,.route-bus,.ap-task,.adm-kpi,.button,.extra-button,.icon-button,.lang-toggle,.theme-toggle,.profile-chip,.swap-button{transform:none!important}
+  .friend-rows,.fare-history,.review-list.is-expanded{scroll-behavior:auto}
+}

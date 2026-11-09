@@ -4,6 +4,7 @@ import { apiRequest } from '../../models/api'
 import { formatDate, formatNumber, formatTime, t } from '../../models/i18n'
 import { Feedback, Heading, Loading, RequireSignIn } from './MorePages'
 import { usePersistentState } from '../../controllers/usePersistentState'
+import { replaceEntry } from '../../controllers/router'
 
 // One-to-one chat with friends. The server decides who the sender is and who may see a conversation; this page
 // only shows what it is given. Message text is rendered as plain text, never as HTML.
@@ -42,7 +43,7 @@ const readUrl = () => { const params = new URLSearchParams(window.location.searc
 const writeUrl = (chatId) => {
   if (window.location.pathname !== '/messages') return
   const next = chatId ? `/messages?chat=${encodeURIComponent(chatId)}` : '/messages'
-  if (window.location.pathname + window.location.search !== next) window.history.replaceState({ page: 'Messages' }, '', next)
+  if (window.location.pathname + window.location.search !== next) replaceEntry(next, { page: 'Messages' })
 }
 
 const isToday = (value) => new Date(value).toDateString() === new Date().toDateString()

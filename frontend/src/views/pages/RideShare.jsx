@@ -3,6 +3,7 @@ import { ArrowRight, BadgeCheck, Check, CheckCircle2, Plus, RefreshCw, Search, T
 import { apiRequest } from '../../models/api'
 import { formatDate, formatNumber, formatTime, t } from '../../models/i18n'
 import { usePersistentState } from '../../controllers/usePersistentState'
+import { replaceEntry } from '../../controllers/router'
 
 // Ride share: browse open rides (filtered by destination on the server), post a ride, and manage your own posts.
 // The server takes the host from the sign-in token and decides who may delete or complete a post; the buttons
@@ -50,7 +51,7 @@ const readDestination = () => new URLSearchParams(window.location.search).get('d
 const writeDestination = (value) => {
   if (window.location.pathname !== '/ride-share') return
   const next = value ? `/ride-share?destination=${encodeURIComponent(value)}` : '/ride-share'
-  if (window.location.pathname + window.location.search !== next) window.history.replaceState({ page: 'Ride share' }, '', next)
+  if (window.location.pathname + window.location.search !== next) replaceEntry(next, { page: 'Ride share' })
 }
 
 function CreateRideForm({ token, onCreated, onClose }) {

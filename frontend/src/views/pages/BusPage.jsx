@@ -11,6 +11,7 @@ import { formatNumber, t, toEnglish } from '../../models/i18n'
 import { formatDuration, getStops, googleMapsDirections, money, sortedStops } from '../helpers'
 import { errorText } from '../../models/messages'
 import { PageHeading, StopSuggestions } from '../components/common'
+import { pushEntry, replaceEntry } from '../../controllers/router'
 
 // Where the distance came from (route-estimate "source").
 export const ESTIMATE_SOURCES = {
@@ -53,6 +54,22 @@ export function searchFromUrl(search = window.location.search) {
 }
 export const searchUrl = ({ mode, from, to, name }) => `/find-a-bus?${new URLSearchParams(mode === 'name' ? { mode, name } : { mode, from, to })}`
 
+// Results and road estimates already fetched in this tab: going Back (or Forward) to a search shows them again
+// without asking the server, as long as they are recent. A new search from the form always asks again.
+export const RESULTS_FRESH_MS = 5 * 60 * 1000
+const resultCache = new Map()
+const estimateCache = new Map()
+const recent = (cache, key) => { const hit = cache.get(key); return hit && Date.now() - hit.at < RESULTS_FRESH_MS ? hit.data : null }
+
+// The search the inputs describe, in English, or the message to show when something is missing.
+const readQuery = ({ mode, from = '', to = '', name = '' }) => {
+  const query = { mode: mode === 'name' ? 'name' : 'route', from: toEnglish(from.trim()), to: toEnglish(to.trim()), name: toEnglish(name.trim()) }
+  if (query.mode === 'route' && !query.from) return { error: t('Enter your starting point.') }
+  if (query.mode === 'route' && !query.to) return { error: t('Enter your destination.') }
+  if (query.mode === 'name' && !query.name) return { error: t('Enter a bus name to search.') }
+  return { query }
+}
+
 export function BusPage({ token, signedIn, user, notify, navigate: goTo, openAuth }) {
   // A search started from another page (home or a route page) runs once when the page opens; otherwise a search
   // kept in the address (coming back to this page) is shown again.
@@ -91,54 +108,102 @@ export function BusPage({ token, signedIn, user, notify, navigate: goTo, openAut
   // One request for the whole list of favourites, so each card knows its heart state without asking the server.
   const favorites = useFavoriteBuses({ token, user, signedIn, notify, openAuth })
 
-  // Road distance and time from Google, through the backend, which holds the server key.
-  const loadEstimate = useCallback((start, end) => {
+  // Each search started counts up, so an answer that arrives after a newer search (or after Back) is ignored.
+  const searchId = useRef(0)
+
+  // Road distance and time from Google, through the backend, which holds the server key. reuse: coming back to a
+  // search, show the estimate already fetched for it.
+  const loadEstimate = useCallback((start, end, { reuse = false } = {}) => {
+    const key = `${start}|${end}`, id = searchId.current
+    const kept = reuse && recent(estimateCache, key)
+    if (kept) { setEstimate({ status: 'ready', data: kept }); return }
     setEstimate({ status: 'loading' })
     request(`/bus/route-estimate?${new URLSearchParams({ startLocation: start, endLocation: end })}`, { token })
-      .then((data) => setEstimate({ status: 'ready', data: data.data }))
-      .catch((e) => setEstimate({ status: 'error', message: errorText(e) }))
+      .then((data) => { estimateCache.set(key, { data: data.data, at: Date.now() }); if (id === searchId.current) setEstimate({ status: 'ready', data: data.data }) })
+      .catch((e) => { if (id === searchId.current) setEstimate({ status: 'error', message: errorText(e) }) })
   }, [token])
 
-  const search = async (event, { restoring = false } = {}) => {
-    event?.preventDefault?.()
-    if (!signedIn) return openAuth()
-    const start = toEnglish(from.trim()), end = toEnglish(to.trim()), busName = toEnglish(name.trim())
-    if (mode === 'route' && !start) { setError(t('Enter your starting point.')); return }
-    if (mode === 'route' && !end) { setError(t('Enter your destination.')); return }
-    if (mode === 'name' && !busName) { setError(t('Enter a bus name to search.')); return }
-    const query = { mode, from: start, to: end, name: busName }
-    setLoading(true); setError(''); setSearched(query); setSelectedId(null); setTrip(null)
-    // Keep the search in this history entry's address, so Back from another page returns to these results.
+  // Shows the results for a search. How it enters the browser history:
+  //  - a search typed into the form is a new page of results: a new entry, so Back returns to what was shown
+  //    before it (the empty form or the previous search); searching again for the same thing adds nothing;
+  //  - a search handed over from another page (a route's "Search buses on this route") replaces the entry, since
+  //    the empty form was never seen;
+  //  - restoring (Back, Forward or a reload) only shows the entry the browser is already on.
+  const runSearch = async (query, { restoring = false, handed = false } = {}) => {
+    const id = ++searchId.current
     if (window.location.pathname === '/find-a-bus') {
-      const { busView, ...state } = window.history.state || {}
-      window.history.replaceState(restoring ? { ...state, busView } : { ...state, page: 'Find a bus' }, '', searchUrl(query))
+      const url = searchUrl(query)
+      if (restoring) replaceEntry(url)
+      else if (handed) replaceEntry(url, { page: 'Find a bus', busView: undefined })
+      else pushEntry(url, { page: 'Find a bus' })
     }
-    // Coming back to results already seen: no need for the "searching" animation.
-    const shownUntil = Date.now() + (restoring ? 0 : MIN_LOADER_MS)
-    if (mode === 'route') loadEstimate(start, end); else setEstimate({ status: 'idle' })
-    try {
-      const result = await request(mode === 'route'
-        ? `/bus/search-by-route?${new URLSearchParams({ startLocation: start, endLocation: end })}`
-        : `/bus/search-by-name?${new URLSearchParams({ busName })}`, { token })
+    setError(''); setSearched(query); setSelectedId(null); setTrip(null)
+    const show = (result) => {
       setBuses(result.data || [])
       // Back on this page: select the bus that was selected before leaving, if it is still in the results.
       const keep = restoring && restoreView.current?.selectedId
       setSelectedId((keep && result.data?.some((bus) => bus._id === keep) ? keep : result.data?.[0]?._id) || null)
       if (result.start && result.end) setTrip({ start: result.start, end: result.end })
+    }
+    const key = searchUrl(query)
+    if (query.mode === 'route') loadEstimate(query.from, query.to, { reuse: restoring }); else setEstimate({ status: 'idle' })
+    // Coming back to results already fetched: show them at once, with no request and no "searching" animation.
+    const kept = restoring && recent(resultCache, key)
+    if (kept) { show(kept); setLoading(false); return }
+    setLoading(true)
+    const shownUntil = Date.now() + (restoring ? 0 : MIN_LOADER_MS)
+    try {
+      const result = await request(query.mode === 'route'
+        ? `/bus/search-by-route?${new URLSearchParams({ startLocation: query.from, endLocation: query.to })}`
+        : `/bus/search-by-name?${new URLSearchParams({ busName: query.name })}`, { token })
+      resultCache.set(key, { data: result, at: Date.now() })
+      if (id === searchId.current) show(result)
     } catch (e) {
-      setBuses([]); setError(errorText(e)); setEstimate({ status: 'idle' })
+      if (id === searchId.current) { setBuses([]); setError(errorText(e)); setEstimate({ status: 'idle' }) }
     } finally {
       await new Promise((resolve) => window.setTimeout(resolve, Math.max(0, shownUntil - Date.now())))
-      setLoading(false)
+      if (id === searchId.current) setLoading(false)
     }
   }
-  // Run a search handed over from another page, once signed in.
+  const search = (event) => {
+    event?.preventDefault?.()
+    if (!signedIn) return openAuth()
+    const { query, error: problem } = readQuery({ mode, from, to, name })
+    if (problem) { setError(problem); return }
+    runSearch(query)
+  }
+  // Run a search handed over from another page, or kept in the address, once signed in.
   const autoSearched = useRef(false)
   useEffect(() => {
     if (autoSearched.current || !savedQuery.auto || !signedIn) return
     autoSearched.current = true
-    search(null, { restoring: Boolean(savedQuery.restoring) })
+    const { query, error: problem } = readQuery(savedQuery)
+    if (problem) { setError(problem); return }
+    runSearch(query, savedQuery.restoring ? { restoring: true } : { handed: true })
   }, [signedIn]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Back and Forward between searches (or back to the empty form) stay on this page: show the search the browser
+  // moved to.
+  const latest = useRef({})
+  latest.current = { runSearch, signedIn, searched }
+  useEffect(() => {
+    const onPop = () => {
+      if (window.location.pathname !== '/find-a-bus') return
+      const query = searchFromUrl()
+      const shown = latest.current.searched
+      if (query && shown && searchUrl(query) === searchUrl(shown)) return
+      if (!query) {
+        searchId.current++
+        setSearched(null); setBuses([]); setError(''); setTrip(null); setSelectedId(null); setEstimate({ status: 'idle' }); setLoading(false)
+        return
+      }
+      setMode(query.mode); setFrom(query.from || ''); setTo(query.to || ''); setName(query.name || '')
+      if (!latest.current.signedIn) return
+      restoreView.current = window.history.state?.busView || null
+      latest.current.runSearch(query, { restoring: true })
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
   // Keep the selected bus and scroll position in this history entry as they change, so they come back however the
   // reader leaves (a card's link, the menu, the notification bell…). Saved once scrolling settles.
   useEffect(() => {

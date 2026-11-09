@@ -12,6 +12,7 @@ import { useBusRoutes } from '../../controllers/useBusRoutes'
 import { usePersistentState } from '../../controllers/usePersistentState'
 import { RouteTile, RoutesStatus } from '../components/BusRoutes'
 import { PageHeading } from '../components/common'
+import { pageFromPath, previousUrl, routeFromPath } from '../../controllers/router'
 
 export const ROUTES_PAGE_SIZE = 24
 
@@ -60,7 +61,14 @@ export function BusDetailPage({ routeNumber, token, user, signedIn, notify, navi
   }, [routeNumber])
   useEffect(() => { load() }, [load])
   const favorite = useFavoriteStatus({ busId: state.bus?._id, token, signedIn, notify, openAuth })
-  const back = <button className="route-back" onClick={() => navigate('Bus routes')}><ArrowLeft size={15} /> {t('All bus routes')}</button>
+  // Opened from the list: step back to it, exactly like the browser's Back button (same search, same scroll
+  // position, and no extra entry, so Forward still leads here). Opened directly or from another page: open the list.
+  const backToList = () => {
+    const from = previousUrl().split('?')[0]
+    if (from && pageFromPath(from) === 'Bus routes' && !routeFromPath(from)) window.history.back()
+    else navigate('Bus routes')
+  }
+  const back = <button className="route-back" onClick={backToList}><ArrowLeft size={15} /> {t('All bus routes')}</button>
   if (state.status !== 'ready') {
     return <div className="page inner-page">{back}
       {state.status === 'loading'

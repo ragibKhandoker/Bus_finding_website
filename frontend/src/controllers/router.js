@@ -21,6 +21,37 @@ export const pageFromPath = (path) => {
   return Object.keys(PAGE_PATHS).find((page) => PAGE_PATHS[page] === clean) || 'Home'
 }
 
+// ---- Browser history ----
+// Every in-app entry carries { idx, from } in history.state: idx is how many in-app steps lie behind it (0 = the
+// page this tab opened on, e.g. a link opened directly), from is the address it was opened from. The browser
+// keeps history.state across reloads, so both survive a refresh. Nothing here keeps a separate stack: the
+// browser's own history is the only one.
+export const historyIndex = () => Number(window.history.state?.idx) || 0
+export const currentUrl = () => window.location.pathname + window.location.search
+// The address the current entry was opened from inside the app, or '' when there is none.
+export const previousUrl = () => (historyIndex() > 0 && window.history.state?.from) || ''
+
+// A new history entry for a real move to another page (or another search). The page being left first saves how
+// far down it was, so Back returns to the same spot. Moving to the address already shown adds nothing.
+export function pushEntry(url, state = {}) {
+  if (url === currentUrl()) return false
+  const current = window.history.state || {}
+  const from = currentUrl()
+  window.history.replaceState({ ...current, scrollY: window.scrollY }, '', window.location.href)
+  window.history.pushState({ ...state, idx: (Number(current.idx) || 0) + 1, from }, '', url)
+  return true
+}
+
+// Changes the current entry's address (redirects, tidying the address, filters typed on a page) while keeping
+// what the entry already holds (its place in the history, the saved scroll position…).
+export function replaceEntry(url, state = {}) {
+  window.history.replaceState({ ...(window.history.state || {}), ...state }, '', url)
+}
+
+// Opens an address inside the app (e.g. a notification's "/friends" link) as normal navigation.
+export const NAVIGATE_EVENT = 'sc:navigate'
+export const openPath = (path) => window.dispatchEvent(new CustomEvent(NAVIGATE_EVENT, { detail: path }))
+
 // How long the page-change loading screen stays up.
 export const PAGE_LOADER_MS = 550
 

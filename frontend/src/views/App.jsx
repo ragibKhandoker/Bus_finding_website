@@ -17,7 +17,7 @@ import { UNAUTHORIZED_EVENT, apiRequest as request, isTokenExpired, tokenExpiry 
 import { formatNumber, getLang, setLang, t } from '../models/i18n'
 import { getTheme, setTheme, syncThemeColor } from '../models/theme'
 import { continueLastSession, endSession, forgetLastSession, loadSession, saveSessionUser, startSession } from '../models/session'
-import { ADMIN_FOCUS_KEY, PAGE_LOADER_MS, PAGE_LOADER_NAMES, PAGE_PATHS, busPath, pageFromPath, routeFromPath } from '../controllers/router'
+import { ADMIN_FOCUS_KEY, NAVIGATE_EVENT, PAGE_LOADER_MS, PAGE_LOADER_NAMES, PAGE_PATHS, busPath, currentUrl, historyIndex, pageFromPath, pushEntry, replaceEntry, routeFromPath } from '../controllers/router'
 import { ThemeMenu } from './components/common'
 import { BusDetailPage, BusRoutesPage } from './pages/BusRoutesPage'
 import { HomePage } from './pages/HomePage'
@@ -29,6 +29,9 @@ import { AdminPage } from './pages/AdminPage'
 import { AuthModal } from './components/AuthModal'
 import { Toaster, useToasts } from './components/Toaster'
 import { clearPersistentState } from '../controllers/usePersistentState'
+import { useHeaderShadow, useRevealOnScroll } from '../controllers/useRevealOnScroll'
+// Last, so its motion layers on top of every page's own stylesheet.
+import './styles/motion.css'
 
 export function PageLoader({ page }) {
   return (
@@ -81,25 +84,28 @@ export function App() {
   const changeTheme = (next) => { setTheme(next); setThemeState(next) }
   useEffect(() => { syncThemeColor() }, [])
 
-  // Shows a page and records it in the browser history; replace swaps the current entry instead of adding one.
-  // 'Bus details' also takes the route to show.
-  const showPage = useCallback((target, { replace = false, route = null } = {}) => {
+  // Shows a page and records it in the browser history as a new entry; replace swaps the current entry instead
+  // (only for redirects). 'Bus details' also takes the route to show; search adds an address query ("?with=…").
+  // Opening the page already shown (e.g. clicking the active tab again) adds no entry.
+  const showPage = useCallback((target, { replace = false, route = null, search = '' } = {}) => {
     const path = target === 'Bus details' && route ? busPath(route) : PAGE_PATHS[target] || '/'
-    if (window.location.pathname !== path) {
-      // Remember how far down this page was, so Back returns to the same spot.
-      if (!replace) window.history.replaceState({ ...(window.history.state || {}), scrollY: window.scrollY }, '', window.location.href)
-      window.history[replace ? 'replaceState' : 'pushState']({ page: target }, '', path)
+    const same = search ? currentUrl() === path + search : window.location.pathname === path
+    if (!same) {
+      if (replace) replaceEntry(path + search, { page: target, scrollY: 0, busView: undefined })
+      else pushEntry(path + search, { page: target })
     }
     setPage(target)
     setRouteNumber(route)
     setMobileMenu(false)
     setMoreMenu(false)
   }, [])
-  // An unknown address shows the home page, so put the matching URL in the address bar.
+  // The first entry of this tab: note its place in the history (0 unless the tab was reloaded part-way through),
+  // and show an unknown address as the home page with the matching URL in the address bar.
   useEffect(() => {
-    if (routeFromPath(window.location.pathname)) return
-    const path = PAGE_PATHS[pageFromPath(window.location.pathname)]
-    if (window.location.pathname !== path) window.history.replaceState({ page: 'Home' }, '', path)
+    const { pathname, search } = window.location
+    const page = pageFromPath(pathname)
+    const path = routeFromPath(pathname) ? pathname : PAGE_PATHS[page]
+    replaceEntry(path === pathname ? window.location.href : path + (page === 'Home' ? '' : search), { idx: historyIndex() })
   }, [])
   // Back and forward: show whichever page the browser moved to.
   useEffect(() => {
@@ -178,6 +184,18 @@ export function App() {
     showPage(target, options)
     window.scrollTo(0, 0)
   }
+  // An address opened from inside the app (a notification's link): shown like any other page change.
+  useEffect(() => {
+    const onOpen = (event) => {
+      const url = new URL(String(event.detail || '/'), window.location.origin)
+      const route = routeFromPath(url.pathname)
+      const target = route ? 'Bus details' : pageFromPath(url.pathname)
+      showPage(target, { route, search: target === 'Home' ? '' : url.search })
+      window.scrollTo(0, 0)
+    }
+    window.addEventListener(NAVIGATE_EVENT, onOpen)
+    return () => window.removeEventListener(NAVIGATE_EVENT, onOpen)
+  }, [showPage])
   // Admins hear about new password requests, messages and verifications at once, on any page.
   const [adminAlert, dismissAdminAlert] = useAdminAlerts({ token, isAdmin })
   const openAdminAlert = () => {
@@ -191,6 +209,11 @@ export function App() {
   const pageKey = page === 'Bus details' ? `${page}:${routeNumber}` : page
   const [loadingPage, setLoadingPage] = useState('')
   const shownKey = useRef(pageKey)
+  // Scroll motion on every page: cards rise into view, and the header lifts once the page is scrolled.
+  const mainRef = useRef(null)
+  const headerRef = useRef(null)
+  useRevealOnScroll(mainRef, pageKey)
+  useHeaderShadow(headerRef)
   useEffect(() => {
     if (shownKey.current === pageKey) return
     shownKey.current = pageKey
@@ -201,7 +224,7 @@ export function App() {
 
   return (
     <div className="app-shell">
-      <header className="topbar">
+      <header className="topbar" ref={headerRef}>
         <button className="brand" onClick={() => navigate('Home')} aria-label={t('SmartCommute home')}>
           <span className="brand-icon"><BusFront size={19} strokeWidth={2.5} /></span>
           <span>smart<span className="brand-accent">commute</span><small>{t('DHAKA, MADE EASIER')}</small></span>
@@ -237,7 +260,7 @@ export function App() {
       </header>
 
       {loadingPage && <PageLoader page={loadingPage} />}
-      <main key={pageKey} className={loadingPage ? 'page-view is-loading' : 'page-view'}>
+      <main key={pageKey} ref={mainRef} className={loadingPage ? 'page-view is-loading' : 'page-view'}>
         {page === 'Home' && <HomePage user={user} token={token} signedIn={signedIn} navigate={navigate} openAuth={() => setAuthMode('login')} />}
         {page === 'Find a bus' && <BusPage token={token} signedIn={signedIn} user={user} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
         {page === 'Bus routes' && <BusRoutesPage navigate={navigate} />}
@@ -246,7 +269,7 @@ export function App() {
         {page === 'My trips' && <TripsPage token={token} signedIn={signedIn} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
         {page === 'Wallet' && <WalletPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Profile' && <ProfilePage user={user} token={token} signedIn={signedIn} navigate={navigate} updateUser={setUser} signOut={signOut} openAuth={() => setAuthMode('login')} notify={notify} />}
-        {page === 'Friends' && <FriendsPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} onChat={(friend) => { navigate('Messages'); window.history.replaceState({ page: 'Messages' }, '', `/messages?with=${encodeURIComponent(friend.id || friend._id)}`) }} notify={notify} />}
+        {page === 'Friends' && <FriendsPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} onChat={(friend) => navigate('Messages', { search: `?with=${encodeURIComponent(friend.id || friend._id)}` })} notify={notify} />}
         {page === 'Messages' && <ChatPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} onFindFriends={() => navigate('Friends')} />}
         {page === 'Notifications' && <NotificationsPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} navigate={navigate} />}
         {page === 'Offers' && <OffersPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}

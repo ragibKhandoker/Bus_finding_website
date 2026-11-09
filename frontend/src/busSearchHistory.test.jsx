@@ -63,11 +63,11 @@ describe('Find a bus → details → Back', () => {
 
     window.history.back()
     await waitFor(() => expect(window.location.pathname + window.location.search).toBe('/find-a-bus?mode=name&name=Victor'))
-    // The results are back without typing anything, searched again from the address.
+    // The results are back without typing anything, and without asking the server again.
     expect(await screen.findByText('Victor Express', {}, { timeout: 4000 })).toBeTruthy()
     expect(screen.getByRole('heading', { name: /Buses matching “Victor”/ })).toBeTruthy()
     expect(screen.getByPlaceholderText(/BRTC/).value).toBe('Victor')
-    expect(searches).toEqual(['Victor', 'Victor'])
+    expect(searches).toEqual(['Victor'])
     await waitFor(() => expect(screen.getByText('Victor Express').closest('article').className).toMatch(/selected/))
   })
 })

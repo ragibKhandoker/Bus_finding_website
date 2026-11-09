@@ -26,6 +26,8 @@ export function HomePage({ user, token, signedIn, navigate, openAuth }) {
   useEffect(() => () => window.clearTimeout(openTimer.current), [])
   const openPage = (target) => {
     setOpening(target)
+    // A second click while the first is still opening replaces it, so only one page change happens.
+    window.clearTimeout(openTimer.current)
     openTimer.current = window.setTimeout(() => navigate(target), 600)
   }
   const busStats = routes.status === 'ready'

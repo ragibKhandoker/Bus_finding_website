@@ -5,6 +5,7 @@ import { Feedback, Heading, Loading, RequireSignIn } from './MorePages'
 import { errorText } from '../../models/messages'
 import { changed, notificationApi } from '../../models/notifications'
 import { usePersistentState } from '../../controllers/usePersistentState'
+import { openPath } from '../../controllers/router'
 
 export { errorText } from '../../models/messages'
 export { PAGE_SIZE } from '../../models/notifications'
@@ -29,8 +30,8 @@ export function NotificationBell({ count, onOpen }) {
   </button>
 }
 
-// Opens a page inside the app (e.g. "/friends") the same way the browser's back and forward buttons do.
-export const openInApp = (path) => { window.history.pushState({}, '', path); window.dispatchEvent(new PopStateEvent('popstate')) }
+// Opens a page inside the app (e.g. "/friends") as normal navigation: one new history entry, so Back returns here.
+export const openInApp = openPath
 
 // Only Google Maps links (SOS locations) leave the app; anything else must be a path inside it.
 export const isMapLink = (url) => /^https:\/\/www\.google\.com\/maps\?q=-?\d/.test(url || '')
