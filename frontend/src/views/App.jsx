@@ -31,6 +31,7 @@ import { AdminPage } from './pages/AdminPage'
 import { AuthModal } from './components/AuthModal'
 import { Toaster, useToasts } from './components/Toaster'
 import { clearPersistentState } from '../controllers/usePersistentState'
+import { captureReferralFromUrl } from '../models/promotions'
 import { useHeaderShadow, useRevealOnScroll } from '../controllers/useRevealOnScroll'
 // Last, so its motion layers on top of every page's own stylesheet.
 import './styles/motion.css'
@@ -180,6 +181,11 @@ export function App() {
     }).catch(() => {})
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const signedIn = Boolean(token && user)
+  // A friend's invite link (/offers?ref=CODE): the code is kept for the "Have a friend's code?" box on the Offers
+  // page. Visitors are asked to create an account first; the box is filled in once they are signed in.
+  useEffect(() => {
+    if (captureReferralFromUrl() && !token) setAuthMode('signup')
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const isAdmin = signedIn && user.role?.toLowerCase() === 'admin'
   const unreadCount = useUnreadCount({ token, user, signedIn })
   const navigate = (target, options) => {
@@ -276,7 +282,7 @@ export function App() {
         {page === 'Friends' && <FriendsPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} onChat={(friend) => navigate('Messages', { search: `?with=${encodeURIComponent(friend.id || friend._id)}` })} notify={notify} />}
         {page === 'Messages' && <ChatPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} onFindFriends={() => navigate('Friends')} />}
         {page === 'Notifications' && <NotificationsPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} navigate={navigate} />}
-        {page === 'Offers' && <OffersPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
+        {page === 'Offers' && <OffersPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} navigate={navigate} />}
         {page === 'Favourites' && <FavoritesPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} navigate={navigate} />}
         {page === 'Map' && <MapPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} navigate={navigate} />}
         {page === 'GPay' && <GpayPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}

@@ -189,10 +189,20 @@ public class IndividualBusController(BusService buses) : ApiControllerBase
     public async Task<IActionResult> Board(Guid id, BoardRequest? request, [FromServices] TripService trips) =>
         Answer(await trips.BoardAsync(CurrentUserId, id, request?.BoardingStop, request?.DestinationStop));
 
-    // Ends the rider's active trip on this vehicle: saves the fare and credits the gems, once.
+    // Ends the rider's active trip on this vehicle: saves the fare and credits the gems, once. Then the reward
+    // engine (F15) works out the trip's cashback, first-trip and referral rewards and membership from the fare the
+    // server just recorded; if that fails, the trip still ends and the background job gives the rewards later.
     [HttpPost("{id:guid}/end-trip")]
-    public async Task<IActionResult> EndTrip(Guid id, EndTripRequest? request, [FromServices] TripService trips) =>
-        Answer(await trips.EndAsync(CurrentUserId, id, request?.Destination, request?.Source));
+    public async Task<IActionResult> EndTrip(Guid id, EndTripRequest? request, [FromServices] TripService trips)
+    {
+        var result = await trips.EndAsync(CurrentUserId, id, request?.Destination, request?.Source);
+        TripRewardOutcome? outcome = null;
+        if (result.Ok && result.Trip is not null && HttpContext.RequestServices.GetService<RewardEngine>() is { } rewards)
+        {
+            outcome = await rewards.ProcessTripSafelyAsync(result.Trip.Id);
+        }
+        return Answer(result, outcome);
+    }
 
     // Older routes with the vehicle id in the body, kept for existing clients.
     [HttpPost("board")]
@@ -203,21 +213,28 @@ public class IndividualBusController(BusService buses) : ApiControllerBase
     public Task<IActionResult> EndTripByBody(EndTripRequest request, [FromServices] TripService trips) =>
         request.BusId is { } id ? EndTrip(id, request, trips) : Task.FromResult<IActionResult>(BadRequestError("busId is required."));
 
-    private IActionResult Answer(TripResult result)
+    private IActionResult Answer(TripResult result, TripRewardOutcome? rewards = null)
     {
         if (!result.Ok)
         {
             return Error(result.Status, result.Message);
         }
+        var message = rewards is { Processed: true, Eligible: true } && (rewards.Cashback > 0 || rewards.FirstTripBonus > 0 || rewards.ReferralRewarded)
+            ? $"{result.Message} {rewards.Message}" : result.Message;
         object body = result.Wallet is null
-            ? new { success = true, message = result.Message, data = TripViewModel.From(result.Trip!) }
+            ? new { success = true, message, data = TripViewModel.From(result.Trip!) }
             : new
             {
                 success = true,
-                message = result.Message,
+                message,
                 data = TripViewModel.From(result.Trip!),
                 gemsEarned = result.Trip!.GemsEarned,
                 wallet = WalletViewModel.From(result.Wallet),
+                rewards = rewards is null ? null : new
+                {
+                    rewards.Eligible, rewards.Cashback, rewards.FirstTripBonus, rewards.ReferralRewarded, rewards.TierBefore, rewards.TierAfter,
+                    rewards.TierUpgraded, rewards.CouponsIssued, rewards.Message,
+                },
             };
         return StatusCode(result.Status, body);
     }

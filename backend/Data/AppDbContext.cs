@@ -47,6 +47,17 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<BusAvailabilityAlert> BusAvailabilityAlerts => Set<BusAvailabilityAlert>();
     public DbSet<BusReminder> BusReminders => Set<BusReminder>();
     public DbSet<RecentlyViewedBus> RecentlyViewedBuses => Set<RecentlyViewedBus>();
+    public DbSet<RewardSettings> RewardSettings => Set<RewardSettings>();
+    public DbSet<MembershipTier> MembershipTiers => Set<MembershipTier>();
+    public DbSet<UserMembership> UserMemberships => Set<UserMembership>();
+    public DbSet<RewardCampaign> RewardCampaigns => Set<RewardCampaign>();
+    public DbSet<Coupon> Coupons => Set<Coupon>();
+    public DbSet<UserCoupon> UserCoupons => Set<UserCoupon>();
+    public DbSet<CouponRedemption> CouponRedemptions => Set<CouponRedemption>();
+    public DbSet<TripReward> TripRewards => Set<TripReward>();
+    public DbSet<CashbackTransaction> CashbackTransactions => Set<CashbackTransaction>();
+    public DbSet<Referral> Referrals => Set<Referral>();
+    public DbSet<RewardAuditLog> RewardAuditLogs => Set<RewardAuditLog>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -59,6 +70,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.HasIndex(x => x.Email).IsUnique();
             e.HasIndex(x => x.FriendCode).IsUnique();
+            e.HasIndex(x => x.ReferralCode).IsUnique().HasFilter("referral_code IS NOT NULL");
             e.ToTable(t =>
             {
                 t.HasCheckConstraint("ck_users_role", "role IN ('commuter', 'driver', 'admin')");
@@ -163,7 +175,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.ToTable(t =>
             {
                 t.HasCheckConstraint("ck_offer_transactions_kind", "kind IN ('cashback', 'coupon', 'discount')");
-                t.HasCheckConstraint("ck_offer_transactions_reason", "reason IN ('welcome', 'opening', 'granted', 'adjusted', 'redeemed', 'trip')");
+                t.HasCheckConstraint("ck_offer_transactions_reason", "reason IN ('welcome', 'opening', 'granted', 'adjusted', 'redeemed', 'trip', 'earned', 'first-trip', 'referral', 'expired')");
             });
         });
 
@@ -435,6 +447,144 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             // Unread counts only look at unread rows.
             e.HasIndex(x => new { x.UserId, x.FromAdmin }).HasFilter("read_at IS NULL").HasDatabaseName("ix_support_messages_unread");
             e.ToTable(t => t.HasCheckConstraint("ck_support_messages_text_not_blank", @"text ~ '\S'"));
+        });
+
+        ConfigurePromotions(b);
+    }
+
+    // F15: rewards. The database itself enforces the limits that concurrent requests could otherwise break: a
+    // coupon's redemption count can never pass its limit, a campaign can never spend past its budget, and the unique
+    // keys stop the same reward from being issued or redeemed twice.
+    private static void ConfigurePromotions(ModelBuilder b)
+    {
+        b.Entity<RewardSettings>(e =>
+        {
+            e.ToTable("reward_settings", t =>
+            {
+                t.HasCheckConstraint("ck_reward_settings_single_row", "id = 1");
+                t.HasCheckConstraint("ck_reward_settings_values",
+                    "cashback_percent BETWEEN 0 AND 100 AND cashback_fixed >= 0 AND cashback_min_fare >= 0 AND cashback_max_per_trip >= 0 " +
+                    "AND cashback_max_per_user_monthly >= 0 AND cashback_expiry_days >= 0 AND new_user_days >= 0 AND first_trip_cashback >= 0 " +
+                    "AND referrer_reward >= 0 AND referred_reward >= 0 AND referral_apply_days >= 0 AND max_referral_rewards_per_month >= 0");
+            });
+            e.Property(x => x.Id).ValueGeneratedNever();
+            e.Property(x => x.Version).IsRowVersion();
+        });
+
+        b.Entity<MembershipTier>(e =>
+        {
+            e.HasKey(x => x.Code);
+            e.HasIndex(x => x.Rank).IsUnique();
+            e.ToTable(t => t.HasCheckConstraint("ck_membership_tiers_values",
+                "min_trips >= 0 AND min_spend >= 0 AND extra_cashback_percent BETWEEN 0 AND 100 AND extra_cap_per_trip >= 0 AND extra_monthly_cap >= 0"));
+        });
+
+        b.Entity<UserMembership>(e =>
+        {
+            e.HasKey(x => x.UserId);
+            e.HasOne(x => x.User).WithOne().HasForeignKey<UserMembership>(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.TierCode);
+        });
+
+        b.Entity<RewardCampaign>(e =>
+        {
+            e.HasIndex(x => new { x.Status, x.EndsAt });
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_reward_campaigns_type", "type IN ('cashback', 'weekend', 'first-trip', 'festival', 'welcome', 'tier-exclusive')");
+                t.HasCheckConstraint("ck_reward_campaigns_status", "status IN ('active', 'paused', 'expired')");
+                t.HasCheckConstraint("ck_reward_campaigns_dates", "ends_at > starts_at");
+                t.HasCheckConstraint("ck_reward_campaigns_values",
+                    "cashback_percent BETWEEN 0 AND 100 AND cashback_fixed >= 0 AND min_fare >= 0 AND (max_cashback_per_trip IS NULL OR max_cashback_per_trip >= 0)");
+                t.HasCheckConstraint("ck_reward_campaigns_budget", "spent >= 0 AND (budget IS NULL OR spent <= budget)");
+                t.HasCheckConstraint("ck_reward_campaigns_redemptions", "redemptions >= 0 AND (max_redemptions IS NULL OR redemptions <= max_redemptions)");
+            });
+        });
+
+        b.Entity<Coupon>(e =>
+        {
+            e.HasIndex(x => x.Code).IsUnique();
+            e.HasIndex(x => new { x.IsActive, x.ExpiresAt });
+            e.HasOne(x => x.Campaign).WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.SetNull);
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_coupons_code_format", "code ~ '^[A-Z0-9_-]{3,30}$'");
+                t.HasCheckConstraint("ck_coupons_type", "type IN ('welcome', 'first-trip', 'weekend', 'seasonal', 'referral', 'fixed', 'percentage', 'campaign')");
+                t.HasCheckConstraint("ck_coupons_discount_type", "discount_type IN ('fixed', 'percent')");
+                t.HasCheckConstraint("ck_coupons_audience", "audience IN ('all', 'new-users', 'assigned')");
+                t.HasCheckConstraint("ck_coupons_values",
+                    "discount_value > 0 AND (discount_type <> 'percent' OR discount_value <= 100) AND min_fare >= 0 AND (max_discount IS NULL OR max_discount > 0)");
+                t.HasCheckConstraint("ck_coupons_limits",
+                    "per_user_limit >= 1 AND redemption_count >= 0 AND (total_limit IS NULL OR (total_limit >= 1 AND redemption_count <= total_limit))");
+                t.HasCheckConstraint("ck_coupons_dates", "expires_at IS NULL OR expires_at > starts_at");
+            });
+        });
+
+        b.Entity<UserCoupon>(e =>
+        {
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Coupon).WithMany().HasForeignKey(x => x.CouponId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.UserId, x.Reference }).IsUnique();
+            e.HasIndex(x => new { x.UserId, x.CouponId });
+            e.HasIndex(x => x.ExpiresAt).HasFilter("used_at IS NULL");
+        });
+
+        b.Entity<CouponRedemption>(e =>
+        {
+            e.HasOne(x => x.Coupon).WithMany().HasForeignKey(x => x.CouponId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Trip).WithMany().HasForeignKey(x => x.TripId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.TripId, x.CouponId }).IsUnique().HasDatabaseName("ix_coupon_redemptions_one_per_trip");
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            e.HasIndex(x => new { x.CouponId, x.UserId });
+            e.HasIndex(x => new { x.UserId, x.Reference }).IsUnique().HasFilter("reference IS NOT NULL")
+                .HasDatabaseName("ix_coupon_redemptions_one_per_reference");
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_coupon_redemptions_mode", "mode IN ('wallet', 'gpay')");
+                t.HasCheckConstraint("ck_coupon_redemptions_amounts", "discount > 0 AND final_fare >= 0 AND discount <= fare");
+            });
+        });
+
+        b.Entity<TripReward>(e =>
+        {
+            e.HasKey(x => x.TripId);
+            e.HasOne(x => x.Trip).WithOne().HasForeignKey<TripReward>(x => x.TripId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.UserId, x.Eligible });
+            e.ToTable(t => t.HasCheckConstraint("ck_trip_rewards_cashback", "cashback >= 0"));
+        });
+
+        b.Entity<CashbackTransaction>(e =>
+        {
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.EventKey).IsUnique().HasFilter("event_key IS NOT NULL").HasDatabaseName("ix_cashback_transactions_one_per_event");
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            // The expiry sweep only looks at lots with something left.
+            e.HasIndex(x => x.ExpiresAt).HasFilter("remaining > 0").HasDatabaseName("ix_cashback_transactions_open_lots");
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_cashback_transactions_source", "source IN ('trip', 'first-trip', 'referral', 'redeemed', 'expired')");
+                t.HasCheckConstraint("ck_cashback_transactions_remaining", "remaining >= 0 AND (amount <= 0 OR remaining <= amount) AND (amount > 0 OR remaining = 0)");
+            });
+        });
+
+        b.Entity<Referral>(e =>
+        {
+            e.HasOne(x => x.Referrer).WithMany().HasForeignKey(x => x.ReferrerId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.ReferredUser).WithMany().HasForeignKey(x => x.ReferredUserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.ReferredUserId).IsUnique();
+            e.HasIndex(x => new { x.ReferrerId, x.Status });
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_referrals_not_self", "referrer_id <> referred_user_id");
+                t.HasCheckConstraint("ck_referrals_status", "status IN ('pending', 'qualified', 'rewarded', 'rejected')");
+            });
+        });
+
+        b.Entity<RewardAuditLog>(e =>
+        {
+            e.HasIndex(x => x.CreatedAt);
+            e.HasIndex(x => new { x.Action, x.CreatedAt });
         });
     }
 }

@@ -301,6 +301,10 @@ public class GpayPayTripRequest
     [Required(ErrorMessage = "Choose the trip to pay for.")]
     public Guid? TripId { get; set; }
 
+    // A coupon code (F15) whose saving comes off the payment; checked on the server.
+    [StringLength(40)]
+    public string? CouponCode { get; set; }
+
     [Required(ErrorMessage = "Enter your GPay PIN."), RegularExpression(@"^\d{4}$", ErrorMessage = "PIN must be 4 digits.")]
     public string Pin { get; set; } = "";
 

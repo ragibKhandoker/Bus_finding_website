@@ -231,6 +231,8 @@ public class OfferService(AppDbContext db, WalletService wallets, NotificationSe
                 Reference = reference, CreatedAt = now,
             };
             db.OfferTransactions.Add(entry);
+            // The cashback ledger (F15): the cashback that expires first is used first.
+            await CashbackLedger.ConsumeAsync(db, userId, take, now, credit);
             return new(StatusCodes.Status200OK, $"৳{take:0.##} cashback added to your wallet.", Entry: entry);
         });
     }
@@ -266,7 +268,9 @@ public class OfferService(AppDbContext db, WalletService wallets, NotificationSe
             {
                 return new(StatusCodes.Status409Conflict, $"Your {kind} was already used on this trip.");
             }
-            var covered = -await db.OfferTransactions.Where(x => x.TripId == tripId).SumAsync(x => x.Amount);
+            // Coupon codes redeemed on the trip (F15) count as covered too, so the fare never goes below zero.
+            var covered = -await db.OfferTransactions.Where(x => x.TripId == tripId).SumAsync(x => x.Amount)
+                + await db.CouponRedemptions.Where(r => r.TripId == tripId).SumAsync(r => r.Discount);
             var uncovered = trip.Fare - covered;
             var balance = BalanceOf(await db.Offers.AsNoTracking().FirstAsync(o => o.UserId == userId), kind);
             if (uncovered <= 0)
@@ -297,6 +301,24 @@ public class OfferService(AppDbContext db, WalletService wallets, NotificationSe
             return new(StatusCodes.Status200OK, $"৳{saving:0.##} {kind} applied. You now pay ৳{finalFare:0.##} for this trip.", Entry: entry,
                 Extra: new { tripId, fare = trip.Fare, saving, coveredBefore = covered, finalFare });
         });
+    }
+
+    // F15: moves the cashback balance by amount (+ earned, - expired) inside the caller's transaction and records
+    // it in the offer ledger. Returns null when taking would leave the balance below zero.
+    public async Task<OfferTransaction?> ChangeCashbackAsync(Guid userId, Guid offerId, decimal amount, string reason, string description, DateTime now)
+    {
+        var balance = await ChangeAsync(userId, OfferKinds.Cashback, amount, spending: false, now);
+        if (balance is null)
+        {
+            return null;
+        }
+        var entry = new OfferTransaction
+        {
+            OfferId = offerId, UserId = userId, Kind = OfferKinds.Cashback, Amount = amount, BalanceAfter = balance.Value,
+            Reason = reason, Description = description.Length > 200 ? description[..200] : description, CreatedAt = now,
+        };
+        db.OfferTransactions.Add(entry);
+        return entry;
     }
 
     // Admin: adds value to one balance. A repeated reference does nothing the second time.

@@ -52,6 +52,7 @@ if (jwt.Secret.Length < 32)
 }
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<RewardOptions>(builder.Configuration.GetSection("Rewards"));
+builder.Services.Configure<PromotionOptions>(builder.Configuration.GetSection("Promotions"));
 builder.Services.Configure<GeoOptions>(builder.Configuration.GetSection("Geo"));
 builder.Services.Configure<RideShareOptions>(builder.Configuration.GetSection("RideShare"));
 builder.Services.Configure<VerificationOptions>(builder.Configuration.GetSection("Verification"));
@@ -143,6 +144,10 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy("friend-search", context => RateLimitPartition.GetFixedWindowLimiter(
         context.User.FindFirst("id")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1) }));
+    // Coupon checks and redemptions: enough to try a few codes, not enough to guess codes by brute force.
+    options.AddPolicy("coupon", context => RateLimitPartition.GetFixedWindowLimiter(
+        $"{context.User.FindFirst("id")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous"}|{context.Request.Path}",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1) }));
 });
 
 // ---- CORS for the web client ----
@@ -199,6 +204,16 @@ builder.Services.AddScoped<RideCommunityService>();
 builder.Services.AddScoped<RideLifecycle>();
 builder.Services.AddScoped<ReviewService>();
 builder.Services.AddScoped<OfferService>();
+builder.Services.AddScoped<RewardConfigService>();
+builder.Services.AddScoped<CashbackService>();
+builder.Services.AddScoped<CouponService>();
+builder.Services.AddScoped<RewardEngine>();
+builder.Services.AddScoped<ReferralService>();
+builder.Services.AddScoped<MembershipService>();
+builder.Services.AddScoped<CampaignService>();
+builder.Services.AddScoped<RewardInsightsService>();
+builder.Services.AddScoped<PromotionAdminService>();
+builder.Services.AddScoped<PromotionLifecycle>();
 builder.Services.AddScoped<GpayService>();
 builder.Services.AddScoped<WalletService>();
 builder.Services.AddScoped<TripService>();
@@ -220,6 +235,7 @@ builder.Services.AddScoped<FavouriteInsightsService>();
 builder.Services.AddScoped<BusAlertService>();
 builder.Services.AddHostedService<FavouriteMonitorHostedService>();
 builder.Services.AddHostedService<RideLifecycleHostedService>();
+builder.Services.AddHostedService<PromotionLifecycleHostedService>();
 builder.Services.AddScoped<StopService>();
 builder.Services.AddScoped<VerificationService>();
 builder.Services.AddScoped<SupportService>();
@@ -313,6 +329,14 @@ using (var scope = app.Services.CreateScope())
 
         step = "seed";
         await DbSeeder.SeedAsync(scope.ServiceProvider, app.Configuration, app.Logger);
+        // F15: the reward settings and membership tiers (from appsettings "Promotions" the first time), and in
+        // Development example coupons and a campaign. Both only add what is missing.
+        var rewardConfig = scope.ServiceProvider.GetRequiredService<RewardConfigService>();
+        await rewardConfig.EnsureDefaultsAsync();
+        if (app.Environment.IsDevelopment() && rewardConfig.Defaults.SeedDemoOffers)
+        {
+            await rewardConfig.SeedDemoOffersAsync();
+        }
         // Every user has a wallet: sign-up creates one, and this fills in any account made before that.
         var walletsCreated = await scope.ServiceProvider.GetRequiredService<WalletService>().CreateMissingWalletsAsync();
         if (walletsCreated > 0)

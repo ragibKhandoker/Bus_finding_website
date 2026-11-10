@@ -75,8 +75,12 @@ public static class OfferEntryReasons
     public const string Adjusted = "adjusted";   // set by an admin
     public const string Redeemed = "redeemed";   // cashback paid into the wallet
     public const string Trip = "trip";           // coupon or discount taken off a trip's fare
+    public const string Earned = "earned";       // cashback earned on an eligible trip (F15)
+    public const string FirstTrip = "first-trip"; // the first eligible trip bonus (F15)
+    public const string Referral = "referral";   // a referral reward (F15)
+    public const string Expired = "expired";     // cashback that expired before it was used (F15)
 
-    public static readonly string[] All = [Welcome, Opening, Granted, Adjusted, Redeemed, Trip];
+    public static readonly string[] All = [Welcome, Opening, Granted, Adjusted, Redeemed, Trip, Earned, FirstTrip, Referral, Expired];
 }
 
 // A user's offer balances, in taka: cashback (paid into the wallet when redeemed), coupon and discount value

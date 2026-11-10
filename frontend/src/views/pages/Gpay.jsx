@@ -22,7 +22,8 @@ export const gpayApi = {
   transactions: (token) => apiRequest('/gpay/transactions?pageSize=30', { token }),
   trips: (token) => apiRequest('/gpay/trips', { token }),
   recharge: (amount, pin, token) => post('/gpay/recharge', token, { amount, pin, reference: newReference() }),
-  payTrip: (tripId, pin, token) => post('/gpay/pay', token, { tripId, pin, reference: newReference() }),
+  // couponCode (optional): checked on the server, which takes the saving off the payment.
+  payTrip: (tripId, pin, token, couponCode) => post('/gpay/pay', token, { tripId, pin, reference: newReference(), ...(couponCode ? { couponCode } : {}) }),
 }
 
 export function amountProblem(text, balance) {
@@ -54,6 +55,7 @@ export function GpayPage({ token, signedIn, openAuth, notify }) {
   const [history, setHistory] = useState([])
   const [trips, setTrips] = useState([])
   const [amount, setAmount] = usePersistentState('gpay:amount', '') // kept when leaving the page and coming back
+  const [couponCode, setCouponCode] = useState('')
   const [amountError, setAmountError] = useState('')
   const [busy, setBusy] = useState('')
   const [resetting, setResetting] = useState(false)
@@ -116,11 +118,16 @@ export function GpayPage({ token, signedIn, openAuth, notify }) {
     })
   }
   const payTrip = (trip) => {
-    if (!window.confirm(t('Pay {fare} with GPay for {route}?', { fare: money(trip.fare), route: `${trip.source} → ${trip.destination}` }))) return
+    const code = couponCode.trim().toUpperCase().replace(/\s+/g, '')
+    const question = code
+      ? t('Pay for {route} with GPay using coupon {code}? The saving is worked out by the server before you pay.', { route: `${trip.source} → ${trip.destination}`, code })
+      : t('Pay {fare} with GPay for {route}?', { fare: money(trip.fare), route: `${trip.source} → ${trip.destination}` })
+    if (!window.confirm(question)) return
     run(`trip:${trip.tripId}`, async () => {
-      const data = await gpayApi.payTrip(trip.tripId, pin, token)
+      const data = await gpayApi.payTrip(trip.tripId, pin, token, code)
       setAccount(data.data)
-      notify(t('Paid {fare} for your trip.', { fare: money(trip.fare) }))
+      setCouponCode('')
+      notify(code ? t(data.message) : t('Paid {fare} for your trip.', { fare: money(trip.fare) }))
       await loadDetails()
     })
   }
@@ -174,6 +181,11 @@ export function GpayPage({ token, signedIn, openAuth, notify }) {
 
       <article className="extra-panel extra-list-panel">
         <div className="extra-panel-title"><div><small>{t('PAY A TRIP')}</small><h2>{t('Completed trips')}</h2></div></div>
+        {trips.some((trip) => !trip.paid) && <div className="gpay-coupon">
+          <label htmlFor="gpay-coupon">{t('Coupon code (optional)')}</label>
+          <input id="gpay-coupon" value={couponCode} onChange={(e) => setCouponCode(e.target.value.toUpperCase())} placeholder="DHAKA10" maxLength={30} autoComplete="off" disabled={!unlocked} />
+          <small className="extra-help">{t('Works on trips you boarded and ended in the app. Check your coupons on the Offers page.')}</small>
+        </div>}
         {trips.length ? <div className="offer-trips">{trips.map((trip) => <div className="offer-trip" key={trip.tripId} data-testid="gpay-trip">
           <div><b>{trip.source} → {trip.destination}</b><small>{trip.busName}{trip.endedAt ? ` · ${formatDate(trip.endedAt)}` : ''} · {t('Fare {fare}', { fare: money(trip.fare) })}</small></div>
           {trip.paid

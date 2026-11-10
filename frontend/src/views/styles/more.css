@@ -681,3 +681,9 @@ html[data-theme="dark"] .sos-location-dot,html[data-theme="night"] .sos-location
 .ad-verify-card b{font:700 15px var(--font-head);color:var(--fg-34483b)}.ad-verify-card span{font-size:13px;color:var(--fg-566d5e)}
 .pf-verify-link{display:block;margin-top:8px;font-size:13px}
 @media(max-width:700px){.gpay-page .gpay-card .pin-row input,.verify-reject textarea{font-size:16px}}
+/* GPay: optional coupon code (F15) above the trips to pay. */
+.extra-page .gpay-coupon{display:grid;gap:6px;max-width:420px;margin:0 0 14px}
+.extra-page .gpay-coupon label{font-size:13px;font-weight:700;color:var(--fg-34483b)}
+.extra-page .gpay-coupon input{border:1px solid var(--bd-e4ebe5);border-radius:8px;padding:11px 12px;font:700 15px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;color:var(--fg-34483b);background:var(--bg-ffffff);outline:0}
+.extra-page .gpay-coupon input:focus{border-color:var(--bd-25875f)}
+.extra-page .gpay-coupon .extra-help{margin:0;font-size:12px}

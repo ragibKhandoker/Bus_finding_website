@@ -73,6 +73,11 @@ public class User
     [MaxLength(5)]
     public string FriendCode { get; set; } = "";
 
+    // The code friends enter to be referred by this user ("DHK" + 6 letters or digits). Made the first time it is
+    // needed; unique.
+    [MaxLength(12)]
+    public string? ReferralCode { get; set; }
+
     // Set when an admin gives the user a temporary password. Until they choose a new password, the user can
     // only change their password or sign out (see the check in Program.cs).
     public bool MustChangePassword { get; set; }

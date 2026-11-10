@@ -77,7 +77,7 @@ public class GpayController(GpayService gpay) : ApiControllerBase
     [EnableRateLimiting("strict")]
     [HttpPost("pay")]
     public async Task<IActionResult> PayTrip(GpayPayTripRequest request) =>
-        Moved(await gpay.PayTripAsync(CurrentUserId, request.TripId!.Value, request.Pin, request.Reference));
+        Moved(await gpay.PayTripAsync(CurrentUserId, request.TripId!.Value, request.Pin, request.Reference, request.CouponCode));
 
     // Older clients: pays an amount from the user's own balance.
     [EnableRateLimiting("strict")]

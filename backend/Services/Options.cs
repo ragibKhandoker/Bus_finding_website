@@ -59,3 +59,48 @@ public class GoogleMapsOptions
     public string ServerApiKey { get; set; } = "";
     public string RoutesBaseUrl { get; set; } = "https://routes.googleapis.com";
 }
+
+// F15 defaults. They seed the reward_settings row and the membership tiers the first time the server starts; after
+// that the admin changes them on the Admin page and these values are not read again.
+public class PromotionOptions
+{
+    public bool CashbackEnabled { get; set; } = true;
+    public decimal CashbackPercent { get; set; } = 5;
+    public decimal CashbackFixed { get; set; }
+    public decimal CashbackMinFare { get; set; } = 20;
+    public decimal CashbackMaxPerTrip { get; set; } = 10;
+    public decimal CashbackMaxPerUserMonthly { get; set; } = 300;
+    public int CashbackExpiryDays { get; set; } = 90;
+    public bool AllowCouponStacking { get; set; }
+    public bool AllowCouponWithCashback { get; set; } = true;
+    public int NewUserDays { get; set; } = 30;
+    public decimal FirstTripCashback { get; set; } = 10;
+    public bool ReferralEnabled { get; set; } = true;
+    public decimal ReferrerReward { get; set; } = 25;
+    public decimal ReferredReward { get; set; } = 15;
+    public int ReferralApplyDays { get; set; } = 7;
+    public int MaxReferralRewardsPerMonth { get; set; } = 20;
+
+    public List<TierOption> Tiers { get; set; } = [];
+
+    // Adds example coupons and a campaign when the server runs in Development (never in production). Safe to run
+    // on every start: nothing that already exists is changed.
+    public bool SeedDemoOffers { get; set; } = true;
+
+    // The background job that expires campaigns and cashback, reminds users of expiring coupons, announces new
+    // campaigns and processes any completed trip whose rewards were missed.
+    public bool LifecycleEnabled { get; set; } = true;
+    public int LifecycleIntervalSeconds { get; set; } = 60;
+}
+
+public class TierOption
+{
+    public string Code { get; set; } = "";
+    public string Name { get; set; } = "";
+    public int MinTrips { get; set; }
+    public decimal MinSpend { get; set; }
+    public decimal ExtraCashbackPercent { get; set; }
+    public decimal ExtraCapPerTrip { get; set; }
+    public decimal ExtraMonthlyCap { get; set; }
+    public string Benefits { get; set; } = "";
+}

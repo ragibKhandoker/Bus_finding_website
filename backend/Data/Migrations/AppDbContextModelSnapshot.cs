@@ -421,6 +421,119 @@ namespace SmartCommute.Server.Data.Migrations
                     b.ToTable("bus_watch_states", (string)null);
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.CashbackTransaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("amount");
+
+                    b.Property<decimal?>("BaseAmount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("base_amount");
+
+                    b.Property<decimal?>("CampaignAmount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("campaign_amount");
+
+                    b.Property<Guid?>("CampaignId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("campaign_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("EventKey")
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("event_key");
+
+                    b.Property<DateTime?>("ExpiredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expired_at");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<decimal?>("FareBasis")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("fare_basis");
+
+                    b.Property<Guid?>("OfferTransactionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("offer_transaction_id");
+
+                    b.Property<Guid?>("ReferralId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("referral_id");
+
+                    b.Property<decimal>("Remaining")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("remaining");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("source");
+
+                    b.Property<decimal?>("TierBonus")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("tier_bonus");
+
+                    b.Property<Guid?>("TripId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trip_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<Guid?>("WalletTransactionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("wallet_transaction_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_cashback_transactions");
+
+                    b.HasIndex("EventKey")
+                        .IsUnique()
+                        .HasDatabaseName("ix_cashback_transactions_one_per_event")
+                        .HasFilter("event_key IS NOT NULL");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_cashback_transactions_open_lots")
+                        .HasFilter("remaining > 0");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_cashback_transactions_user_id_created_at");
+
+                    b.ToTable("cashback_transactions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_cashback_transactions_remaining", "remaining >= 0 AND (amount <= 0 OR remaining <= amount) AND (amount > 0 OR remaining = 0)");
+
+                            t.HasCheckConstraint("ck_cashback_transactions_source", "source IN ('trip', 'first-trip', 'referral', 'redeemed', 'expired')");
+                        });
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.Chat", b =>
                 {
                     b.Property<Guid>("Id")
@@ -509,6 +622,248 @@ namespace SmartCommute.Server.Data.Migrations
                     b.ToTable("chat_messages", null, t =>
                         {
                             t.HasCheckConstraint("ck_chat_messages_text_not_blank", "text ~ '\\S'");
+                        });
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.Coupon", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Audience")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("audience");
+
+                    b.Property<Guid?>("CampaignId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("campaign_id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("DiscountType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("discount_type");
+
+                    b.Property<decimal>("DiscountValue")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("discount_value");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<decimal?>("MaxDiscount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("max_discount");
+
+                    b.Property<decimal>("MinFare")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("min_fare");
+
+                    b.Property<string>("MinTier")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("min_tier");
+
+                    b.Property<int>("PerUserLimit")
+                        .HasColumnType("integer")
+                        .HasColumnName("per_user_limit");
+
+                    b.Property<int>("RedemptionCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("redemption_count");
+
+                    b.Property<string>("RouteNumber")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("route_number");
+
+                    b.Property<DateTime>("StartsAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("starts_at");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("title");
+
+                    b.Property<int?>("TotalLimit")
+                        .HasColumnType("integer")
+                        .HasColumnName("total_limit");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("type");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int?>("ValidDaysAfterIssue")
+                        .HasColumnType("integer")
+                        .HasColumnName("valid_days_after_issue");
+
+                    b.Property<bool>("WeekendOnly")
+                        .HasColumnType("boolean")
+                        .HasColumnName("weekend_only");
+
+                    b.HasKey("Id")
+                        .HasName("pk_coupons");
+
+                    b.HasIndex("CampaignId")
+                        .HasDatabaseName("ix_coupons_campaign_id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasDatabaseName("ix_coupons_code");
+
+                    b.HasIndex("IsActive", "ExpiresAt")
+                        .HasDatabaseName("ix_coupons_is_active_expires_at");
+
+                    b.ToTable("coupons", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_coupons_audience", "audience IN ('all', 'new-users', 'assigned')");
+
+                            t.HasCheckConstraint("ck_coupons_code_format", "code ~ '^[A-Z0-9_-]{3,30}$'");
+
+                            t.HasCheckConstraint("ck_coupons_dates", "expires_at IS NULL OR expires_at > starts_at");
+
+                            t.HasCheckConstraint("ck_coupons_discount_type", "discount_type IN ('fixed', 'percent')");
+
+                            t.HasCheckConstraint("ck_coupons_limits", "per_user_limit >= 1 AND redemption_count >= 0 AND (total_limit IS NULL OR (total_limit >= 1 AND redemption_count <= total_limit))");
+
+                            t.HasCheckConstraint("ck_coupons_type", "type IN ('welcome', 'first-trip', 'weekend', 'seasonal', 'referral', 'fixed', 'percentage', 'campaign')");
+
+                            t.HasCheckConstraint("ck_coupons_values", "discount_value > 0 AND (discount_type <> 'percent' OR discount_value <= 100) AND min_fare >= 0 AND (max_discount IS NULL OR max_discount > 0)");
+                        });
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.CouponRedemption", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("CampaignId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("campaign_id");
+
+                    b.Property<Guid>("CouponId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("coupon_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<decimal>("Discount")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("discount");
+
+                    b.Property<decimal>("Fare")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("fare");
+
+                    b.Property<decimal>("FinalFare")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("final_fare");
+
+                    b.Property<Guid?>("GpayTransactionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("gpay_transaction_id");
+
+                    b.Property<string>("Mode")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("mode");
+
+                    b.Property<string>("Reference")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("reference");
+
+                    b.Property<Guid>("TripId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trip_id");
+
+                    b.Property<Guid?>("UserCouponId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_coupon_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<Guid?>("WalletTransactionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("wallet_transaction_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_coupon_redemptions");
+
+                    b.HasIndex("CouponId", "UserId")
+                        .HasDatabaseName("ix_coupon_redemptions_coupon_id_user_id");
+
+                    b.HasIndex("TripId", "CouponId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_coupon_redemptions_one_per_trip");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_coupon_redemptions_user_id_created_at");
+
+                    b.HasIndex("UserId", "Reference")
+                        .IsUnique()
+                        .HasDatabaseName("ix_coupon_redemptions_one_per_reference")
+                        .HasFilter("reference IS NOT NULL");
+
+                    b.ToTable("coupon_redemptions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_coupon_redemptions_amounts", "discount > 0 AND final_fare >= 0 AND discount <= fare");
+
+                            t.HasCheckConstraint("ck_coupon_redemptions_mode", "mode IN ('wallet', 'gpay')");
                         });
                 });
 
@@ -968,6 +1323,70 @@ namespace SmartCommute.Server.Data.Migrations
                     b.ToTable("individual_buses", (string)null);
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.MembershipTier", b =>
+                {
+                    b.Property<string>("Code")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("code");
+
+                    b.Property<string>("Benefits")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("benefits");
+
+                    b.Property<decimal>("ExtraCapPerTrip")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("extra_cap_per_trip");
+
+                    b.Property<decimal>("ExtraCashbackPercent")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("extra_cashback_percent");
+
+                    b.Property<decimal>("ExtraMonthlyCap")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("extra_monthly_cap");
+
+                    b.Property<decimal>("MinSpend")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("min_spend");
+
+                    b.Property<int>("MinTrips")
+                        .HasColumnType("integer")
+                        .HasColumnName("min_trips");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("Rank")
+                        .HasColumnType("integer")
+                        .HasColumnName("rank");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Code")
+                        .HasName("pk_membership_tiers");
+
+                    b.HasIndex("Rank")
+                        .IsUnique()
+                        .HasDatabaseName("ix_membership_tiers_rank");
+
+                    b.ToTable("membership_tiers", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_membership_tiers_values", "min_trips >= 0 AND min_spend >= 0 AND extra_cashback_percent BETWEEN 0 AND 100 AND extra_cap_per_trip >= 0 AND extra_monthly_cap >= 0");
+                        });
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.Notification", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1194,7 +1613,7 @@ namespace SmartCommute.Server.Data.Migrations
                         {
                             t.HasCheckConstraint("ck_offer_transactions_kind", "kind IN ('cashback', 'coupon', 'discount')");
 
-                            t.HasCheckConstraint("ck_offer_transactions_reason", "reason IN ('welcome', 'opening', 'granted', 'adjusted', 'redeemed', 'trip')");
+                            t.HasCheckConstraint("ck_offer_transactions_reason", "reason IN ('welcome', 'opening', 'granted', 'adjusted', 'redeemed', 'trip', 'earned', 'first-trip', 'referral', 'expired')");
                         });
                 });
 
@@ -1352,6 +1771,82 @@ namespace SmartCommute.Server.Data.Migrations
                     b.ToTable("recently_viewed_buses", (string)null);
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.Referral", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)")
+                        .HasColumnName("code");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("note");
+
+                    b.Property<DateTime?>("QualifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("qualified_at");
+
+                    b.Property<Guid?>("QualifyingTripId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("qualifying_trip_id");
+
+                    b.Property<decimal>("ReferredReward")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("referred_reward");
+
+                    b.Property<Guid>("ReferredUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("referred_user_id");
+
+                    b.Property<Guid>("ReferrerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("referrer_id");
+
+                    b.Property<decimal>("ReferrerReward")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("referrer_reward");
+
+                    b.Property<DateTime?>("RewardedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("rewarded_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.HasKey("Id")
+                        .HasName("pk_referrals");
+
+                    b.HasIndex("ReferredUserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_referrals_referred_user_id");
+
+                    b.HasIndex("ReferrerId", "Status")
+                        .HasDatabaseName("ix_referrals_referrer_id_status");
+
+                    b.ToTable("referrals", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_referrals_not_self", "referrer_id <> referred_user_id");
+
+                            t.HasCheckConstraint("ck_referrals_status", "status IN ('pending', 'qualified', 'rewarded', 'rejected')");
+                        });
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.Review", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1490,6 +1985,306 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasDatabaseName("ix_review_replies_review_id_created_at");
 
                     b.ToTable("review_replies", (string)null);
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.RewardAuditLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("action");
+
+                    b.Property<Guid?>("ActorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Details")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("details");
+
+                    b.Property<string>("EntityId")
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("entity_id");
+
+                    b.Property<string>("EntityType")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("entity_type");
+
+                    b.HasKey("Id")
+                        .HasName("pk_reward_audit_logs");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_reward_audit_logs_created_at");
+
+                    b.HasIndex("Action", "CreatedAt")
+                        .HasDatabaseName("ix_reward_audit_logs_action_created_at");
+
+                    b.ToTable("reward_audit_logs", (string)null);
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.RewardCampaign", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("AnnouncedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("announced_at");
+
+                    b.Property<string>("BannerUrl")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("banner_url");
+
+                    b.Property<decimal?>("Budget")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("budget");
+
+                    b.Property<decimal>("CashbackFixed")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("cashback_fixed");
+
+                    b.Property<decimal>("CashbackPercent")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("cashback_percent");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<DateTime>("EndsAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ends_at");
+
+                    b.Property<bool>("FirstTripOnly")
+                        .HasColumnType("boolean")
+                        .HasColumnName("first_trip_only");
+
+                    b.Property<decimal?>("MaxCashbackPerTrip")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("max_cashback_per_trip");
+
+                    b.Property<int?>("MaxRedemptions")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_redemptions");
+
+                    b.Property<decimal>("MinFare")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("min_fare");
+
+                    b.Property<string>("MinTier")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("min_tier");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<bool>("NewUsersOnly")
+                        .HasColumnType("boolean")
+                        .HasColumnName("new_users_only");
+
+                    b.Property<int>("Redemptions")
+                        .HasColumnType("integer")
+                        .HasColumnName("redemptions");
+
+                    b.Property<decimal>("Spent")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("spent");
+
+                    b.Property<DateTime>("StartsAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("starts_at");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Theme")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("theme");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("type");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<bool>("WeekendOnly")
+                        .HasColumnType("boolean")
+                        .HasColumnName("weekend_only");
+
+                    b.HasKey("Id")
+                        .HasName("pk_reward_campaigns");
+
+                    b.HasIndex("Status", "EndsAt")
+                        .HasDatabaseName("ix_reward_campaigns_status_ends_at");
+
+                    b.ToTable("reward_campaigns", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_reward_campaigns_budget", "spent >= 0 AND (budget IS NULL OR spent <= budget)");
+
+                            t.HasCheckConstraint("ck_reward_campaigns_dates", "ends_at > starts_at");
+
+                            t.HasCheckConstraint("ck_reward_campaigns_redemptions", "redemptions >= 0 AND (max_redemptions IS NULL OR redemptions <= max_redemptions)");
+
+                            t.HasCheckConstraint("ck_reward_campaigns_status", "status IN ('active', 'paused', 'expired')");
+
+                            t.HasCheckConstraint("ck_reward_campaigns_type", "type IN ('cashback', 'weekend', 'first-trip', 'festival', 'welcome', 'tier-exclusive')");
+
+                            t.HasCheckConstraint("ck_reward_campaigns_values", "cashback_percent BETWEEN 0 AND 100 AND cashback_fixed >= 0 AND min_fare >= 0 AND (max_cashback_per_trip IS NULL OR max_cashback_per_trip >= 0)");
+                        });
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.RewardSettings", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AllowCouponStacking")
+                        .HasColumnType("boolean")
+                        .HasColumnName("allow_coupon_stacking");
+
+                    b.Property<bool>("AllowCouponWithCashback")
+                        .HasColumnType("boolean")
+                        .HasColumnName("allow_coupon_with_cashback");
+
+                    b.Property<bool>("CashbackEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("cashback_enabled");
+
+                    b.Property<int>("CashbackExpiryDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("cashback_expiry_days");
+
+                    b.Property<decimal>("CashbackFixed")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("cashback_fixed");
+
+                    b.Property<decimal>("CashbackMaxPerTrip")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("cashback_max_per_trip");
+
+                    b.Property<decimal>("CashbackMaxPerUserMonthly")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("cashback_max_per_user_monthly");
+
+                    b.Property<decimal>("CashbackMinFare")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("cashback_min_fare");
+
+                    b.Property<decimal>("CashbackPercent")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("cashback_percent");
+
+                    b.Property<decimal>("FirstTripCashback")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("first_trip_cashback");
+
+                    b.Property<int>("MaxReferralRewardsPerMonth")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_referral_rewards_per_month");
+
+                    b.Property<int>("NewUserDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("new_user_days");
+
+                    b.Property<int>("ReferralApplyDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("referral_apply_days");
+
+                    b.Property<bool>("ReferralEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("referral_enabled");
+
+                    b.Property<decimal>("ReferredReward")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("referred_reward");
+
+                    b.Property<decimal>("ReferrerReward")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("referrer_reward");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_id");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_reward_settings");
+
+                    b.ToTable("reward_settings", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_reward_settings_single_row", "id = 1");
+
+                            t.HasCheckConstraint("ck_reward_settings_values", "cashback_percent BETWEEN 0 AND 100 AND cashback_fixed >= 0 AND cashback_min_fare >= 0 AND cashback_max_per_trip >= 0 AND cashback_max_per_user_monthly >= 0 AND cashback_expiry_days >= 0 AND new_user_days >= 0 AND first_trip_cashback >= 0 AND referrer_reward >= 0 AND referred_reward >= 0 AND referral_apply_days >= 0 AND max_referral_rewards_per_month >= 0");
+                        });
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.RideMessage", b =>
@@ -2079,6 +2874,60 @@ namespace SmartCommute.Server.Data.Migrations
                     b.ToTable("trips", (string)null);
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.TripReward", b =>
+                {
+                    b.Property<Guid>("TripId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trip_id");
+
+                    b.Property<Guid?>("CampaignId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("campaign_id");
+
+                    b.Property<decimal>("Cashback")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("cashback");
+
+                    b.Property<bool>("Eligible")
+                        .HasColumnType("boolean")
+                        .HasColumnName("eligible");
+
+                    b.Property<decimal>("Fare")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("fare");
+
+                    b.Property<DateTime>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("processed_at");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("reason");
+
+                    b.Property<string>("TierCode")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tier_code");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("TripId")
+                        .HasName("pk_trip_rewards");
+
+                    b.HasIndex("UserId", "Eligible")
+                        .HasDatabaseName("ix_trip_rewards_user_id_eligible");
+
+                    b.ToTable("trip_rewards", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_trip_rewards_cashback", "cashback >= 0");
+                        });
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2150,6 +2999,11 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("phone");
 
+                    b.Property<string>("ReferralCode")
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)")
+                        .HasColumnName("referral_code");
+
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -2184,6 +3038,11 @@ namespace SmartCommute.Server.Data.Migrations
                     b.HasIndex("FriendCode")
                         .IsUnique()
                         .HasDatabaseName("ix_users_friend_code");
+
+                    b.HasIndex("ReferralCode")
+                        .IsUnique()
+                        .HasDatabaseName("ix_users_referral_code")
+                        .HasFilter("referral_code IS NOT NULL");
 
                     b.ToTable("users", null, t =>
                         {
@@ -2226,6 +3085,107 @@ namespace SmartCommute.Server.Data.Migrations
                         {
                             t.HasCheckConstraint("ck_user_blocks_not_self", "blocker_id <> blocked_id");
                         });
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.UserCoupon", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("CouponId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("coupon_id");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<DateTime?>("ExpiryNotifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expiry_notified_at");
+
+                    b.Property<DateTime>("IssuedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("issued_at");
+
+                    b.Property<string>("Reference")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)")
+                        .HasColumnName("reference");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("source");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("used_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_user_coupons");
+
+                    b.HasIndex("CouponId")
+                        .HasDatabaseName("ix_user_coupons_coupon_id");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("ix_user_coupons_expires_at")
+                        .HasFilter("used_at IS NULL");
+
+                    b.HasIndex("UserId", "CouponId")
+                        .HasDatabaseName("ix_user_coupons_user_id_coupon_id");
+
+                    b.HasIndex("UserId", "Reference")
+                        .IsUnique()
+                        .HasDatabaseName("ix_user_coupons_user_id_reference");
+
+                    b.ToTable("user_coupons", (string)null);
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.UserMembership", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<decimal>("EligibleSpend")
+                        .HasPrecision(12, 2)
+                        .HasColumnType("numeric(12,2)")
+                        .HasColumnName("eligible_spend");
+
+                    b.Property<int>("EligibleTrips")
+                        .HasColumnType("integer")
+                        .HasColumnName("eligible_trips");
+
+                    b.Property<string>("TierCode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("tier_code");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<DateTime?>("UpgradedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("upgraded_at");
+
+                    b.HasKey("UserId")
+                        .HasName("pk_user_memberships");
+
+                    b.HasIndex("TierCode")
+                        .HasDatabaseName("ix_user_memberships_tier_code");
+
+                    b.ToTable("user_memberships", (string)null);
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.UserSession", b =>
@@ -2661,6 +3621,18 @@ namespace SmartCommute.Server.Data.Migrations
                     b.Navigation("Bus");
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.CashbackTransaction", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_cashback_transactions_users_user_id");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.Chat", b =>
                 {
                     b.HasOne("SmartCommute.Server.Models.User", "User1")
@@ -2701,6 +3673,47 @@ namespace SmartCommute.Server.Data.Migrations
                     b.Navigation("Chat");
 
                     b.Navigation("Sender");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.Coupon", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.RewardCampaign", "Campaign")
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_coupons_reward_campaigns_campaign_id");
+
+                    b.Navigation("Campaign");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.CouponRedemption", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.Coupon", "Coupon")
+                        .WithMany()
+                        .HasForeignKey("CouponId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_coupon_redemptions_coupons_coupon_id");
+
+                    b.HasOne("SmartCommute.Server.Models.Trip", "Trip")
+                        .WithMany()
+                        .HasForeignKey("TripId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_coupon_redemptions_trips_trip_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_coupon_redemptions_users_user_id");
+
+                    b.Navigation("Coupon");
+
+                    b.Navigation("Trip");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.FareRecord", b =>
@@ -2992,6 +4005,27 @@ namespace SmartCommute.Server.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.Referral", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.User", "ReferredUser")
+                        .WithMany()
+                        .HasForeignKey("ReferredUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_referrals_users_referred_user_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "Referrer")
+                        .WithMany()
+                        .HasForeignKey("ReferrerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_referrals_users_referrer_id");
+
+                    b.Navigation("ReferredUser");
+
+                    b.Navigation("Referrer");
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.Review", b =>
                 {
                     b.HasOne("SmartCommute.Server.Models.Bus", "Bus")
@@ -3207,6 +4241,18 @@ namespace SmartCommute.Server.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.TripReward", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.Trip", "Trip")
+                        .WithOne()
+                        .HasForeignKey("SmartCommute.Server.Models.TripReward", "TripId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_trip_rewards_trips_trip_id");
+
+                    b.Navigation("Trip");
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.UserBlock", b =>
                 {
                     b.HasOne("SmartCommute.Server.Models.User", "Blocked")
@@ -3226,6 +4272,39 @@ namespace SmartCommute.Server.Data.Migrations
                     b.Navigation("Blocked");
 
                     b.Navigation("Blocker");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.UserCoupon", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.Coupon", "Coupon")
+                        .WithMany()
+                        .HasForeignKey("CouponId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_coupons_coupons_coupon_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_coupons_users_user_id");
+
+                    b.Navigation("Coupon");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.UserMembership", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.User", "User")
+                        .WithOne()
+                        .HasForeignKey("SmartCommute.Server.Models.UserMembership", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_user_memberships_users_user_id");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.UserSession", b =>

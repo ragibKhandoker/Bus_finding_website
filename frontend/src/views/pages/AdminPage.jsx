@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { ArrowRight, BadgeCheck, BellRing, Check, CircleAlert, Clock3, Copy, GraduationCap, History, KeyRound, Lock, Inbox, MessageCircle, Siren, Search, ShieldCheck, UserRound, Users } from 'lucide-react'
+import { ArrowRight, BadgeCheck, BellRing, Check, CircleAlert, Clock3, Copy, Gift, GraduationCap, History, KeyRound, Lock, Inbox, MessageCircle, Siren, Search, ShieldCheck, UserRound, Users } from 'lucide-react'
 import { AdminSupportInbox, PasswordRequestsCard } from './Support'
+import { AdminPromotions } from './AdminPromotions'
 import { apiRequest as request } from '../../models/api'
 import { formatDate, formatNumber, formatTime, t } from '../../models/i18n'
 import { errorText } from '../../models/messages'
@@ -42,6 +43,7 @@ export const ADMIN_TABS = [
   { id: 'inbox', focus: 'sp-inbox-title', icon: Inbox, label: 'Support inbox' },
   { id: 'verifications', focus: 'admin-verifications', icon: BadgeCheck, label: 'Verifications' },
   { id: 'users', focus: 'admin-users', icon: Users, label: 'Users' },
+  { id: 'offers', focus: 'admin-offers', icon: Gift, label: 'Offers & rewards' },
 ]
 
 export const USER_ROLE_FILTERS = [['all', 'All'], ['commuter', 'Commuters'], ['driver', 'Drivers'], ['admin', 'Admins']]
@@ -177,6 +179,7 @@ export function AdminPage({ user, token, signedIn, isAdmin, openAuth, notify, na
         {tab === 'requests' && <PasswordRequestsCard token={token} notify={(message) => { notify(message); loadOverview() }} />}
         {tab === 'inbox' && <AdminSupportInbox token={token} startWith={messageUser} onStarted={() => setMessageUser(null)} />}
         {tab === 'verifications' && <AdminVerificationCard token={token} navigate={navigate} pending={stats?.pendingVerifications} />}
+        {tab === 'offers' && <AdminPromotions token={token} notify={notify} />}
         {tab === 'users' && <section className="pf-panel ad-panel" id="admin-users">
           <header className="ad-toolbar">
             <div><h2><Users size={18} /> {t('All users')} <span className="ad-count">{formatNumber(shown.length)}</span></h2><p>{t('Message a user. Passwords are never shown: a user who forgot theirs sends a request that you approve.')}</p></div>

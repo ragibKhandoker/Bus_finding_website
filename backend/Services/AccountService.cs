@@ -20,7 +20,9 @@ public class AccountService(
     FriendCodeGenerator friendCodes,
     OfferService offers,
     NotificationService notifications,
-    PasswordResetService passwordResets)
+    PasswordResetService passwordResets,
+    ReferralService? referrals = null,
+    CouponService? coupons = null)
 {
 
     public async Task<ServiceResult<SignedIn>> SignupAsync(SignupRequest request, ClientInfo client)
@@ -54,6 +56,17 @@ public class AccountService(
         {
             return ServiceResult<SignedIn>.Conflict("An account with this email already exists.");
         }
+        // A friend's referral code is checked before the account is made, so a mistyped code can be fixed.
+        Guid? referrerId = null;
+        if (referrals is not null)
+        {
+            var (referrer, problem) = await referrals.ForSignupAsync(request.ReferralCode);
+            if (problem is not null)
+            {
+                return ServiceResult<SignedIn>.BadRequest(problem);
+            }
+            referrerId = referrer;
+        }
 
         var user = new User
         {
@@ -69,6 +82,15 @@ public class AccountService(
         db.Wallets.Add(wallet);
         // The welcome offer from the Rewards settings is saved in the same transaction as the account.
         offers.AddWelcomeOffers(user, wallet);
+        // F15: the welcome coupons and the referral, saved with the account (so they exist exactly when it does).
+        if (coupons is not null)
+        {
+            await coupons.IssueWelcomeAsync(user, DateTime.UtcNow);
+        }
+        if (referrals is not null && referrerId is { } inviter)
+        {
+            referrals.AddForNewUser(user, inviter, request.ReferralCode!);
+        }
         // The user, wallet, offers and friend code are saved together. If a simultaneous sign-up took the same friend
         // code first, the unique index rejects the insert and it is retried with a new code.
         for (var attempt = 1; ; attempt++)

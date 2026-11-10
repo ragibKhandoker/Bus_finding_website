@@ -21,7 +21,7 @@ public record GpayTripView(Guid TripId, string BusName, string Source, string De
 // Moving money needs the account's 4-digit PIN. Each change takes the balance with one conditional UPDATE
 // (balance >= amount) inside a transaction that also writes the ledger and any wallet credit, so a repeated or
 // simultaneous request can never overspend, and nothing is saved unless all of it is.
-public class GpayService(AppDbContext db, WalletService wallets, NotificationService notifications)
+public class GpayService(AppDbContext db, WalletService wallets, NotificationService notifications, CouponService? coupons = null)
 {
     public const decimal MaxAmount = 100_000m;
     private static readonly PasswordHasher<GpayAccount> PinHasher = new();
@@ -169,6 +169,11 @@ public class GpayService(AppDbContext db, WalletService wallets, NotificationSer
                 await transaction.RollbackAsync();
                 return new GpayResult(StatusCodes.Status200OK, "This request was already processed.", await FindAsync(userId));
             }
+            catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation, ConstraintName: "ix_coupon_redemptions_one_per_trip" })
+            {
+                await transaction.RollbackAsync();
+                return new GpayResult(StatusCodes.Status409Conflict, "That coupon was already used on this trip.");
+            }
             catch (DbUpdateConcurrencyException)
             {
                 await transaction.RollbackAsync();
@@ -213,7 +218,8 @@ public class GpayService(AppDbContext db, WalletService wallets, NotificationSer
     }
 
     // Pays a completed trip's fare, as the server recorded it when the trip ended. Each trip can be paid once.
-    public async Task<GpayResult> PayTripAsync(Guid userId, Guid tripId, string? pin, string? reference)
+    // couponCode (F15): a coupon checked on the server whose saving comes off the payment.
+    public async Task<GpayResult> PayTripAsync(Guid userId, Guid tripId, string? pin, string? reference, string? couponCode = null)
     {
         var trip = await db.Trips.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tripId && t.UserId == userId);
         if (trip is null)
@@ -228,18 +234,38 @@ public class GpayService(AppDbContext db, WalletService wallets, NotificationSer
         {
             return new(StatusCodes.Status409Conflict, "This trip is already paid.");
         }
+        var withCoupon = !string.IsNullOrWhiteSpace(couponCode) && coupons is not null;
         return await MoveAsync(userId, pin, Clean(reference), async (account, now) =>
         {
-            if (await TakeAsync(account.Id, trip.Fare, now) is not { } left)
+            CouponRedemption? redemption = null;
+            if (withCoupon)
             {
-                return new GpayResult(StatusCodes.Status400BadRequest, $"Insufficient GPay balance: the fare is ৳{trip.Fare:0.##}.");
+                await coupons!.LockUsersAsync(userId);
+                var redeemed = await coupons.RedeemInTransactionAsync(userId, couponCode, tripId, RedemptionModes.Gpay, now, null);
+                if (!redeemed.Succeeded)
+                {
+                    return new GpayResult(redeemed.StatusCode, redeemed.Message);
+                }
+                redemption = redeemed.Redemption;
             }
+            var pay = trip.Fare - (redemption?.Discount ?? 0);
+            if (await TakeAsync(account.Id, pay, now) is not { } left)
+            {
+                return new GpayResult(StatusCodes.Status400BadRequest, $"Insufficient GPay balance: you need ৳{pay:0.##}.");
+            }
+            var description = $"Fare: {trip.BusName}, {trip.Source} to {trip.Destination}"
+                + (redemption is null ? "" : $" (coupon {redemption.Coupon?.Code} -৳{redemption.Discount:0.##})");
             var entry = new GpayTransaction
             {
-                AccountId = account.Id, UserId = userId, Type = GpayTransactionTypes.TripPayment, Amount = -trip.Fare, BalanceAfter = left,
-                Description = $"Fare: {trip.BusName}, {trip.Source} to {trip.Destination}", TripId = tripId, Reference = Clean(reference), CreatedAt = now,
+                AccountId = account.Id, UserId = userId, Type = GpayTransactionTypes.TripPayment, Amount = -pay, BalanceAfter = left,
+                Description = description.Length > 200 ? description[..200] : description, TripId = tripId, Reference = Clean(reference), CreatedAt = now,
             };
             db.GpayTransactions.Add(entry);
+            if (redemption is not null)
+            {
+                redemption.GpayTransactionId = entry.Id;
+                return new GpayResult(StatusCodes.Status200OK, $"Coupon {redemption.Coupon?.Code} saved ৳{redemption.Discount:0.##}. Paid ৳{pay:0.##} for your trip (fare ৳{trip.Fare:0.##}).", Entry: entry);
+            }
             return new GpayResult(StatusCodes.Status200OK, $"Paid ৳{trip.Fare:0.##} for your trip.", Entry: entry);
         });
     }

@@ -107,6 +107,10 @@ public class SignupRequest
     [StringLength(20)]
     public string? Role { get; set; }
 
+    // A friend's referral code (F15), optional.
+    [StringLength(20)]
+    public string? ReferralCode { get; set; }
+
     [Required(ErrorMessage = "Please choose a password.")]
     [StringLength(128, MinimumLength = 6, ErrorMessage = "Password must be at least 6 characters.")]
     [RegularExpression(@"^(?=.*[A-Za-z])(?=.*\d).+$", ErrorMessage = "Password must contain at least one letter and one number.")]
