@@ -5,7 +5,7 @@ export const PAGE_PATHS = {
   'Home': '/', 'Find a bus': '/find-a-bus', 'Bus routes': '/bus-routes', 'Ride share': '/ride-share', 'My trips': '/my-trips', 'Wallet': '/wallet',
   'Profile': '/profile', 'Friends': '/friends', 'Messages': '/messages', 'Notifications': '/notifications', 'Offers': '/offers',
   'Map': '/map', 'Favourites': '/favourites', 'GPay': '/gpay', 'Verification': '/verification', 'Admin': '/admin', 'Support': '/support',
-  'My rides': '/ride-share/my', 'Lost & found': '/lost-found',
+  'My rides': '/ride-share/my', 'Lost & found': '/lost-found', 'Complaints': '/complaints',
 }
 
 // Each route also has its own page, e.g. /bus-routes/DBR-12.
@@ -71,7 +71,7 @@ export const PAGE_LOADER_MS = 550
 // The name shown while a page loads, using the wording from the menus.
 export const PAGE_LOADER_NAMES = {
   'Bus details': 'Bus routes', 'Ride details': 'Ride share', 'Wallet': 'My wallet', 'Profile': 'Account', 'Offers': 'Offers & rewards', 'Map': 'Map & fare calculator',
-  'Favourites': 'Favourite buses', 'GPay': 'GPay & recharge', 'Verification': 'Account verification', 'Admin': 'Admin · Users', 'Support': 'Contact admin',
+  'Favourites': 'Favourite buses', 'GPay': 'GPay & recharge', 'Verification': 'Account verification', 'Admin': 'Admin · Users', 'Support': 'Contact admin', 'Complaints': 'Complaint & Feedback',
 }
 
 // Which Admin page section a profile shortcut should scroll to.

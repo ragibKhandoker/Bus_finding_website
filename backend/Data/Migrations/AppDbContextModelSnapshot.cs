@@ -625,6 +625,228 @@ namespace SmartCommute.Server.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.Complaint", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AdminNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("admin_notes");
+
+                    b.Property<Guid?>("BusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bus_id");
+
+                    b.Property<string>("BusName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("bus_name");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("category");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<DateOnly>("IncidentDate")
+                        .HasColumnType("date")
+                        .HasColumnName("incident_date");
+
+                    b.Property<string>("IncidentLocation")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("incident_location");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("double precision")
+                        .HasColumnName("latitude");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("double precision")
+                        .HasColumnName("longitude");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at");
+
+                    b.Property<Guid?>("ReviewedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewed_by_id");
+
+                    b.Property<string>("RouteName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("route_name");
+
+                    b.Property<string>("RouteNumber")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("route_number");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("StopName")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("stop_name");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("subject");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_complaints");
+
+                    b.HasIndex("BusId")
+                        .HasDatabaseName("ix_complaints_bus_id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("ix_complaints_created_at");
+
+                    b.HasIndex("Status", "CreatedAt")
+                        .HasDatabaseName("ix_complaints_status_created_at");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_complaints_user_id_created_at");
+
+                    b.ToTable("complaints", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_complaints_status", "status IN ('PENDING', 'REVIEWING', 'RESOLVED', 'REJECTED')");
+
+                            t.HasCheckConstraint("ck_complaints_text", "subject ~ '\\S' AND description ~ '\\S'");
+                        });
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.ComplaintEvidence", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ComplaintId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("complaint_id");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("content_type");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("SizeBytes")
+                        .HasColumnType("integer")
+                        .HasColumnName("size_bytes");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("storage_key");
+
+                    b.HasKey("Id")
+                        .HasName("pk_complaint_evidence");
+
+                    b.HasIndex("ComplaintId")
+                        .HasDatabaseName("ix_complaint_evidence_complaint_id");
+
+                    b.ToTable("complaint_evidence", (string)null);
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.ComplaintHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("ActorId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_id");
+
+                    b.Property<string>("ActorRole")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("actor_role");
+
+                    b.Property<Guid>("ComplaintId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("complaint_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("FromStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("from_status");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("note");
+
+                    b.Property<string>("ToStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("to_status");
+
+                    b.HasKey("Id")
+                        .HasName("pk_complaint_history");
+
+                    b.HasIndex("ActorId")
+                        .HasDatabaseName("ix_complaint_history_actor_id");
+
+                    b.HasIndex("ComplaintId", "CreatedAt")
+                        .HasDatabaseName("ix_complaint_history_complaint_id_created_at");
+
+                    b.ToTable("complaint_history", (string)null);
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.Coupon", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3932,6 +4154,58 @@ namespace SmartCommute.Server.Data.Migrations
                     b.Navigation("Sender");
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.Complaint", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.Bus", "Bus")
+                        .WithMany()
+                        .HasForeignKey("BusId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_complaints_buses_bus_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_complaints_users_user_id");
+
+                    b.Navigation("Bus");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.ComplaintEvidence", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.Complaint", "Complaint")
+                        .WithMany("Evidence")
+                        .HasForeignKey("ComplaintId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_complaint_evidence_complaints_complaint_id");
+
+                    b.Navigation("Complaint");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.ComplaintHistory", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.User", "Actor")
+                        .WithMany()
+                        .HasForeignKey("ActorId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_complaint_history_users_actor_id");
+
+                    b.HasOne("SmartCommute.Server.Models.Complaint", "Complaint")
+                        .WithMany("History")
+                        .HasForeignKey("ComplaintId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_complaint_history_complaints_complaint_id");
+
+                    b.Navigation("Actor");
+
+                    b.Navigation("Complaint");
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.Coupon", b =>
                 {
                     b.HasOne("SmartCommute.Server.Models.RewardCampaign", "Campaign")
@@ -4708,6 +4982,13 @@ namespace SmartCommute.Server.Data.Migrations
             modelBuilder.Entity("SmartCommute.Server.Models.Chat", b =>
                 {
                     b.Navigation("Messages");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.Complaint", b =>
+                {
+                    b.Navigation("Evidence");
+
+                    b.Navigation("History");
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.FavoriteCollection", b =>

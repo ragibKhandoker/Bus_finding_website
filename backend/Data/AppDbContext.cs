@@ -62,6 +62,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<LostFoundConversation> LostFoundConversations => Set<LostFoundConversation>();
     public DbSet<LostFoundMessage> LostFoundMessages => Set<LostFoundMessage>();
     public DbSet<LostFoundMessageReaction> LostFoundMessageReactions => Set<LostFoundMessageReaction>();
+    public DbSet<Complaint> Complaints => Set<Complaint>();
+    public DbSet<ComplaintEvidence> ComplaintEvidence => Set<ComplaintEvidence>();
+    public DbSet<ComplaintHistory> ComplaintHistory => Set<ComplaintHistory>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -454,6 +457,37 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         });
 
         ConfigurePromotions(b);
+
+        // F18: complaints. Deleting a route keeps its complaints (with the copied bus name); deleting an account
+        // deletes its complaints.
+        b.Entity<Complaint>(e =>
+        {
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Bus).WithMany().HasForeignKey(x => x.BusId).OnDelete(DeleteBehavior.SetNull);
+            e.Property(x => x.Version).IsRowVersion();
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            e.HasIndex(x => new { x.Status, x.CreatedAt });
+            e.HasIndex(x => x.BusId);
+            e.HasIndex(x => x.CreatedAt);
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_complaints_status", "status IN ('PENDING', 'REVIEWING', 'RESOLVED', 'REJECTED')");
+                t.HasCheckConstraint("ck_complaints_text", @"subject ~ '\S' AND description ~ '\S'");
+            });
+        });
+
+        b.Entity<ComplaintEvidence>(e =>
+        {
+            e.HasOne(x => x.Complaint).WithMany(c => c.Evidence).HasForeignKey(x => x.ComplaintId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.ComplaintId);
+        });
+
+        b.Entity<ComplaintHistory>(e =>
+        {
+            e.HasOne(x => x.Complaint).WithMany(c => c.History).HasForeignKey(x => x.ComplaintId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Actor).WithMany().HasForeignKey(x => x.ActorId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(x => new { x.ComplaintId, x.CreatedAt });
+        });
 
         // F17: Lost & Found. Deleting an account deletes its reports.
         b.Entity<LostFound>(e =>

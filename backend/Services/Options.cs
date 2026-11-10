@@ -113,3 +113,11 @@ public class LostFoundOptions
     // Relative to the app folder, outside wwwroot; files are served only through LostFoundController.
     public string StoragePath { get; set; } = "App_Data/lost-found-images";
 }
+
+// F18: evidence pictures for complaints. Private: only the person who complained and admins can see them.
+public class ComplaintOptions
+{
+    public int MaxImageBytes { get; set; } = 5 * 1024 * 1024;
+    public int MaxImages { get; set; } = 3;
+    public string StoragePath { get; set; } = "App_Data/complaint-evidence";
+}
