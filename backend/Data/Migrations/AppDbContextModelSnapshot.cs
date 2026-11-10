@@ -179,6 +179,139 @@ namespace SmartCommute.Server.Data.Migrations
                     b.ToTable("bus_boardings", (string)null);
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.BusCrowdReport", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AdditionalComments")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("additional_comments");
+
+                    b.Property<int?>("AvailableSeatCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("available_seat_count");
+
+                    b.Property<Guid>("BusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bus_id");
+
+                    b.Property<string>("BusName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("bus_name");
+
+                    b.Property<Guid>("BusStopId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bus_stop_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CrowdLevel")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("crowd_level");
+
+                    b.Property<DateTime>("ObservationDateTime")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("observation_date_time");
+
+                    b.Property<long>("ObservationSlot")
+                        .HasColumnType("bigint")
+                        .HasColumnName("observation_slot");
+
+                    b.Property<string>("RouteName")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("route_name");
+
+                    b.Property<string>("RouteNumber")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("route_number");
+
+                    b.Property<string>("SeatAvailability")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)")
+                        .HasColumnName("seat_availability");
+
+                    b.Property<int?>("StandingPassengerCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("standing_passenger_count");
+
+                    b.Property<string>("StopName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("stop_name");
+
+                    b.Property<string>("TowardsStop")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("towards_stop");
+
+                    b.Property<string>("TravelDirection")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("travel_direction");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_bus_crowd_reports");
+
+                    b.HasIndex("BusName")
+                        .HasDatabaseName("ix_bus_crowd_reports_bus_name");
+
+                    b.HasIndex("ObservationDateTime")
+                        .HasDatabaseName("ix_bus_crowd_reports_observation_date_time");
+
+                    b.HasIndex("BusId", "ObservationDateTime")
+                        .HasDatabaseName("ix_bus_crowd_reports_bus_id_observation_date_time");
+
+                    b.HasIndex("BusStopId", "ObservationDateTime")
+                        .HasDatabaseName("ix_bus_crowd_reports_bus_stop_id_observation_date_time");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_bus_crowd_reports_user_id_created_at");
+
+                    b.HasIndex("UserId", "BusId", "BusStopId", "ObservationSlot")
+                        .IsUnique()
+                        .HasDatabaseName("ix_bus_crowd_reports_one_per_sighting");
+
+                    b.ToTable("bus_crowd_reports", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_bus_crowd_reports_crowd_level", "crowd_level IN ('LOW', 'MEDIUM', 'HIGH')");
+
+                            t.HasCheckConstraint("ck_bus_crowd_reports_direction", "travel_direction IN ('FORWARD', 'RETURN')");
+
+                            t.HasCheckConstraint("ck_bus_crowd_reports_no_seats", "seat_availability <> 'NO_SEATS' OR available_seat_count IS NULL OR available_seat_count = 0");
+
+                            t.HasCheckConstraint("ck_bus_crowd_reports_seat_availability", "seat_availability IN ('AVAILABLE', 'LIMITED', 'NO_SEATS')");
+
+                            t.HasCheckConstraint("ck_bus_crowd_reports_seat_count", "available_seat_count IS NULL OR available_seat_count BETWEEN 0 AND 100");
+
+                            t.HasCheckConstraint("ck_bus_crowd_reports_standing_count", "standing_passenger_count IS NULL OR standing_passenger_count BETWEEN 0 AND 200");
+                        });
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.BusFareHistory", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4019,6 +4152,36 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasConstraintName("fk_bus_boardings_users_user_id");
 
                     b.Navigation("IndividualBus");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.BusCrowdReport", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.Bus", "Bus")
+                        .WithMany()
+                        .HasForeignKey("BusId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_bus_crowd_reports_buses_bus_id");
+
+                    b.HasOne("SmartCommute.Server.Models.BusStop", "BusStop")
+                        .WithMany()
+                        .HasForeignKey("BusStopId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_bus_crowd_reports_bus_stops_bus_stop_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_bus_crowd_reports_users_user_id");
+
+                    b.Navigation("Bus");
+
+                    b.Navigation("BusStop");
 
                     b.Navigation("User");
                 });

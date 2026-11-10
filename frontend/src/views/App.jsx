@@ -6,6 +6,7 @@ import { VerificationPage } from './pages/Verification'
 import { OffersPage } from './pages/Offers'
 import { LostFoundPage } from './pages/LostFound'
 import { ComplaintPage } from './pages/Complaints'
+import { BusCrowdReportPage, MyCrowdReportsPage } from './pages/BusCrowdReports'
 import { useUnreadCount } from '../controllers/useUnreadCount'
 import { ADMIN_FOCUS_EVENT, useAdminAlerts } from '../controllers/useAdminAlerts'
 import { AdminAlert } from './components/AdminAlert'
@@ -247,8 +248,8 @@ export function App() {
             <button key={item} className={page === item || (item === 'Bus routes' && page === 'Bus details') || (item === 'Ride share' && (page === 'Ride details' || page === 'My rides')) ? 'nav-link active' : 'nav-link'} onClick={() => navigate(item)}>{t(item)}</button>
           ))}
           <div className="more-nav-wrap" ref={moreRef}>
-            <button className={['Friends', 'Messages', 'Notifications', 'Offers', 'Lost & found', 'Complaints', 'Map', 'Favourites', 'Wallet', 'GPay', 'Verification', 'Admin'].includes(page) ? 'nav-link active' : 'nav-link'} aria-expanded={moreMenu} onClick={() => setMoreMenu(!moreMenu)}>{t('More')} <ChevronDown size={13} /></button>
-            {moreMenu && <div className="more-nav-menu">{[['Friends','Friends'],['Messages','Messages'],['Notifications','Notifications'],['Offers','Offers & rewards'],['Lost & found','Lost & found'],['Complaints','Complaint & Feedback'],['Map','Map & fare calculator'],['Favourites','Favourite buses'],['Wallet','My wallet'],['GPay','GPay & recharge'],['Verification','Account verification'], ['Support','Contact admin'], ...(isAdmin ? [['Admin', 'Admin · Users']] : [])].map(([target,label]) => <button key={target} className={page === target ? 'current' : ''} onClick={() => navigate(target)}>{t(label)}<ArrowRight size={13} /></button>)}</div>}
+            <button className={['Friends', 'Messages', 'Notifications', 'Offers', 'Lost & found', 'Complaints', 'Crowd reports', 'My crowd reports', 'Map', 'Favourites', 'Wallet', 'GPay', 'Verification', 'Admin'].includes(page) ? 'nav-link active' : 'nav-link'} aria-expanded={moreMenu} onClick={() => setMoreMenu(!moreMenu)}>{t('More')} <ChevronDown size={13} /></button>
+            {moreMenu && <div className="more-nav-menu">{[['Friends','Friends'],['Messages','Messages'],['Notifications','Notifications'],['Offers','Offers & rewards'],['Lost & found','Lost & found'],['Complaints','Complaint & Feedback'],['Crowd reports','Bus crowd & seats'],['Map','Map & fare calculator'],['Favourites','Favourite buses'],['Wallet','My wallet'],['GPay','GPay & recharge'],['Verification','Account verification'], ['Support','Contact admin'], ...(isAdmin ? [['Admin', 'Admin · Users']] : [])].map(([target,label]) => <button key={target} className={page === target || (target === 'Crowd reports' && page === 'My crowd reports') ? 'current' : ''} onClick={() => navigate(target)}>{t(label)}<ArrowRight size={13} /></button>)}</div>}
           </div>
         </nav>
         <div className="top-actions">
@@ -284,6 +285,8 @@ export function App() {
         {page === 'Friends' && <FriendsPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} onChat={(friend) => navigate('Messages', { search: `?with=${encodeURIComponent(friend.id || friend._id)}` })} notify={notify} />}
         {page === 'Messages' && <ChatPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} onFindFriends={() => navigate('Friends')} />}
         {page === 'Notifications' && <NotificationsPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} navigate={navigate} />}
+        {page === 'Crowd reports' && <BusCrowdReportPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} navigate={navigate} />}
+        {page === 'My crowd reports' && <MyCrowdReportsPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} navigate={navigate} />}
         {page === 'Complaints' && <ComplaintPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Lost & found' && <LostFoundPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Offers' && <OffersPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} navigate={navigate} />}
@@ -303,7 +306,7 @@ export function App() {
             <button onClick={() => navigate('Support')}><CircleHelp size={14} /> {t('Contact admin')}</button>
           </div>
           {[
-            ['Commute', [['Find a bus', 'Find a bus'], ['Ride share', 'Ride share'], ['Map', 'Map & fare calculator'], ['Favourites', 'Favourite buses'], ['My trips', 'My trips']]],
+            ['Commute', [['Find a bus', 'Find a bus'], ['Crowd reports', 'Bus crowd & seats'], ['Ride share', 'Ride share'], ['Map', 'Map & fare calculator'], ['Favourites', 'Favourite buses'], ['My trips', 'My trips']]],
             ['Payments', [['Wallet', 'Travel wallet'], ['GPay', 'GPay & recharge'], ['Offers', 'Offers & rewards']]],
             ['Community', [['Complaints', 'Complaint & Feedback'], ['Lost & found', 'Lost & found'], ['Friends', 'Friends'], ['Messages', 'Messages'], ['Notifications', 'Notifications'], ['Verification', 'Account verification']]],
           ].map(([heading, links]) => <nav key={heading} className="site-footer-col" aria-label={t(heading)}><b>{t(heading)}</b>{links.map(([target, label]) => <button key={target} onClick={() => navigate(target)}>{t(label)}</button>)}</nav>)}

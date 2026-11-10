@@ -147,6 +147,10 @@ builder.Services.AddRateLimiter(options =>
         context.User.FindFirst("id")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 30, Window = TimeSpan.FromMinutes(1) }));
     // Coupon checks and redemptions: enough to try a few codes, not enough to guess codes by brute force.
+    // Crowd reports: a commuter may report several buses in a row, but not flood the list.
+    options.AddPolicy("crowd-report", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst("id")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 12, Window = TimeSpan.FromMinutes(1) }));
     options.AddPolicy("coupon", context => RateLimitPartition.GetFixedWindowLimiter(
         $"{context.User.FindFirst("id")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous"}|{context.Request.Path}",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1) }));
@@ -219,6 +223,7 @@ builder.Services.AddScoped<PromotionLifecycle>();
 builder.Services.AddScoped<LostFoundService>();
 builder.Services.AddScoped<LostFoundChatService>();
 builder.Services.AddScoped<ComplaintService>();
+builder.Services.AddScoped<BusCrowdReportService>();
 builder.Services.AddScoped<GpayService>();
 builder.Services.AddScoped<WalletService>();
 builder.Services.AddScoped<TripService>();

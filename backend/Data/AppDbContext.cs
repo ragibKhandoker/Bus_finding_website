@@ -65,6 +65,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Complaint> Complaints => Set<Complaint>();
     public DbSet<ComplaintEvidence> ComplaintEvidence => Set<ComplaintEvidence>();
     public DbSet<ComplaintHistory> ComplaintHistory => Set<ComplaintHistory>();
+    public DbSet<BusCrowdReport> BusCrowdReports => Set<BusCrowdReport>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -487,6 +488,30 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(x => x.Complaint).WithMany(c => c.History).HasForeignKey(x => x.ComplaintId).OnDelete(DeleteBehavior.Cascade);
             e.HasOne(x => x.Actor).WithMany().HasForeignKey(x => x.ActorId).OnDelete(DeleteBehavior.SetNull);
             e.HasIndex(x => new { x.ComplaintId, x.CreatedAt });
+        });
+
+        // F19: crowd and seat reports. Deleting an account, a route or a stop deletes the reports about it.
+        b.Entity<BusCrowdReport>(e =>
+        {
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Bus).WithMany().HasForeignKey(x => x.BusId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.BusStop).WithMany().HasForeignKey(x => x.BusStopId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => x.ObservationDateTime);
+            e.HasIndex(x => new { x.BusId, x.ObservationDateTime });
+            e.HasIndex(x => new { x.BusStopId, x.ObservationDateTime });
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            e.HasIndex(x => x.BusName);
+            e.HasIndex(x => new { x.UserId, x.BusId, x.BusStopId, x.ObservationSlot }).IsUnique()
+                .HasDatabaseName("ix_bus_crowd_reports_one_per_sighting");
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_bus_crowd_reports_crowd_level", "crowd_level IN ('LOW', 'MEDIUM', 'HIGH')");
+                t.HasCheckConstraint("ck_bus_crowd_reports_seat_availability", "seat_availability IN ('AVAILABLE', 'LIMITED', 'NO_SEATS')");
+                t.HasCheckConstraint("ck_bus_crowd_reports_direction", "travel_direction IN ('FORWARD', 'RETURN')");
+                t.HasCheckConstraint("ck_bus_crowd_reports_seat_count", "available_seat_count IS NULL OR available_seat_count BETWEEN 0 AND 100");
+                t.HasCheckConstraint("ck_bus_crowd_reports_standing_count", "standing_passenger_count IS NULL OR standing_passenger_count BETWEEN 0 AND 200");
+                t.HasCheckConstraint("ck_bus_crowd_reports_no_seats", "seat_availability <> 'NO_SEATS' OR available_seat_count IS NULL OR available_seat_count = 0");
+            });
         });
 
         // F17: Lost & Found. Deleting an account deletes its reports.

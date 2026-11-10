@@ -248,9 +248,13 @@ html[data-theme="dark"] .hp-hero h1 span,html[data-theme="night"] .hp-hero h1 sp
   .brand small{display:none}
   .mobile-menu{padding:6px}
 }
-@media(max-width:380px){
+/* Signed in, the header also holds the bell and the account chip; on phones up to 420px wide (most phones) the
+   language button shows only its icon and the account chip drops its arrow, so nothing runs past the screen. */
+@media(max-width:420px){
   .lang-short{display:none}
   .lang-toggle{width:34px;padding:0;justify-content:center}
+  .profile-chip>svg{display:none}
+  .profile-chip{padding-right:5px}
 }
 
 /* ---- Dialogs (sign-in form, admin reset) on dark backgrounds ----

@@ -7,6 +7,10 @@ namespace SmartCommute.Server.ViewModels;
 
 public class BusStopViewModel
 {
+    // The bus_stops row, so a form can name the exact stop (crowd reports). Null for places made up from several stops.
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? Id { get; init; }
+
     public string Name { get; init; } = "";
     public double Lat { get; init; }
     public double Lng { get; init; }
@@ -14,7 +18,7 @@ public class BusStopViewModel
     // Position along the route, starting at 0.
     public int Order { get; init; }
 
-    public static BusStopViewModel From(BusStop s) => new() { Name = s.Name, Lat = s.Lat, Lng = s.Lng, Order = s.Order };
+    public static BusStopViewModel From(BusStop s) => new() { Id = s.Id.ToString(), Name = s.Name, Lat = s.Lat, Lng = s.Lng, Order = s.Order };
 }
 
 public class BusViewModel : EntityViewModel
