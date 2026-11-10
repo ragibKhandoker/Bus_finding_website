@@ -104,3 +104,12 @@ public class TierOption
     public decimal ExtraMonthlyCap { get; set; }
     public string Benefits { get; set; } = "";
 }
+
+// F17: pictures of lost and found items.
+public class LostFoundOptions
+{
+    public int MaxImageBytes { get; set; } = 5 * 1024 * 1024;
+
+    // Relative to the app folder, outside wwwroot; files are served only through LostFoundController.
+    public string StoragePath { get; set; } = "App_Data/lost-found-images";
+}

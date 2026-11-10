@@ -58,6 +58,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<CashbackTransaction> CashbackTransactions => Set<CashbackTransaction>();
     public DbSet<Referral> Referrals => Set<Referral>();
     public DbSet<RewardAuditLog> RewardAuditLogs => Set<RewardAuditLog>();
+    public DbSet<LostFound> LostFoundReports => Set<LostFound>();
+    public DbSet<LostFoundConversation> LostFoundConversations => Set<LostFoundConversation>();
+    public DbSet<LostFoundMessage> LostFoundMessages => Set<LostFoundMessage>();
+    public DbSet<LostFoundMessageReaction> LostFoundMessageReactions => Set<LostFoundMessageReaction>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -450,6 +454,47 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         });
 
         ConfigurePromotions(b);
+
+        // F17: Lost & Found. Deleting an account deletes its reports.
+        b.Entity<LostFound>(e =>
+        {
+            e.ToTable("lost_found_reports", t =>
+            {
+                t.HasCheckConstraint("ck_lost_found_reports_type", "report_type IN ('lost', 'found')");
+                t.HasCheckConstraint("ck_lost_found_reports_status", "status IN ('open', 'under-review', 'resolved', 'closed')");
+                t.HasCheckConstraint("ck_lost_found_reports_text", @"item_name ~ '\S' AND description ~ '\S' AND contact_information ~ '\S'");
+            });
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            e.HasIndex(x => new { x.ReportType, x.Status, x.CreatedAt });
+            e.HasIndex(x => x.Category);
+        });
+
+        // One conversation per report and person; deleting the report deletes its conversations and messages.
+        b.Entity<LostFoundConversation>(e =>
+        {
+            e.HasOne(x => x.Report).WithMany().HasForeignKey(x => x.ReportId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.OtherUser).WithMany().HasForeignKey(x => x.OtherUserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.ReportId, x.OtherUserId }).IsUnique();
+            e.HasIndex(x => new { x.OwnerId, x.LastMessageAt });
+            e.HasIndex(x => new { x.OtherUserId, x.LastMessageAt });
+            e.ToTable(t => t.HasCheckConstraint("ck_lost_found_conversations_not_self", "owner_id <> other_user_id"));
+        });
+
+        b.Entity<LostFoundMessage>(e =>
+        {
+            e.HasOne(x => x.Conversation).WithMany(c => c.Messages).HasForeignKey(x => x.ConversationId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.ConversationId, x.CreatedAt });
+            // A message has words, a picture, or both.
+            e.ToTable(t => t.HasCheckConstraint("ck_lost_found_messages_text", @"text ~ '\S' OR image_key IS NOT NULL"));
+        });
+
+        b.Entity<LostFoundMessageReaction>(e =>
+        {
+            e.HasOne(x => x.Message).WithMany(m => m.Reactions).HasForeignKey(x => x.MessageId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.MessageId, x.UserId }).IsUnique();
+        });
     }
 
     // F15: rewards. The database itself enforces the limits that concurrent requests could otherwise break: a

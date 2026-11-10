@@ -53,6 +53,7 @@ if (jwt.Secret.Length < 32)
 builder.Services.Configure<JwtOptions>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<RewardOptions>(builder.Configuration.GetSection("Rewards"));
 builder.Services.Configure<PromotionOptions>(builder.Configuration.GetSection("Promotions"));
+builder.Services.Configure<LostFoundOptions>(builder.Configuration.GetSection("LostFound"));
 builder.Services.Configure<GeoOptions>(builder.Configuration.GetSection("Geo"));
 builder.Services.Configure<RideShareOptions>(builder.Configuration.GetSection("RideShare"));
 builder.Services.Configure<VerificationOptions>(builder.Configuration.GetSection("Verification"));
@@ -214,6 +215,8 @@ builder.Services.AddScoped<CampaignService>();
 builder.Services.AddScoped<RewardInsightsService>();
 builder.Services.AddScoped<PromotionAdminService>();
 builder.Services.AddScoped<PromotionLifecycle>();
+builder.Services.AddScoped<LostFoundService>();
+builder.Services.AddScoped<LostFoundChatService>();
 builder.Services.AddScoped<GpayService>();
 builder.Services.AddScoped<WalletService>();
 builder.Services.AddScoped<TripService>();

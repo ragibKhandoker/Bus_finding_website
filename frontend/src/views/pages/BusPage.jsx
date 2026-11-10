@@ -12,6 +12,7 @@ import { formatNumber, t, toEnglish } from '../../models/i18n'
 import { formatDuration, getStops, googleMapsDirections, money, sortedStops } from '../helpers'
 import { errorText } from '../../models/messages'
 import { PageHeading, StopSuggestions } from '../components/common'
+import { BusNameSearch } from '../components/BusNameSearch'
 import { pushEntry, replaceEntry } from '../../controllers/router'
 
 // Where the distance came from (route-estimate "source").
@@ -166,6 +167,13 @@ export function BusPage({ token, signedIn, user, notify, navigate: goTo, openAut
       if (id === searchId.current) setLoading(false)
     }
   }
+  // A bus picked from the suggestions: search for it straight away.
+  const pickBus = (picked) => {
+    if (!signedIn) return openAuth()
+    const { query, error: problem } = readQuery({ mode: 'name', from, to, name: picked })
+    if (problem) { setError(problem); return }
+    runSearch(query)
+  }
   const search = (event) => {
     event?.preventDefault?.()
     if (!signedIn) return openAuth()
@@ -257,7 +265,7 @@ export function BusPage({ token, signedIn, user, notify, navigate: goTo, openAut
           <label className="field"><small>{t('STARTING POINT')}</small><span><span className="input-dot" /><input value={from} onChange={(e) => setFrom(e.target.value)} placeholder={t('e.g. Uttara')} list="stop-suggestions" /></span></label>
           <button type="button" className="swap-button" onClick={() => { setFrom(to); setTo(from) }} aria-label={t('Swap locations')}><ArrowDownUp size={15} /></button>
           <label className="field"><small>{t('DESTINATION')}</small><span><MapPin size={16} /><input value={to} onChange={(e) => setTo(e.target.value)} placeholder={t('e.g. Motijheel')} list="stop-suggestions" /></span></label>
-        </> : <label className="field wide"><small>{t('BUS NAME')}</small><span><Search size={16} /><input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('e.g. BRTC, Raida')} /></span></label>}
+        </> : <BusNameSearch value={name} onChange={setName} onPick={pickBus} />}
         <button className={`button button-green${loading ? ' is-loading' : ''}`} type="submit" disabled={loading} aria-busy={loading}>{loading ? <><span className="button-spinner" aria-hidden="true" /> {t('Searching…')}</> : <><Search size={16} /> {t('Search buses')}</>}</button>
       </form>
       {error && <div className="inline-error" role="alert">{error}</div>}

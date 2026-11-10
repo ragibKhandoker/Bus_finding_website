@@ -1,0 +1,20 @@
+/* Find a bus: the bus name box and its suggestion list. */
+.bns{position:relative}
+.bns>label{display:block;cursor:text}
+.bns-clear{display:grid;place-items:center;width:24px;height:24px;margin-left:auto;border:0;border-radius:6px;background:transparent;color:var(--muted);flex:none}
+.bns-clear:hover{background:color-mix(in srgb,var(--ink) 8%,transparent);color:var(--ink)}
+.bns-menu{position:absolute;left:-1px;right:-1px;top:calc(100% + 6px);z-index:30;overflow:hidden;border:1px solid color-mix(in srgb,var(--ink) 16%,transparent);border-radius:12px;background:var(--surface);box-shadow:0 18px 40px -14px rgba(16,44,32,.35)}
+html[data-theme="dark"] .bns-menu,html[data-theme="night"] .bns-menu{box-shadow:0 18px 40px -14px rgba(0,0,0,.7)}
+.bns-head,.bns-note{margin:0;padding:9px 14px;font-size:12px;font-weight:700;color:var(--muted)}
+.bns-head{border-bottom:1px solid color-mix(in srgb,var(--ink) 10%,transparent);background:color-mix(in srgb,var(--paper) 60%,var(--surface))}
+.bns-note{padding:14px}
+.bns ul{max-height:320px;overflow-y:auto;margin:0;padding:4px;list-style:none}
+.bns li{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;cursor:pointer}
+.bns li.active{background:color-mix(in srgb,var(--green) 11%,transparent)}
+.bns-icon{display:grid;place-items:center;width:30px;height:30px;border-radius:8px;background:color-mix(in srgb,var(--green) 12%,transparent);color:var(--green);flex:none}
+.bns-text{flex:1;display:grid;gap:1px;min-width:0}
+.bns-text b{font-size:13.5px;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bns-text small{font-size:11.5px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.bns-routes{display:flex;gap:4px;flex:none}
+.bns-routes em{padding:3px 7px;border-radius:6px;background:color-mix(in srgb,var(--ink) 7%,transparent);color:var(--ink);font-style:normal;font-size:11px;font-weight:800}
+@media(max-width:700px){.bns ul{max-height:260px}.bns-routes em:nth-child(n+2){display:none}}

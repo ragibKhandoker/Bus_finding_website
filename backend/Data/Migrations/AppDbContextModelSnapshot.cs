@@ -1323,6 +1323,263 @@ namespace SmartCommute.Server.Data.Migrations
                     b.ToTable("individual_buses", (string)null);
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.LostFound", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AdminNote")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("admin_note");
+
+                    b.Property<Guid?>("BusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bus_id");
+
+                    b.Property<string>("BusName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("bus_name");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("category");
+
+                    b.Property<string>("ContactInformation")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("contact_information");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("ImageContentType")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("image_content_type");
+
+                    b.Property<string>("ImageKey")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("image_key");
+
+                    b.Property<DateOnly>("IncidentDate")
+                        .HasColumnType("date")
+                        .HasColumnName("incident_date");
+
+                    b.Property<TimeOnly?>("IncidentTime")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("incident_time");
+
+                    b.Property<string>("ItemName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("item_name");
+
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("location");
+
+                    b.Property<string>("ReportType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("report_type");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolved_at");
+
+                    b.Property<string>("Route")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)")
+                        .HasColumnName("route");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lost_found_reports");
+
+                    b.HasIndex("Category")
+                        .HasDatabaseName("ix_lost_found_reports_category");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_lost_found_reports_user_id_created_at");
+
+                    b.HasIndex("ReportType", "Status", "CreatedAt")
+                        .HasDatabaseName("ix_lost_found_reports_report_type_status_created_at");
+
+                    b.ToTable("lost_found_reports", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_lost_found_reports_status", "status IN ('open', 'under-review', 'resolved', 'closed')");
+
+                            t.HasCheckConstraint("ck_lost_found_reports_text", "item_name ~ '\\S' AND description ~ '\\S' AND contact_information ~ '\\S'");
+
+                            t.HasCheckConstraint("ck_lost_found_reports_type", "report_type IN ('lost', 'found')");
+                        });
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.LostFoundConversation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("LastMessageAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_message_at");
+
+                    b.Property<DateTime?>("OtherReadAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("other_read_at");
+
+                    b.Property<Guid>("OtherUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("other_user_id");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_id");
+
+                    b.Property<DateTime?>("OwnerReadAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("owner_read_at");
+
+                    b.Property<Guid>("ReportId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("report_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lost_found_conversations");
+
+                    b.HasIndex("OtherUserId", "LastMessageAt")
+                        .HasDatabaseName("ix_lost_found_conversations_other_user_id_last_message_at");
+
+                    b.HasIndex("OwnerId", "LastMessageAt")
+                        .HasDatabaseName("ix_lost_found_conversations_owner_id_last_message_at");
+
+                    b.HasIndex("ReportId", "OtherUserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_lost_found_conversations_report_id_other_user_id");
+
+                    b.ToTable("lost_found_conversations", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_lost_found_conversations_not_self", "owner_id <> other_user_id");
+                        });
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.LostFoundMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("conversation_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("ImageKey")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("image_key");
+
+                    b.Property<Guid>("SenderId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("sender_id");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("text");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lost_found_messages");
+
+                    b.HasIndex("ConversationId", "CreatedAt")
+                        .HasDatabaseName("ix_lost_found_messages_conversation_id_created_at");
+
+                    b.ToTable("lost_found_messages", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_lost_found_messages_text", "text ~ '\\S' OR image_key IS NOT NULL");
+                        });
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.LostFoundMessageReaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Emoji")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("emoji");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("message_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_lost_found_message_reactions");
+
+                    b.HasIndex("MessageId", "UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_lost_found_message_reactions_message_id_user_id");
+
+                    b.ToTable("lost_found_message_reactions", (string)null);
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.MembershipTier", b =>
                 {
                     b.Property<string>("Code")
@@ -3874,6 +4131,72 @@ namespace SmartCommute.Server.Data.Migrations
                     b.Navigation("Bus");
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.LostFound", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_lost_found_reports_users_user_id");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.LostFoundConversation", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.User", "OtherUser")
+                        .WithMany()
+                        .HasForeignKey("OtherUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_lost_found_conversations_users_other_user_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_lost_found_conversations_users_owner_id");
+
+                    b.HasOne("SmartCommute.Server.Models.LostFound", "Report")
+                        .WithMany()
+                        .HasForeignKey("ReportId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_lost_found_conversations_lost_found_reports_report_id");
+
+                    b.Navigation("OtherUser");
+
+                    b.Navigation("Owner");
+
+                    b.Navigation("Report");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.LostFoundMessage", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.LostFoundConversation", "Conversation")
+                        .WithMany("Messages")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_lost_found_messages_lost_found_conversations_conversation_id");
+
+                    b.Navigation("Conversation");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.LostFoundMessageReaction", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.LostFoundMessage", "Message")
+                        .WithMany("Reactions")
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_lost_found_message_reactions_lost_found_messages_message_id");
+
+                    b.Navigation("Message");
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.Notification", b =>
                 {
                     b.HasOne("SmartCommute.Server.Models.User", "Sender")
@@ -4390,6 +4713,16 @@ namespace SmartCommute.Server.Data.Migrations
             modelBuilder.Entity("SmartCommute.Server.Models.FavoriteCollection", b =>
                 {
                     b.Navigation("Buses");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.LostFoundConversation", b =>
+                {
+                    b.Navigation("Messages");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.LostFoundMessage", b =>
+                {
+                    b.Navigation("Reactions");
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.Review", b =>

@@ -5,7 +5,7 @@ export const PAGE_PATHS = {
   'Home': '/', 'Find a bus': '/find-a-bus', 'Bus routes': '/bus-routes', 'Ride share': '/ride-share', 'My trips': '/my-trips', 'Wallet': '/wallet',
   'Profile': '/profile', 'Friends': '/friends', 'Messages': '/messages', 'Notifications': '/notifications', 'Offers': '/offers',
   'Map': '/map', 'Favourites': '/favourites', 'GPay': '/gpay', 'Verification': '/verification', 'Admin': '/admin', 'Support': '/support',
-  'My rides': '/ride-share/my',
+  'My rides': '/ride-share/my', 'Lost & found': '/lost-found',
 }
 
 // Each route also has its own page, e.g. /bus-routes/DBR-12.
