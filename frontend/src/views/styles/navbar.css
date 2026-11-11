@@ -1,0 +1,103 @@
+/* The top navigation bar. Loaded after the page stylesheets (and before motion.css), and built only on the theme
+   variables (--ink, --muted, --green, --line, --surface, --paper), so light, dark and night all follow. */
+.topbar{
+  --nb-soft:color-mix(in srgb,var(--green) 9%,var(--surface));
+  --nb-border:color-mix(in srgb,var(--ink) 11%,transparent);
+  --nb-border-strong:color-mix(in srgb,var(--ink) 18%,transparent);
+  --nb-track:color-mix(in srgb,var(--ink) 4%,var(--surface));
+  height:70px;padding:0 max(calc((100vw - 1320px)/2),24px);gap:12px;
+  border-bottom:1px solid var(--nb-border);
+  background:color-mix(in srgb,var(--surface) 88%,transparent);
+  box-shadow:0 1px 0 color-mix(in srgb,var(--ink) 3%,transparent),0 10px 30px -26px rgba(15,45,32,.45);
+}
+/* A thin brand line along the top edge. */
+.topbar::before{content:"";position:absolute;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,var(--green) 0%,#2bb07d 45%,#e3a008 100%);opacity:.9;pointer-events:none}
+
+/* ---- Brand ---- */
+.topbar .brand{margin-right:8px;gap:11px}
+.topbar .brand-icon{width:40px;height:40px;border-radius:13px;background:linear-gradient(135deg,var(--green),#2bb07d);color:#fff;box-shadow:0 8px 18px -10px color-mix(in srgb,var(--green) 80%,transparent)}
+.topbar .brand-icon svg{color:#fff}
+.topbar .brand>span:last-child{font-size:19px;letter-spacing:-.6px}
+.topbar .brand small{font-size:8.5px;letter-spacing:1.8px;margin-top:4px}
+
+/* ---- Main links: one soft track with the current page as a raised pill ---- */
+.topbar .nav-links{height:auto;margin-left:auto;margin-right:10px;gap:2px;padding:4px;border:1px solid var(--nb-border);border-radius:15px;background:var(--nb-track)}
+.topbar .nav-link{height:38px;padding:0 13px;border-radius:11px;gap:7px;color:var(--muted);font-size:14px;font-weight:700;transition:background .18s,color .18s,box-shadow .18s}
+.topbar .nav-links .nav-link::after,.topbar .nav-links .nav-link.active::after{display:none!important;content:none!important}
+.topbar .nav-link:hover{color:var(--ink);background:var(--nb-soft)}
+.topbar .nav-link.active{color:var(--green);background:var(--surface);box-shadow:0 1px 2px rgba(15,45,32,.08),0 6px 14px -8px rgba(15,45,32,.35),inset 0 0 0 1px var(--nb-border)}
+.topbar .nav-icon{flex:none;opacity:.8}
+.topbar .nav-link.active .nav-icon{opacity:1}
+.topbar .nav-chevron{transition:transform .2s}
+.topbar .more-nav-wrap{height:auto}
+.topbar .more-nav-wrap>.nav-link[aria-expanded="true"]{color:var(--ink);background:var(--surface);box-shadow:inset 0 0 0 1px var(--nb-border)}
+.topbar .more-nav-wrap>.nav-link[aria-expanded="true"] .nav-chevron{transform:rotate(180deg)}
+
+/* ---- More menu: sections in two columns ---- */
+.topbar .more-nav-menu{right:0;top:calc(100% + 12px);width:min(560px,calc(100vw - 32px));min-width:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 10px;padding:12px;
+  border:1px solid var(--nb-border-strong);border-radius:18px;background:var(--surface);box-shadow:0 24px 50px -20px rgba(15,45,32,.45)}
+html[data-theme="dark"] .topbar .more-nav-menu,html[data-theme="night"] .topbar .more-nav-menu{box-shadow:0 24px 50px -16px rgba(0,0,0,.75)}
+.more-nav-section{display:grid;gap:2px;align-content:start;padding:4px}
+.more-nav-heading{padding:4px 10px 6px;font-size:10.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.topbar .more-nav-menu button{gap:10px;justify-content:flex-start;padding:8px 10px;border-radius:11px;color:var(--ink);font-size:13.5px;font-weight:600}
+.topbar .more-nav-menu button>svg:last-child{margin-left:auto;opacity:0;color:var(--muted);transition:opacity .15s,transform .2s}
+.topbar .more-nav-menu button:hover,.topbar .more-nav-menu button.current{background:var(--nb-soft);color:var(--ink)}
+.topbar .more-nav-menu button:hover>svg:last-child,.topbar .more-nav-menu button.current>svg:last-child{opacity:1}
+.topbar .more-nav-menu button.current{box-shadow:inset 3px 0 0 var(--green)}
+.more-nav-icon{display:grid;place-items:center;width:30px;height:30px;flex:none;border-radius:9px;background:var(--nb-soft);color:var(--green)}
+.more-nav-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ---- Right-hand actions: one size, one style ---- */
+.topbar .top-actions{gap:8px}
+.topbar .theme-toggle,.topbar .top-actions>.icon-button{width:40px;height:40px;padding:0;display:grid;place-items:center;border:1px solid var(--nb-border);border-radius:12px;background:var(--surface);color:var(--ink)}
+.topbar .lang-toggle{height:40px;padding:0 13px;border:1px solid var(--nb-border);border-radius:12px;background:var(--surface);color:var(--ink);font-weight:700}
+.topbar .lang-toggle svg{color:var(--green)}
+.topbar .theme-toggle:hover,.topbar .theme-toggle[aria-expanded="true"],.topbar .lang-toggle:hover,.topbar .top-actions>.icon-button:hover{background:var(--nb-soft);border-color:color-mix(in srgb,var(--green) 40%,transparent);color:var(--green)}
+.topbar .notification-badge{top:-5px;right:-5px;border:2px solid var(--surface)}
+.topbar .profile-chip{height:44px;gap:9px;padding:4px 12px 4px 4px;border:1px solid var(--nb-border);border-radius:999px;background:var(--surface);color:var(--ink)}
+.topbar .profile-chip:hover{border-color:color-mix(in srgb,var(--green) 40%,transparent);background:var(--nb-soft)}
+.topbar .profile-chip .avatar{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,var(--green),#2bb07d);color:#fff;font-weight:800;font-size:14px}
+.topbar .profile-chip.is-admin .avatar{background:linear-gradient(135deg,#1d3b30,#2c6a52);color:#fff}
+.profile-chip-text{display:grid;text-align:left;line-height:1.15}
+.profile-chip-text b{font-size:13.5px;font-weight:800;max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.profile-chip-text small{font-size:11px;font-weight:600;color:var(--muted)}
+.topbar .profile-chip>svg{color:var(--muted)}
+.topbar .top-actions .button{height:40px;border-radius:12px;font-size:13.5px}
+
+/* ---- Fitting narrower screens ---- */
+@media(max-width:1360px){.topbar .nav-icon{display:none}.topbar .nav-link{padding:0 12px}}
+@media(max-width:1180px){
+  .topbar .brand small{display:none}
+  .topbar .lang-toggle .lang-full{display:none}
+  .topbar .lang-toggle .lang-short{display:inline}
+  .profile-chip-text{display:none}
+  .topbar .profile-chip{padding-right:8px}
+}
+@media(max-width:1060px) and (min-width:701px){
+  .topbar .nav-link{padding:0 9px;font-size:13px}
+}
+
+/* ---- Phones: the links open as a panel under the bar ---- */
+@media(max-width:700px){
+  .topbar{height:62px;padding:0 12px}
+  .topbar .brand-icon{width:36px;height:36px}
+  .topbar .brand>span:last-child{font-size:17px}
+  .topbar .mobile-menu{width:40px;height:40px;border:1px solid var(--nb-border);border-radius:12px;background:var(--surface);color:var(--ink)}
+  .topbar .nav-links{position:absolute;top:100%;left:8px;right:8px;margin:6px 0 0;padding:8px;border:1px solid var(--nb-border-strong);border-radius:18px;background:var(--surface);
+    box-shadow:0 24px 40px -20px rgba(15,45,32,.5);flex-direction:column;align-items:stretch;gap:2px}
+  .topbar .nav-links>*{flex-shrink:0}
+  .topbar .nav-link{height:46px;padding:0 12px;font-size:15px;justify-content:flex-start}
+  .topbar .nav-icon{display:inline-block;width:18px;height:18px}
+  .topbar .more-nav-wrap>.nav-link .nav-chevron{margin-left:auto}
+  .topbar .more-nav-menu{position:static;width:auto;grid-template-columns:1fr;margin:4px 0 0;padding:6px;border:0;border-radius:14px;box-shadow:none;background:var(--nb-track)}
+  .topbar .theme-toggle,.topbar .top-actions>.icon-button,.topbar .lang-toggle{width:38px;height:38px;padding:0;justify-content:center}
+  .topbar .lang-toggle .lang-full,.topbar .lang-toggle .lang-short{display:none}
+  .topbar .profile-chip{height:40px;padding:3px}
+  .topbar .profile-chip>svg,.profile-chip-text{display:none}
+}
+
+/* Signed out on a phone: the Sign up button gives way (Sign in's form links to sign-up), and Sign in stays compact. */
+@media(max-width:600px){
+  .topbar .top-signup{display:none}
+  .topbar .top-actions .button{height:38px;padding:0 12px;font-size:13px}
+}

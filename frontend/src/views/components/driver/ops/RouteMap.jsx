@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import L from 'leaflet'
+import { cooperativeTouchHint, fitPadding, isTouchScreen, watchLeafletResize } from '../../mapResponsive'
 import 'leaflet/dist/leaflet.css'
 
 // A route's stops on the existing OpenStreetMap/Leaflet map (the same tiles as the live trip map): the line in
@@ -13,7 +14,8 @@ export default function RouteMap({ stops }) {
   useEffect(() => {
     const points = stops.filter((s) => Number.isFinite(s.lat) && Number.isFinite(s.lng) && (s.lat || s.lng)).map((s) => [s.lat, s.lng])
     if (!box.current || points.length < 2) return undefined
-    const map = L.map(box.current, { scrollWheelZoom: false })
+    const touch = isTouchScreen()
+    const map = L.map(box.current, { scrollWheelZoom: false, dragging: !touch, tap: !touch })
     L.tileLayer(TILES, { maxZoom: 19, attribution: ATTRIBUTION }).addTo(map)
     L.polyline(points, { color: '#19865e', weight: 5, opacity: 0.85 }).addTo(map)
     points.forEach((p, i) => {
@@ -21,9 +23,12 @@ export default function RouteMap({ stops }) {
       else if (i === points.length - 1) L.marker(p, { icon: pin('B', 'gmap-end') }).addTo(map)
       else L.circleMarker(p, { radius: 5, color: '#ffffff', weight: 2, fillColor: '#19865e', fillOpacity: 1 }).bindTooltip(stops[i].name).addTo(map)
     })
-    map.fitBounds(L.latLngBounds(points), { padding: [24, 24] })
+    const fit = () => { const pad = fitPadding(box.current); map.fitBounds(L.latLngBounds(points), { padding: [pad, pad] }) }
+    fit()
     const resize = setTimeout(() => map.invalidateSize(), 200)
-    return () => { clearTimeout(resize); map.remove() }
+    const stopWatching = watchLeafletResize(box.current, map, fit)
+    const stopHint = touch ? cooperativeTouchHint(box.current) : () => {}
+    return () => { clearTimeout(resize); stopWatching(); stopHint(); map.remove() }
   }, [stops])
   return <div ref={box} className="do-map" aria-label="Route map" />
 }

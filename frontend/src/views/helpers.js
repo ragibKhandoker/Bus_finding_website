@@ -24,15 +24,21 @@ export const formatDuration = (minutes) => {
   return hours ? (mins ? t('{h} hr {m} min', { h: hours, m: mins }) : t('{h} hr', { h: hours })) : t('{m} min', { m: mins })
 }
 
-// Google Maps directions between two places, opened in a new tab (or the Google Maps app on phones).
+const hasCoords = (stop) => Number.isFinite(Number(stop?.lat)) && Number.isFinite(Number(stop?.lng)) && !(Number(stop.lat) === 0 && Number(stop.lng) === 0)
+const placeOf = (stop) => hasCoords(stop) ? `${Number(stop.lat).toFixed(6)},${Number(stop.lng).toFixed(6)}` : `${stop.name}, Dhaka, Bangladesh`
+
+// Google Maps directions between two places: the Google Maps app on phones, a new tab elsewhere. from and to are
+// places ({ name, lat, lng }) or plain names; with coordinates Google gets the exact point instead of guessing
+// from the name.
 export const googleMapsDirections = (from, to) => `https://www.google.com/maps/dir/?${new URLSearchParams({
-  api: '1', origin: `${from}, Dhaka, Bangladesh`, destination: `${to}, Dhaka, Bangladesh`, travelmode: 'driving',
+  api: '1', origin: placeOf(typeof from === 'string' ? { name: from } : from), destination: placeOf(typeof to === 'string' ? { name: to } : to), travelmode: 'driving',
 })}`
+
+// A phone or tablet, where a Google Maps link opens the Google Maps app.
+export const isPhone = () => typeof window !== 'undefined' && typeof window.matchMedia === 'function' && window.matchMedia('(pointer: coarse)').matches
 
 // Google Maps allows at most 9 waypoints in a directions link; keep one spare.
 export const MAX_MAP_WAYPOINTS = 8
-const hasCoords = (stop) => Number.isFinite(Number(stop?.lat)) && Number.isFinite(Number(stop?.lng)) && !(Number(stop.lat) === 0 && Number(stop.lng) === 0)
-const placeOf = (stop) => hasCoords(stop) ? `${Number(stop.lat).toFixed(6)},${Number(stop.lng).toFixed(6)}` : `${stop.name}, Dhaka, Bangladesh`
 
 // Google Maps directions along a whole bus route: first stop to last, through evenly spread stops in between,
 // so the map follows the bus's path and shows its distance and travel time. stops must be in route order.

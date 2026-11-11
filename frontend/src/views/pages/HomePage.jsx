@@ -7,6 +7,7 @@ import { formatNumber, t } from '../../models/i18n'
 import { BusStatsCard, RoutePreview } from '../components/BusRoutes'
 import { useBusRoutes } from '../../controllers/useBusRoutes'
 import { useScrollMotion } from '../../controllers/useScrollMotion'
+import '../styles/home-mobile.css'
 
 // Secondary tools listed on the home page; each opens its own page, which handles sign-in itself.
 export const HOME_TOOLS = [

@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { MapPinOff } from 'lucide-react'
 import { getLang, t } from '../../models/i18n'
+import { fitPadding } from './mapResponsive'
 
 // With a browser key (VITE_GOOGLE_MAPS_API_KEY) this is the full Google Maps JavaScript API, with markers for
 // every stop and the road line. Without one it falls back to Google's free embedded map, which needs no setup.
@@ -54,6 +55,8 @@ export default function GoogleMapView({ start, end, roadPath, busStops = [], seg
   const boxRef = useRef(null)
   const mapRef = useRef(null)
   const overlaysRef = useRef([])
+  // The area last fitted, so the route can be fitted again when the map changes size (rotating the phone…).
+  const boundsRef = useRef(null)
   const [status, setStatus] = useState(BROWSER_KEY ? (authFailed ? 'auth' : 'loading') : 'missing-key')
 
   // Create the map once.
@@ -114,8 +117,24 @@ export default function GoogleMapView({ start, end, roadPath, busStops = [], seg
     if (hasPoint(start)) { add(new maps.marker.AdvancedMarkerElement({ map, position: point(start), title: t(start.name), content: pin('A', 'gmap-start'), zIndex: 10 })); bounds.extend(point(start)) }
     if (hasPoint(end)) { add(new maps.marker.AdvancedMarkerElement({ map, position: point(end), title: t(end.name), content: pin('B', 'gmap-end'), zIndex: 10 })); bounds.extend(point(end)) }
 
-    if (!bounds.isEmpty()) map.fitBounds(bounds, 48)
+    boundsRef.current = bounds.isEmpty() ? null : bounds
+    if (boundsRef.current) map.fitBounds(bounds, fitPadding(boxRef.current))
   }, [status, start, end, roadPath, busStops, segment])
+
+  // Google resizes its tiles by itself, but keeps the old view: fit the route again when the box changes size.
+  useEffect(() => {
+    const box = boxRef.current
+    if (status !== 'ready' || !box || typeof ResizeObserver === 'undefined') return undefined
+    let timer = 0
+    let first = true
+    const observer = new ResizeObserver(() => {
+      if (first) { first = false; return }
+      clearTimeout(timer)
+      timer = setTimeout(() => { if (boundsRef.current && mapRef.current) mapRef.current.fitBounds(boundsRef.current, fitPadding(box)) }, 150)
+    })
+    observer.observe(box)
+    return () => { clearTimeout(timer); observer.disconnect() }
+  }, [status])
 
   // No key, or the key did not work: show Google's free embedded map instead, which needs no key.
   if (['missing-key', 'auth', 'failed'].includes(status)) {

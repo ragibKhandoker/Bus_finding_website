@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowRight, BusFront, ChevronDown, CircleHelp, Languages, Menu, ShieldCheck, Users, Wallet, X } from 'lucide-react'
+import { ArrowRight, BadgeCheck, Bell, BusFront, ChevronDown, CircleHelp, ClipboardList, CreditCard, Gift, Heart, House, Languages, LayoutDashboard, LayoutGrid, Map as MapIcon, MessageCircle, Menu, PackageSearch, Route, Search, ShieldCheck, Ticket, UserPlus, Users, Wallet, X } from 'lucide-react'
 import { MapPage } from './pages/MorePages'
 import { GpayPage } from './pages/Gpay'
 import { VerificationPage } from './pages/Verification'
@@ -52,6 +52,8 @@ import { Toaster, useToasts } from './components/Toaster'
 import { clearPersistentState } from '../controllers/usePersistentState'
 import { captureReferralFromUrl } from '../models/promotions'
 import { useHeaderShadow, useRevealOnScroll } from '../controllers/useRevealOnScroll'
+import './styles/mobile-polish.css'
+import './styles/navbar.css'
 // Last, so its motion layers on top of every page's own stylesheet.
 import './styles/motion.css'
 
@@ -71,6 +73,25 @@ export function PageLoader({ page }) {
   )
 }
 
+// The name on the account button: the first name, or the first two words when the first is a title such as "Md.".
+const shortName = (name) => {
+  const words = String(name || '').trim().split(/\s+/).filter(Boolean)
+  return words.length > 1 && /^(md|mohammad|mohammed|muhammad|mst|mrs?|ms|dr|engr)\.?$/i.test(words[0]) ? `${words[0]} ${words[1]}` : words[0] || ''
+}
+
+// The main links, each with its icon.
+const NAV_ITEMS = [['Home', House], ['Find a bus', Search], ['Bus routes', Route], ['Ride share', Users], ['My trips', Ticket]]
+
+// The More menu, in sections. Driver and admin sections appear only for those accounts.
+const MORE_SECTIONS = (isDriver, isAdmin) => [
+  ['Commute', [['Crowd reports', 'Bus crowd & seats', Users], ['Map', 'Map & fare calculator', MapIcon], ['Favourites', 'Favourite buses', Heart]]],
+  ['People', [['Friends', 'Friends', UserPlus], ['Messages', 'Messages', MessageCircle], ['Notifications', 'Notifications', Bell]]],
+  ['Payments & rewards', [['Wallet', 'My wallet', Wallet], ['GPay', 'GPay & recharge', CreditCard], ['Offers', 'Offers & rewards', Gift]]],
+  ['Help', [['Lost & found', 'Lost & found', PackageSearch], ['Complaints', 'Complaint & Feedback', ClipboardList], ['Verification', 'Account verification', BadgeCheck], ['Support', 'Contact admin', CircleHelp]]],
+  ...(isDriver ? [['Driver', [['Driver dashboard', 'Driver dashboard', LayoutDashboard]]]] : []),
+  ...(isAdmin ? [['Admin', [['Admin', 'Admin · Users', ShieldCheck], ['Driver verification', 'Admin · Driver verification', BadgeCheck], ['Driver operations', 'Admin · Driver schedules', BusFront]]]] : []),
+]
+
 export function App() {
   // This tab's own sign-in (see session.js). One that has already expired is dropped before the first render.
   const [initialSession] = useState(() => {
@@ -84,6 +105,8 @@ export function App() {
   // The item a detail page shows: the route on 'Bus details', the ride id on 'Ride details'.
   const [routeNumber, setRouteNumber] = useState(() => paramFromPath(window.location.pathname))
   const [mobileMenu, setMobileMenu] = useState(false)
+  // Which footer group is unfolded on phones ('' = none).
+  const [footerOpen, setFooterOpen] = useState('')
   const [moreMenu, setMoreMenu] = useState(false)
   // Close the More menu on a click/tap outside it or on Escape.
   const moreRef = useRef(null)
@@ -265,12 +288,22 @@ export function App() {
           {mobileMenu ? <X /> : <Menu />}
         </button>
         <nav className={mobileMenu ? 'nav-links open' : 'nav-links'}>
-          {['Home', 'Find a bus', 'Bus routes', 'Ride share', 'My trips'].map((item) => (
-            <button key={item} className={page === item || (item === 'Bus routes' && page === 'Bus details') || (item === 'Ride share' && (page === 'Ride details' || page === 'My rides')) ? 'nav-link active' : 'nav-link'} onClick={() => navigate(item)}>{t(item)}</button>
-          ))}
+          {NAV_ITEMS.map(([item, Icon]) => {
+            const current = page === item || (item === 'Bus routes' && page === 'Bus details') || (item === 'Ride share' && (page === 'Ride details' || page === 'My rides'))
+            return <button key={item} className={current ? 'nav-link active' : 'nav-link'} aria-current={current ? 'page' : undefined} onClick={() => navigate(item)}>
+              <Icon size={16} aria-hidden="true" className="nav-icon" /><span>{t(item)}</span></button>
+          })}
           <div className="more-nav-wrap" ref={moreRef}>
-            <button className={['Friends', 'Messages', 'Notifications', 'Offers', 'Lost & found', 'Complaints', 'Crowd reports', 'My crowd reports', 'Map', 'Favourites', 'Wallet', 'GPay', 'Verification', 'Admin', 'Driver status', 'Driver verification', 'Driver application', 'Driver operations', ...DRIVER_CONSOLE_PAGES].includes(page) ? 'nav-link active' : 'nav-link'} aria-expanded={moreMenu} onClick={() => setMoreMenu(!moreMenu)}>{t('More')} <ChevronDown size={13} /></button>
-            {moreMenu && <div className="more-nav-menu">{[['Friends','Friends'],['Messages','Messages'],['Notifications','Notifications'],['Offers','Offers & rewards'],['Lost & found','Lost & found'],['Complaints','Complaint & Feedback'],['Crowd reports','Bus crowd & seats'],['Map','Map & fare calculator'],['Favourites','Favourite buses'],['Wallet','My wallet'],['GPay','GPay & recharge'],['Verification','Account verification'], ['Support','Contact admin'], ...(isDriver ? [['Driver dashboard', 'Driver dashboard']] : []), ...(isAdmin ? [['Admin', 'Admin · Users'], ['Driver verification', 'Admin · Driver verification'], ['Driver operations', 'Admin · Driver schedules']] : [])].map(([target,label]) => <button key={target} className={page === target || (target === 'Crowd reports' && page === 'My crowd reports') || (target === 'Driver verification' && page === 'Driver application') || (target === 'Driver dashboard' && (page === 'Driver status' || DRIVER_CONSOLE_PAGES.includes(page))) ? 'current' : ''} onClick={() => navigate(target)}>{t(label)}<ArrowRight size={13} /></button>)}</div>}
+            <button className={['Friends', 'Messages', 'Notifications', 'Offers', 'Lost & found', 'Complaints', 'Crowd reports', 'My crowd reports', 'Map', 'Favourites', 'Wallet', 'GPay', 'Verification', 'Admin', 'Driver status', 'Driver verification', 'Driver application', 'Driver operations', ...DRIVER_CONSOLE_PAGES].includes(page) ? 'nav-link active' : 'nav-link'} aria-expanded={moreMenu} onClick={() => setMoreMenu(!moreMenu)}><LayoutGrid size={16} aria-hidden="true" className="nav-icon" /><span>{t('More')}</span> <ChevronDown size={13} className="nav-chevron" /></button>
+            {moreMenu && <div className="more-nav-menu">{MORE_SECTIONS(isDriver, isAdmin).map(([heading, items]) => <div key={heading} className="more-nav-section">
+              <small className="more-nav-heading">{t(heading)}</small>
+              {items.map(([target, label, Icon]) => {
+                const current = page === target || (target === 'Crowd reports' && page === 'My crowd reports') || (target === 'Driver verification' && page === 'Driver application')
+                  || (target === 'Driver dashboard' && (page === 'Driver status' || DRIVER_CONSOLE_PAGES.includes(page)))
+                return <button key={target} className={current ? 'current' : ''} onClick={() => navigate(target)}>
+                  <span className="more-nav-icon"><Icon size={15} aria-hidden="true" /></span><span className="more-nav-label">{t(label)}</span><ArrowRight size={13} /></button>
+              })}
+            </div>)}</div>}
           </div>
         </nav>
         <div className="top-actions">
@@ -284,7 +317,8 @@ export function App() {
               {!isAdmin && <button className="icon-button" title={t('My wallet')} onClick={() => navigate('Wallet')}><Wallet size={18} /></button>}
               <button className={`profile-chip${isAdmin ? ' is-admin' : ''}`} onClick={() => navigate('Profile')} title={isAdmin ? t('Admin profile') : undefined}>
                 <span className="avatar">{isAdmin ? <ShieldCheck size={15} /> : user.name?.[0]?.toUpperCase() || 'U'}</span>
-                <span>{isAdmin ? t('Admin') : user.name?.split(' ')[0] || t('Account')}</span><ChevronDown size={14} />
+                <span className="profile-chip-text"><b>{isAdmin ? t('Admin') : shortName(user.name) || t('Account')}</b>
+                  <small>{t(isAdmin ? 'Administrator' : isDriver ? 'Driver' : 'Commuter')}</small></span><ChevronDown size={14} />
               </button>
             </>
           ) : <>
@@ -347,11 +381,21 @@ export function App() {
             <p>{t('Bus routes, ride sharing and a travel wallet for everyday commuters in Dhaka.')}</p>
             <button onClick={() => navigate('Support')}><CircleHelp size={14} /> {t('Contact admin')}</button>
           </div>
+          {/* On phones each group folds open like an app's settings list; on wider screens all groups are shown. */}
           {[
-            ['Commute', [['Find a bus', 'Find a bus'], ['Crowd reports', 'Bus crowd & seats'], ['Ride share', 'Ride share'], ['Map', 'Map & fare calculator'], ['Favourites', 'Favourite buses'], ['My trips', 'My trips']]],
-            ['Payments', [['Wallet', 'Travel wallet'], ['GPay', 'GPay & recharge'], ['Offers', 'Offers & rewards']]],
-            ['Community', [['Complaints', 'Complaint & Feedback'], ['Lost & found', 'Lost & found'], ['Friends', 'Friends'], ['Messages', 'Messages'], ['Notifications', 'Notifications'], ['Verification', 'Account verification']]],
-          ].map(([heading, links]) => <nav key={heading} className="site-footer-col" aria-label={t(heading)}><b>{t(heading)}</b>{links.map(([target, label]) => <button key={target} onClick={() => navigate(target)}>{t(label)}</button>)}</nav>)}
+            ['Commute', [['Find a bus', 'Find a bus', Search], ['Crowd reports', 'Bus crowd & seats', Users], ['Ride share', 'Ride share', Users], ['Map', 'Map & fare calculator', MapIcon], ['Favourites', 'Favourite buses', Heart], ['My trips', 'My trips', Ticket]]],
+            ['Payments', [['Wallet', 'Travel wallet', Wallet], ['GPay', 'GPay & recharge', CreditCard], ['Offers', 'Offers & rewards', Gift]]],
+            ['Community', [['Complaints', 'Complaint & Feedback', ClipboardList], ['Lost & found', 'Lost & found', PackageSearch], ['Friends', 'Friends', UserPlus], ['Messages', 'Messages', MessageCircle], ['Notifications', 'Notifications', Bell], ['Verification', 'Account verification', BadgeCheck]]],
+          ].map(([heading, links]) => {
+            const open = footerOpen === heading
+            return <nav key={heading} className={`site-footer-col${open ? ' open' : ''}`} aria-label={t(heading)}>
+              <button type="button" className="site-footer-toggle" aria-expanded={open} aria-controls={`footer-${heading}`} onClick={() => setFooterOpen(open ? '' : heading)}>
+                <b>{t(heading)}</b><small>{t('{n} links', { n: links.length })}</small><ChevronDown size={16} aria-hidden="true" /></button>
+              <div className="site-footer-links" id={`footer-${heading}`}>
+                {links.map(([target, label, Icon]) => <button key={target} onClick={() => navigate(target)}><Icon size={15} aria-hidden="true" className="site-footer-icon" /><span>{t(label)}</span></button>)}
+              </div>
+            </nav>
+          })}
         </div>
         <div className="site-footer-bottom"><span>© {formatNumber(new Date().getFullYear(), { useGrouping: false })} {t('SmartCommute Dhaka')}</span><span>{t('Making every trip a little simpler.')}</span></div>
       </footer>

@@ -1,0 +1,144 @@
+/* App-wide phone polish: one comfortable size for every button and form control (44px is a good touch target
+   without looking oversized), compact page headings and tighter page padding. Loaded after the page stylesheets
+   and before navbar.css / motion.css. Desktop is untouched. */
+@media(max-width:760px){
+  /* ---- Buttons: the same rhythm everywhere ---- */
+  main .button{border-radius:12px;font-size:14px;gap:7px;letter-spacing:0}
+  main .button:not(.button-small){min-height:42px;padding:10px 16px}
+  main .button-small{min-height:36px;padding:7px 12px;font-size:12.5px;border-radius:10px}
+  main .button svg{width:16px;height:16px;flex:none}
+  main .button-small svg{width:14px;height:14px}
+
+  /* Buttons that had their own large sizes. */
+  .cp-actions .button,.dv-actions .button{height:44px;min-width:0;flex:1}
+  .dv-choice-button{height:46px}
+  .lfc-compose .button,.of-code-form .button{height:42px}
+  .fare-top .fare-submit{height:44px}
+
+  /* ---- Page headings ---- */
+  .inner-page{padding-top:22px;padding-bottom:48px}
+  .page-heading{gap:12px;margin-bottom:18px}
+  .page-heading .heading-icon{width:38px;height:38px;border-radius:11px}
+  .page-heading .heading-icon svg{width:18px;height:18px}
+  .page-heading h1{font-size:24px;line-height:1.2;letter-spacing:-.6px;margin:3px 0 4px}
+  .page-heading .eyebrow{font-size:10.5px;letter-spacing:1.2px}
+  .page-heading p{font-size:13.5px;line-height:1.55}
+
+  /* ---- Find a bus ---- */
+  .bus-page .page-heading p{font-size:13.5px}
+  .bus-page .bus-search-panel{padding:12px;border-radius:16px}
+  .bus-page .segmented{gap:4px;padding-bottom:10px}
+  .bus-page .segmented button{font-size:13px;padding:8px 11px;border-radius:9px}
+  .bus-page .bus-search-form{gap:8px;padding-top:12px}
+  .bus-page .bus-search-form .field{height:52px;padding:0 10px;border-radius:12px}
+  .bus-page .bus-search-form .field small{font-size:10px;letter-spacing:.5px}
+  .bus-page .bus-search-form .field input{font-size:14.5px}
+  .bus-page .swap-button{width:34px;height:34px}
+  /* A compact search button at the end of the form, not a full-width bar. */
+  .bus-page .bus-search-form>.button{grid-column:1/-1;justify-self:end;width:auto;height:40px;min-height:0;padding:0 20px;font-size:14px;border-radius:11px;
+    box-shadow:0 6px 14px -8px rgba(25,134,94,.6)}
+  .bus-page .bus-search-form>.button svg{width:15px;height:15px}
+  .bus-page .results-area{margin-top:22px}
+
+  /* Search by bus: the name box (and so its suggestion list) uses the whole row, and long bus names wrap
+     onto a second line instead of being cut to "1 M…". */
+  .bus-page .bus-search-form>.bns{grid-column:1/-1}
+  .bns-menu{left:0;right:0;border-radius:14px}
+  .bns-head{padding:9px 12px;font-size:11.5px}
+  .bns ul{max-height:min(320px,50vh);padding:4px;overscroll-behavior:contain}
+  .bns li{align-items:flex-start;gap:10px;padding:9px 8px}
+  .bns-icon{width:30px;height:30px;margin-top:1px}
+  .bns-text b{display:block;font-size:13.5px;line-height:1.3;white-space:normal;overflow:hidden;max-height:2.6em}
+  .bns-routes{align-self:center}
+  .bns-routes em{font-size:10.5px;padding:3px 6px}
+
+  /* The landmark hint: text first, the quick picks underneath. */
+  .bus-page .suggestion{flex-wrap:wrap;align-items:flex-start;gap:10px 12px;margin-top:16px;padding:14px;border-radius:14px}
+  .bus-page .suggestion-icon{width:34px;height:34px}
+  .bus-page .suggestion>div{flex:1 1 calc(100% - 50px);min-width:0}
+  .bus-page .suggestion b{font-size:14px}
+  .bus-page .suggestion p{font-size:12.5px;line-height:1.5;margin-top:3px}
+  .bus-page .suggestion-pills{flex:1 1 100%;flex-wrap:wrap;gap:6px;padding-left:46px}
+  .bus-page .suggestion-pills button{font-size:12.5px;padding:6px 12px;border-radius:999px}
+}
+
+/* ---- Maps ---- */
+/* The "use two fingers" hint on touch screens (see mapResponsive.js). */
+.map-touch-hint{position:absolute;left:50%;bottom:14px;z-index:800;transform:translate(-50%,6px);padding:7px 13px;border-radius:999px;background:rgba(16,32,25,.82);color:#fff;
+  font-size:12.5px;font-weight:700;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s}
+.map-touch-hint.show{opacity:1;transform:translate(-50%,0)}
+@media(max-width:760px){
+  /* Tall enough to read the route, never taller than about half the screen. */
+  .bus-page .gmap,.gmap{height:clamp(240px,46vh,380px);border-radius:14px}
+  .fare-top .fare-map,.fare-map{height:clamp(240px,46vh,360px)}
+  .fare-top .fare-map-panel{padding:6px}
+  .results-with-map{gap:14px}
+  .results-map{scroll-margin-top:80px}
+  .gmap-legend{gap:4px 12px;font-size:11.5px;margin-top:8px}
+  .gmap-legend i{width:16px}
+  .bus-page .gmap-note{font-size:12px}
+  .do-map{height:clamp(240px,46vh,340px)}
+  /* Map controls a touch-friendly size. */
+  .leaflet-touch .leaflet-bar a{width:34px;height:34px;line-height:34px}
+  .leaflet-control-attribution{font-size:9.5px}
+}
+
+@media(max-width:380px){
+  .page-heading h1{font-size:22px}
+  .bus-page .suggestion-pills{padding-left:0}
+}
+
+/* ---- Route map: a title bar with "Full screen", and the full-screen view itself (all screen sizes) ---- */
+.results-map-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.results-map-bar b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13.5px;font-weight:700;color:var(--ink)}
+.map-expand{display:inline-flex;align-items:center;gap:6px;flex:none;height:34px;padding:0 12px;border:1px solid color-mix(in srgb,var(--ink) 16%,transparent);border-radius:10px;
+  background:var(--surface);color:var(--ink);font-size:13px;font-weight:700;cursor:pointer}
+.map-expand:hover{border-color:var(--green);color:var(--green)}
+.results-map.is-full{position:fixed;inset:0;z-index:95;display:flex;flex-direction:column;margin:0;padding:max(12px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom));background:var(--paper)}
+.results-map.is-full .results-map-bar{padding:2px 2px 4px}
+.results-map.is-full .results-map-bar b{font-size:15px}
+.results-map.is-full .map-expand{background:var(--green);border-color:var(--green);color:#fff}
+.results-map.is-full .gmap,.bus-page .results-map.is-full .gmap{flex:1;height:auto!important;min-height:0;border-radius:14px}
+.results-map.is-full .gmap-legend,.results-map.is-full .gmap-note{flex:none}
+
+/* The suggestion list sits inside the bus name "field", so the field's label style (small, bold, spaced
+   capitals) must not leak into the route line under each bus name. */
+.bus-page .bus-search-form .bns-menu small,.bns-menu .bns-text small{display:block;font-size:11.5px;font-weight:500;letter-spacing:0;text-transform:none;color:var(--muted);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Same reason, every screen size: the field's "span" layout (in a row, centred) must not reach the list. */
+.bus-search-form .bns-menu .bns-text{display:flex;flex-direction:column;align-items:flex-start;justify-content:flex-start;gap:2px;text-align:left}
+.bus-search-form .bns-menu li{text-align:left}
+
+/* ---- Footer ---- */
+/* Wide screens: the group headings are plain headings and every group is open, as before. */
+.site-footer .site-footer-toggle{display:block;pointer-events:none;cursor:default}
+.site-footer-toggle small,.site-footer-toggle svg,.site-footer-icon{display:none}
+.site-footer-links{display:flex;flex-direction:column;align-items:flex-start;gap:11px}
+
+/* Phones: a compact, app-like footer. Groups fold open one at a time; links become two-column tiles. */
+@media(max-width:760px){
+  .site-footer-inner{width:calc(100% - 28px);grid-template-columns:1fr;gap:0;padding:22px 0 6px}
+  .site-footer-about{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px 12px;padding-bottom:16px}
+  .site-footer .footer-brand{font-size:16px}
+  .site-footer .footer-brand .brand-icon{width:32px;height:32px}
+  .site-footer-about p{grid-column:1/-1;grid-row:2;margin:0;max-width:none;font-size:12.5px;line-height:1.55}
+  .site-footer .site-footer-about>button{grid-column:2;grid-row:1;padding:7px 12px;border:1px solid var(--bd-ffffff1f);border-radius:999px;font-size:12.5px;font-weight:700;color:var(--fg-ffffff)}
+
+  .site-footer-col{display:block;gap:0;border-top:1px solid var(--bd-ffffff17)}
+  .site-footer .site-footer-toggle{display:flex;align-items:center;gap:8px;width:100%;padding:14px 2px;pointer-events:auto;cursor:pointer}
+  .site-footer-toggle b{margin:0!important;font-size:12.5px}
+  .site-footer-toggle small{display:inline;margin-left:auto;font-size:11.5px;color:var(--fg-7f958a)}
+  .site-footer-toggle svg{display:block;color:var(--fg-a9bcb2);transition:transform .2s}
+  .site-footer-col.open .site-footer-toggle svg{transform:rotate(180deg)}
+
+  .site-footer-links{display:none}
+  .site-footer-col.open .site-footer-links{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:0 0 14px;animation:footer-open .2s ease}
+  .site-footer .site-footer-links button{display:flex;align-items:center;gap:8px;min-width:0;padding:10px 11px;border:1px solid var(--bd-ffffff17);border-radius:12px;
+    background:var(--bd-ffffff12);color:var(--fg-ffffff);font-size:12.5px;font-weight:600}
+  .site-footer .site-footer-links button span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .site-footer-icon{display:block;flex:none;color:#7fd3ad}
+
+  .site-footer-bottom{width:calc(100% - 28px);flex-direction:row;flex-wrap:wrap;justify-content:space-between;gap:4px 12px;padding:12px 0 max(16px,env(safe-area-inset-bottom));font-size:11.5px}
+}
+@keyframes footer-open{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.site-footer-col.open .site-footer-links{animation:none}}

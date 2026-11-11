@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import L from 'leaflet'
+import { watchLeafletResize } from './mapResponsive'
 import 'leaflet/dist/leaflet.css'
 import { t } from '../../models/i18n'
 
@@ -35,7 +36,8 @@ export default function LiveTripMap({ route = [], ride = [], position = null, pa
     map.on('dragstart', () => moveRef.current?.())
     mapRef.current = map
     const resize = setTimeout(() => map.invalidateSize(), 200)
-    return () => { clearTimeout(resize); map.remove(); mapRef.current = null }
+    const stopWatching = watchLeafletResize(boxRef.current, map)
+    return () => { clearTimeout(resize); stopWatching(); map.remove(); mapRef.current = null }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // The route and the ride, redrawn when the trip or the progress changes.

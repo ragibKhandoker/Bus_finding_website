@@ -1,0 +1,91 @@
+/* The home page on phones and small tablets, laid out like a mobile app: compact type, side-by-side actions,
+   chips instead of long lists, and the photos as a swipeable row so no picture is ever cropped by a fixed box.
+   Loaded after home.css; only theme variables are used, so light, dark and night all follow. */
+@media(max-width:760px){
+  .home-page{padding-bottom:40px}
+
+  /* ---- Hero ---- */
+  .hp-hero{padding:16px 0 22px}
+  .hp-hero-inner{width:calc(100% - 28px);gap:20px}
+  .hp-badge{padding:5px 11px 5px 9px;font-size:12px;gap:7px}
+  .hp-badge-dot{width:7px;height:7px;box-shadow:0 0 0 3px #22a06b26}
+  .hp-hero h1{font-size:clamp(26px,7.4vw,32px);line-height:1.12;letter-spacing:-.03em;margin:12px 0 10px}
+  .hp-hero-copy>p{font-size:14.5px;line-height:1.55;max-width:none}
+
+  .hp-hero-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:18px}
+  .hp-hero-actions>.button{flex:none;width:100%}
+  .hp-hero-cta,.hp-hero-secondary{height:48px;padding:0 10px;border-radius:13px;font-size:14px;gap:7px}
+  .hp-hero-cta svg,.hp-hero-secondary svg{width:16px;height:16px}
+
+  .hp-hero-stats{margin-top:14px;border-radius:14px;max-width:none}
+  .hp-hero-stats span{padding:11px 10px;gap:1px}
+  .hp-hero-stats b{font-size:17px}
+  .hp-hero-stats span:last-child b{font-size:14.5px}
+  .hp-hero-stats b svg{width:15px;height:15px}
+  .hp-hero-stats small{font-size:11px;line-height:1.3}
+
+  .hp-trust{flex-direction:row;flex-wrap:wrap;gap:6px;margin-top:14px}
+  .hp-trust li{padding:6px 10px;border:1px solid var(--hp-border);border-radius:999px;background:var(--surface);font-size:12px;font-weight:600;gap:5px}
+  .hp-trust svg{width:13px;height:13px}
+
+  /* ---- Photos: a swipeable row of whole pictures ---- */
+  .hp-preview.hp-photos{height:auto;display:flex;gap:12px;margin:0 -14px;padding:2px 14px 8px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-padding:0 14px;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;overscroll-behavior-x:contain}
+  .hp-preview.hp-photos::-webkit-scrollbar{display:none}
+  .hp-photos .hp-photo{position:relative;inset:auto;flex:0 0 84%;width:auto;aspect-ratio:16/10;border:0;border-radius:18px;scroll-snap-align:start;
+    box-shadow:0 18px 34px -24px #13402c80,0 2px 6px #13281f14}
+  .hp-photos .hp-photo figcaption,.hp-photos .hp-photo-fleet figcaption{left:10px;right:auto;top:auto;bottom:10px;font-size:11.5px;padding:5px 10px}
+
+  /* ---- Sections ---- */
+  .hp-section{margin-top:40px}
+  .hp-section-head{margin-bottom:16px}
+  .hp-section-head h2{font-size:22px;line-height:1.25;margin-top:6px}
+  .hp-section-head p{font-size:14px;margin-top:6px}
+  .hp-kicker{font-size:11px}
+  .hp-head-row .button{margin-top:12px}
+
+  /* Core services: a compact list, icon on the left. */
+  .hp-services{gap:10px}
+  .hp-service{display:grid;grid-template-columns:44px minmax(0,1fr);column-gap:14px;align-items:start;padding:16px;border-radius:16px}
+  .hp-service-icon{grid-row:span 3;width:44px;height:44px;border-radius:12px;margin:0}
+  .hp-service-icon svg{width:20px;height:20px}
+  .hp-service>b{font-size:16px}
+  .hp-service>p{font-size:13.5px;line-height:1.5;margin:4px 0 10px}
+  .hp-service-link{font-size:13px}
+
+  /* More tools: two-column tiles, like an app's home grid. */
+  .hp-tools{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .hp-tool{flex-direction:column;align-items:flex-start;gap:10px;padding:14px;border-radius:16px}
+  .hp-tool-icon{width:38px;height:38px;border-radius:11px}
+  .hp-tool b{font-size:14px;line-height:1.25}
+  .hp-tool small{font-size:12px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .hp-tool-arrow{display:none}
+
+  /* Popular routes: compact cards, two per row on wider phones. */
+  .hp-routes,.hp-routes-3{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .hp-route{padding:13px 14px;border-radius:15px}
+  .hp-route-head{gap:10px}
+  .hp-route-no{min-width:44px;padding:5px 7px;font-size:12px;border-radius:9px}
+  .hp-route-head b{font-size:15px}
+  .hp-route-head small{font-size:12px}
+  .hp-route-ends{margin-top:10px;gap:6px;font-size:12.5px}
+  .hp-route-foot{margin-top:10px;padding-top:9px;font-size:12px}
+  .hp-route-search{width:100%}
+
+  .hp-steps-section{padding:20px 16px;border-radius:18px}
+  .hp-steps b{font-size:15.5px}
+  .hp-steps p{font-size:13.5px}
+
+  .hp-cta{margin-top:40px;padding:24px 18px;border-radius:18px;gap:18px}
+  .hp-cta h2{font-size:21px}
+  .hp-cta p{font-size:14px}
+}
+
+@media(max-width:480px){
+  .hp-routes,.hp-routes-3{grid-template-columns:1fr}
+}
+@media(max-width:360px){
+  .hp-hero-actions{grid-template-columns:1fr}
+  .hp-tools{grid-template-columns:1fr}
+  .hp-photos .hp-photo{flex-basis:90%}
+}

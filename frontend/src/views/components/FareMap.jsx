@@ -1,5 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import L from 'leaflet'
+import { cooperativeTouchHint, fitPadding, isTouchScreen, watchLeafletResize } from './mapResponsive'
 import 'leaflet/dist/leaflet.css'
 import { t } from '../../models/i18n'
 
@@ -22,16 +23,21 @@ export default function FareMap({ start, end, path = [], me = null }) {
   const boxRef = useRef(null)
   const mapRef = useRef(null)
   const layerRef = useRef(null)
+  // What the map last fitted to, so it can fit again when its size changes.
+  const fitRef = useRef(null)
 
-  // Create the map once.
+  // Create the map once. On touch screens one finger scrolls the page; two fingers move and zoom the map.
   useEffect(() => {
-    const map = L.map(boxRef.current, { center: DHAKA, zoom: 12, scrollWheelZoom: false })
+    const touch = isTouchScreen()
+    const map = L.map(boxRef.current, { center: DHAKA, zoom: 12, scrollWheelZoom: false, dragging: !touch, tap: !touch })
     L.tileLayer(TILES, { maxZoom: 19, attribution: ATTRIBUTION }).addTo(map)
     layerRef.current = L.layerGroup().addTo(map)
     mapRef.current = map
     // The map is created before the page finishes laying out; measure again once it has.
     const resize = setTimeout(() => map.invalidateSize(), 200)
-    return () => { clearTimeout(resize); map.remove(); mapRef.current = null }
+    const stopWatching = watchLeafletResize(boxRef.current, map, () => fitRef.current?.())
+    const stopHint = touch ? cooperativeTouchHint(boxRef.current) : () => {}
+    return () => { clearTimeout(resize); stopWatching(); stopHint(); map.remove(); mapRef.current = null }
   }, [])
 
   // Redraw the pins and the road line whenever they change.
@@ -57,11 +63,16 @@ export default function FareMap({ start, end, path = [], me = null }) {
         .bindTooltip(t('Your current location'), { permanent: true, direction: 'top', offset: [0, -12], className: 'map-me-label' }).addTo(layer)
     }
     // With only the rider's location, zoom in on it; otherwise fit everything shown.
-    if (here && !bounds.isValid()) map.setView(here, 16)
-    else {
-      if (here) bounds.extend(here)
-      if (bounds.isValid()) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 15 })
+    const fit = () => {
+      if (here && !bounds.isValid()) map.setView(here, 16)
+      else {
+        if (here) bounds.extend(here)
+        const pad = fitPadding(boxRef.current)
+        if (bounds.isValid()) map.fitBounds(bounds, { padding: [pad, pad], maxZoom: 15 })
+      }
     }
+    fitRef.current = fit
+    fit()
   }, [start, end, path, me])
 
   return <div ref={boxRef} className="fare-map" role="region" aria-label={t('Map of the selected places')} />

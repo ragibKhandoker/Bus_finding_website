@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowDownUp, ArrowRight, ArrowUpRight, BusFront, CircleAlert, Compass, Map as MapIcon, MapPin, Search, ShieldCheck } from 'lucide-react'
+import { Maximize2, Minimize2, ArrowDownUp, ArrowRight, ArrowUpRight, BusFront, CircleAlert, Compass, Map as MapIcon, MapPin, Search, ShieldCheck } from 'lucide-react'
 import GoogleMapView, { mapsConfigured } from '../components/GoogleMapView'
 import { useActiveTrip } from '../../controllers/useTrips'
 import { ActiveTripPanel, useBoardControls } from '../components/Trips'
@@ -9,7 +9,7 @@ import { FavoriteButton } from './Favorites'
 import { canFavourite } from '../../models/favorites'
 import { apiRequest as request } from '../../models/api'
 import { formatNumber, t, toEnglish } from '../../models/i18n'
-import { formatDuration, getStops, googleMapsDirections, money, sortedStops } from '../helpers'
+import { formatDuration, getStops, googleMapsDirections, isPhone, money, sortedStops } from '../helpers'
 import { errorText } from '../../models/messages'
 import { PageHeading, StopSuggestions } from '../components/common'
 import { BusNameSearch } from '../components/BusNameSearch'
@@ -40,7 +40,7 @@ export function TripSummary({ trip, estimate, onRetry }) {
           : estimate.data.source === 'approximate' ? t('Rough estimate') : t('Driving, without traffic')}</em></span>}
       </>}
       {estimate.status === 'error' && <span className="trip-figure trip-unavailable"><small>{t('Estimated distance')}</small><b>{t('Temporarily unavailable')}</b><em>{estimate.message} <button type="button" onClick={onRetry}>{t('Try again')}</button></em></span>}
-      <a className="button button-outline button-small trip-gmaps" href={googleMapsDirections(trip.start.name, trip.end.name)} target="_blank" rel="noreferrer"><MapIcon size={14} /> {t('Open in Google Maps')} <ArrowUpRight size={13} /></a>
+      <a className="button button-outline button-small trip-gmaps" href={googleMapsDirections(trip.start, trip.end)} target="_blank" rel="noreferrer"><MapIcon size={14} /> {isPhone() ? t('Open in Google Maps app') : t('Open in Google Maps')} <ArrowUpRight size={13} /></a>
     </div>
   </section>
 }
@@ -105,6 +105,27 @@ export function BusPage({ token, signedIn, user, notify, navigate: goTo, openAut
   const [trip, setTrip] = useState(null) // { start, end }: the stops the searched places resolved to
   const [estimate, setEstimate] = useState({ status: 'idle' })
   const [selectedId, setSelectedId] = useState(null)
+  // The route map can fill the whole screen, so directions are easy to follow on a phone.
+  const [mapFull, setMapFull] = useState(false)
+  useEffect(() => {
+    if (!mapFull) return undefined
+    const overflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    const onKey = (event) => { if (event.key === 'Escape') setMapFull(false) }
+    window.addEventListener('keydown', onKey)
+    return () => { document.body.style.overflow = overflow; window.removeEventListener('keydown', onKey) }
+  }, [mapFull])
+  // On phones the map sits above the list, out of sight while choosing a bus further down: bring it into view.
+  const mapRef = useRef(null)
+  const showBusOnMap = (busId) => {
+    setSelectedId(busId)
+    const box = mapRef.current
+    if (!box || typeof window.matchMedia !== 'function' || !window.matchMedia('(max-width: 980px)').matches) return
+    const top = box.getBoundingClientRect().top
+    if (top < 70 || top > window.innerHeight * 0.4) {
+      window.scrollTo({ top: window.scrollY + top - 80, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+    }
+  }
   const activeTrip = useActiveTrip(token, signedIn).trip
 
   // One request for the whole list of favourites, so each card knows its heart state without asking the server.
@@ -278,10 +299,15 @@ export function BusPage({ token, signedIn, user, notify, navigate: goTo, openAut
         <div className="results-heading"><div><div className="eyebrow">{searched.mode === 'route' ? t('YOUR ROUTE') : t('BUS SEARCH')}</div><h2>{searched.mode === 'route' ? t('{from} to {to}', { from: t(trip?.start.name || searched.from), to: t(trip?.end.name || searched.to) }) : t('Buses matching “{name}”', { name: searched.name })}</h2></div>{!loading && !error && <span className="result-count">{buses.length === 1 ? t('{count} bus found', { count: 1 }) : t('{count} buses found', { count: buses.length })}</span>}</div>
         {loading ? <BusSearchLoader mode={searched.mode} />
           : error ? <div className="empty-state"><span className="empty-icon"><CircleAlert size={23} /></span><b>{t('Search could not be completed')}</b><span>{error}</span></div>
-          : buses.length ? <div className="bus-list">{buses.map((bus) => <BusCard key={bus._id} bus={bus} user={user} token={token} signedIn={signedIn} openAuth={openAuth} selected={bus._id === selectedId} onSelect={() => setSelectedId(bus._id)} favorite={favorites.isFavorite(bus)} favoritePending={favorites.isPending(bus)} onFavorite={() => favorites.toggle(bus)} onAddTrip={() => saveTrip(bus)} boarding={{ token, signedIn, openAuth, notify, activeTrip }} onDetails={bus.routeNumber ? () => navigate('Bus details', { route: bus.routeNumber }) : null} notify={notify} />)}</div>
+          : buses.length ? <div className="bus-list">{buses.map((bus) => <BusCard key={bus._id} bus={bus} user={user} token={token} signedIn={signedIn} openAuth={openAuth} selected={bus._id === selectedId} onSelect={() => showBusOnMap(bus._id)} favorite={favorites.isFavorite(bus)} favoritePending={favorites.isPending(bus)} onFavorite={() => favorites.toggle(bus)} onAddTrip={() => saveTrip(bus)} boarding={{ token, signedIn, openAuth, notify, activeTrip }} onDetails={bus.routeNumber ? () => navigate('Bus details', { route: bus.routeNumber }) : null} notify={notify} />)}</div>
           : <div className="empty-state"><span className="empty-icon"><BusFront size={23} /></span><b>{t('No buses found just yet')}</b><span>{searched.mode === 'route' ? t('No bus in the database stops at both places. Try a nearby stop.') : t('Try another bus name or route number.')}</span></div>}
       </div>
-      {showMap && <aside className="results-map">
+      {showMap && <aside className={`results-map${mapFull ? ' is-full' : ''}`} ref={mapRef}>
+        <div className="results-map-bar">
+          <b>{trip ? `${t(trip.start.name)} → ${t(trip.end.name)}` : t('Route map')}</b>
+          <button type="button" className="map-expand" onClick={() => setMapFull(!mapFull)} aria-pressed={mapFull}>
+            {mapFull ? <><Minimize2 size={15} /> {t('Close')}</> : <><Maximize2 size={15} /> {t('Full screen')}</>}</button>
+        </div>
         <GoogleMapView start={trip?.start} end={trip?.end} roadPath={estimate.status === 'ready' ? estimate.data.polyline : null} busStops={mapStops} segment={mapSegment} />
         {mapsConfigured
           ? <ul className="gmap-legend">
