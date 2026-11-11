@@ -71,6 +71,9 @@ async function describeNew(previous, current, token) {
         : t('A user forgot their password and is waiting for a temporary one.'),
     }
   }
+  if ((current.pendingDriverApplications || 0) > (previous.pendingDriverApplications || 0)) {
+    return { kind: 'driver', focus: 'admin-drivers', title: t('New driver application'), text: t('A bus driver submitted documents for verification.') }
+  }
   if (current.pendingVerifications > previous.pendingVerifications) {
     return { kind: 'verification', focus: 'admin-verifications', title: t('New verification request'), text: t('A user sent a student pass or NID to review.') }
   }
@@ -91,7 +94,7 @@ export function useAdminAlerts({ token, isAdmin }) {
       const { data } = await apiRequest('/admin/overview', { token })
       const previous = last.current
       last.current = data
-      const count = data.pendingPasswordRequests + data.unreadMessages + data.pendingVerifications
+      const count = data.pendingPasswordRequests + data.unreadMessages + data.pendingVerifications + (data.pendingDriverApplications || 0)
       setWaiting(count)
       showTitleCount(count)
       if (!previous) return // first check after sign-in: nothing is "new" yet

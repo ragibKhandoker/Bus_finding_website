@@ -1222,6 +1222,625 @@ namespace SmartCommute.Server.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.DriverBusAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("AssignedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("assigned_at");
+
+                    b.Property<Guid?>("AssignedByAdminId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assigned_by_admin_id");
+
+                    b.Property<Guid>("BusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bus_id");
+
+                    b.Property<Guid>("DriverId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("driver_id");
+
+                    b.Property<DateTime?>("EndedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("ended_at");
+
+                    b.Property<Guid?>("EndedByAdminId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ended_by_admin_id");
+
+                    b.Property<Guid?>("IndividualBusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("individual_bus_id");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.HasKey("Id")
+                        .HasName("pk_driver_bus_assignments");
+
+                    b.HasIndex("AssignedByAdminId")
+                        .HasDatabaseName("ix_driver_bus_assignments_assigned_by_admin_id");
+
+                    b.HasIndex("BusId")
+                        .HasDatabaseName("ix_driver_bus_assignments_bus_id");
+
+                    b.HasIndex("IndividualBusId")
+                        .HasDatabaseName("ix_driver_bus_assignments_individual_bus_id");
+
+                    b.HasIndex("DriverId", "BusId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_driver_bus_assignments_one_active")
+                        .HasFilter("is_active");
+
+                    b.HasIndex("DriverId", "IsActive")
+                        .HasDatabaseName("ix_driver_bus_assignments_driver_id_is_active");
+
+                    b.ToTable("driver_bus_assignments", (string)null);
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.DriverDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("content_type");
+
+                    b.Property<string>("DocumentType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("document_type");
+
+                    b.Property<Guid>("DriverProfileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("driver_profile_id");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint")
+                        .HasColumnName("file_size");
+
+                    b.Property<string>("PrivateStorageKey")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("private_storage_key");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("uploaded_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_driver_documents");
+
+                    b.HasIndex("DriverProfileId", "DocumentType")
+                        .IsUnique()
+                        .HasDatabaseName("ix_driver_documents_driver_profile_id_document_type");
+
+                    b.ToTable("driver_documents", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_driver_documents_type", "document_type IN ('license_front', 'license_back', 'nid_front', 'nid_back', 'profile_photo')");
+                        });
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.DriverProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AccountStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("account_status");
+
+                    b.Property<string>("Area")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("area");
+
+                    b.Property<string>("BusRegistrationNumber")
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("bus_registration_number");
+
+                    b.Property<Guid?>("ClaimedBusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("claimed_bus_id");
+
+                    b.Property<string>("ClaimedBusName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("claimed_bus_name");
+
+                    b.Property<string>("ClaimedOperatorName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("claimed_operator_name");
+
+                    b.Property<string>("ClaimedRoute")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("claimed_route");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateOnly>("DateOfBirth")
+                        .HasColumnType("date")
+                        .HasColumnName("date_of_birth");
+
+                    b.Property<string>("District")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("district");
+
+                    b.Property<int>("DrivingExperienceYears")
+                        .HasColumnType("integer")
+                        .HasColumnName("driving_experience_years");
+
+                    b.Property<string>("EmergencyContact")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("emergency_contact");
+
+                    b.Property<string>("EmploymentType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("employment_type");
+
+                    b.Property<string>("Gender")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("gender");
+
+                    b.Property<DateOnly>("LicenseExpiryDate")
+                        .HasColumnType("date")
+                        .HasColumnName("license_expiry_date");
+
+                    b.Property<string>("LicenseNumberEncrypted")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("license_number_encrypted");
+
+                    b.Property<string>("LicenseNumberHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("license_number_hash");
+
+                    b.Property<string>("LicenseNumberLast4")
+                        .IsRequired()
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)")
+                        .HasColumnName("license_number_last4");
+
+                    b.Property<string>("LicenseType")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("license_type");
+
+                    b.Property<string>("NidNumberEncrypted")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("nid_number_encrypted");
+
+                    b.Property<string>("NidNumberHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("nid_number_hash");
+
+                    b.Property<string>("NidNumberLast4")
+                        .IsRequired()
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)")
+                        .HasColumnName("nid_number_last4");
+
+                    b.Property<string>("PresentAddress")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("present_address");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("rejection_reason");
+
+                    b.Property<string>("ResubmissionFields")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("resubmission_fields");
+
+                    b.Property<string>("ResubmissionReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("resubmission_reason");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<Guid?>("ReviewedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewed_by_id");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("submitted_at");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("VerificationStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("verification_status");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_driver_profiles");
+
+                    b.HasIndex("ClaimedBusId")
+                        .HasDatabaseName("ix_driver_profiles_claimed_bus_id");
+
+                    b.HasIndex("LicenseNumberHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_driver_profiles_license_number_hash");
+
+                    b.HasIndex("NidNumberHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_driver_profiles_nid_number_hash");
+
+                    b.HasIndex("SubmittedAt")
+                        .HasDatabaseName("ix_driver_profiles_submitted_at");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_driver_profiles_user_id");
+
+                    b.HasIndex("VerificationStatus", "SubmittedAt")
+                        .HasDatabaseName("ix_driver_profiles_verification_status_submitted_at");
+
+                    b.ToTable("driver_profiles", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_driver_profiles_account_status", "account_status IN ('PENDING_VERIFICATION', 'ACTIVE', 'REJECTED')");
+
+                            t.HasCheckConstraint("ck_driver_profiles_employment_type", "employment_type IN ('Full-time', 'Part-time', 'Contractual', 'Self-employed')");
+
+                            t.HasCheckConstraint("ck_driver_profiles_experience", "driving_experience_years BETWEEN 0 AND 60");
+
+                            t.HasCheckConstraint("ck_driver_profiles_license_type", "license_type IN ('Professional', 'Heavy Vehicle', 'Other')");
+
+                            t.HasCheckConstraint("ck_driver_profiles_verification_status", "verification_status IN ('PENDING', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'RESUBMISSION_REQUIRED')");
+                        });
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.DriverStatusHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("ChangedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("changed_at");
+
+                    b.Property<string>("ChangedBy")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("changed_by");
+
+                    b.Property<Guid>("DriverId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("driver_id");
+
+                    b.Property<string>("NewStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("new_status");
+
+                    b.Property<string>("PreviousStatus")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("previous_status");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("reason");
+
+                    b.Property<Guid?>("TripId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trip_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_driver_status_history");
+
+                    b.HasIndex("DriverId", "ChangedAt")
+                        .HasDatabaseName("ix_driver_status_history_driver_id_changed_at");
+
+                    b.ToTable("driver_status_history", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_driver_status_history_changed_by", "changed_by IN ('driver', 'system', 'admin')");
+                        });
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.DriverTrip", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime?>("ActualArrival")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actual_arrival");
+
+                    b.Property<DateTime?>("ActualDeparture")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("actual_departure");
+
+                    b.Property<Guid?>("AssignmentId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assignment_id");
+
+                    b.Property<Guid>("BusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bus_id");
+
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("cancel_reason");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByAdminId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_admin_id");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("direction");
+
+                    b.Property<Guid>("DriverId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("driver_id");
+
+                    b.Property<int?>("DurationMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("duration_minutes");
+
+                    b.Property<string>("EndStop")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("end_stop");
+
+                    b.Property<Guid?>("IndividualBusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("individual_bus_id");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("notes");
+
+                    b.Property<DateTime?>("ReminderSentAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reminder_sent_at");
+
+                    b.Property<DateOnly>("ScheduleDate")
+                        .HasColumnType("date")
+                        .HasColumnName("schedule_date");
+
+                    b.Property<DateTime>("ScheduledArrival")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("scheduled_arrival");
+
+                    b.Property<DateTime>("ScheduledDeparture")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("scheduled_departure");
+
+                    b.Property<string>("StartStop")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("start_stop");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<int>("TripNumber")
+                        .HasColumnType("integer")
+                        .HasColumnName("trip_number");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByAdminId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_admin_id");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_driver_trips");
+
+                    b.HasIndex("AssignmentId")
+                        .HasDatabaseName("ix_driver_trips_assignment_id");
+
+                    b.HasIndex("DriverId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_driver_trips_one_in_progress")
+                        .HasFilter("status = 'IN_PROGRESS'");
+
+                    b.HasIndex("BusId", "ScheduleDate")
+                        .HasDatabaseName("ix_driver_trips_bus_id_schedule_date");
+
+                    b.HasIndex("DriverId", "ScheduleDate")
+                        .HasDatabaseName("ix_driver_trips_driver_id_schedule_date");
+
+                    b.HasIndex("IndividualBusId", "ScheduledDeparture")
+                        .HasDatabaseName("ix_driver_trips_individual_bus_id_scheduled_departure");
+
+                    b.HasIndex("Status", "ScheduledDeparture")
+                        .HasDatabaseName("ix_driver_trips_status_scheduled_departure");
+
+                    b.HasIndex("DriverId", "Status", "ScheduledDeparture")
+                        .HasDatabaseName("ix_driver_trips_driver_id_status_scheduled_departure");
+
+                    b.ToTable("driver_trips", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_driver_trips_actual", "actual_arrival IS NULL OR (actual_departure IS NOT NULL AND actual_arrival >= actual_departure)");
+
+                            t.HasCheckConstraint("ck_driver_trips_direction", "direction IN ('FORWARD', 'RETURN')");
+
+                            t.HasCheckConstraint("ck_driver_trips_duration", "duration_minutes IS NULL OR duration_minutes >= 0");
+
+                            t.HasCheckConstraint("ck_driver_trips_status", "status IN ('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'MISSED')");
+
+                            t.HasCheckConstraint("ck_driver_trips_times", "scheduled_arrival > scheduled_departure");
+                        });
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.DriverVerificationHistory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AdminId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("admin_id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("DriverProfileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("driver_profile_id");
+
+                    b.Property<string>("NewStatus")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("new_status");
+
+                    b.Property<string>("PreviousStatus")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("previous_status");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason");
+
+                    b.HasKey("Id")
+                        .HasName("pk_driver_verification_history");
+
+                    b.HasIndex("AdminId")
+                        .HasDatabaseName("ix_driver_verification_history_admin_id");
+
+                    b.HasIndex("DriverProfileId", "CreatedAt")
+                        .HasDatabaseName("ix_driver_verification_history_driver_profile_id_created_at");
+
+                    b.ToTable("driver_verification_history", (string)null);
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.DriverWorkingStatus", b =>
+                {
+                    b.Property<Guid>("DriverId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("driver_id");
+
+                    b.Property<string>("CurrentStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("current_status");
+
+                    b.Property<DateTime>("LastStatusChangedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_status_changed_at");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("DriverId")
+                        .HasName("pk_driver_working_statuses");
+
+                    b.HasIndex("CurrentStatus")
+                        .HasDatabaseName("ix_driver_working_statuses_current_status");
+
+                    b.ToTable("driver_working_statuses", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_driver_working_statuses_status", "current_status IN ('AVAILABLE', 'ON_DUTY', 'ON_TRIP', 'BREAK', 'OFF_DUTY', 'UNAVAILABLE')");
+                        });
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.FareRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4410,6 +5029,156 @@ namespace SmartCommute.Server.Data.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.DriverBusAssignment", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.User", "AssignedByAdmin")
+                        .WithMany()
+                        .HasForeignKey("AssignedByAdminId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_driver_bus_assignments_users_assigned_by_admin_id");
+
+                    b.HasOne("SmartCommute.Server.Models.Bus", "Bus")
+                        .WithMany()
+                        .HasForeignKey("BusId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_driver_bus_assignments_buses_bus_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "Driver")
+                        .WithMany()
+                        .HasForeignKey("DriverId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_driver_bus_assignments_users_driver_id");
+
+                    b.HasOne("SmartCommute.Server.Models.IndividualBus", "IndividualBus")
+                        .WithMany()
+                        .HasForeignKey("IndividualBusId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_driver_bus_assignments_individual_buses_individual_bus_id");
+
+                    b.Navigation("AssignedByAdmin");
+
+                    b.Navigation("Bus");
+
+                    b.Navigation("Driver");
+
+                    b.Navigation("IndividualBus");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.DriverDocument", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.DriverProfile", "DriverProfile")
+                        .WithMany("Documents")
+                        .HasForeignKey("DriverProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_driver_documents_driver_profiles_driver_profile_id");
+
+                    b.Navigation("DriverProfile");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.DriverProfile", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.Bus", "ClaimedBus")
+                        .WithMany()
+                        .HasForeignKey("ClaimedBusId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_driver_profiles_buses_claimed_bus_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_driver_profiles_users_user_id");
+
+                    b.Navigation("ClaimedBus");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.DriverStatusHistory", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.User", "Driver")
+                        .WithMany()
+                        .HasForeignKey("DriverId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_driver_status_history_users_driver_id");
+
+                    b.Navigation("Driver");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.DriverTrip", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.DriverBusAssignment", "Assignment")
+                        .WithMany()
+                        .HasForeignKey("AssignmentId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_driver_trips_driver_bus_assignments_assignment_id");
+
+                    b.HasOne("SmartCommute.Server.Models.Bus", "Bus")
+                        .WithMany()
+                        .HasForeignKey("BusId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_driver_trips_buses_bus_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "Driver")
+                        .WithMany()
+                        .HasForeignKey("DriverId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_driver_trips_users_driver_id");
+
+                    b.HasOne("SmartCommute.Server.Models.IndividualBus", "IndividualBus")
+                        .WithMany()
+                        .HasForeignKey("IndividualBusId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_driver_trips_individual_buses_individual_bus_id");
+
+                    b.Navigation("Assignment");
+
+                    b.Navigation("Bus");
+
+                    b.Navigation("Driver");
+
+                    b.Navigation("IndividualBus");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.DriverVerificationHistory", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.User", "Admin")
+                        .WithMany()
+                        .HasForeignKey("AdminId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_driver_verification_history_users_admin_id");
+
+                    b.HasOne("SmartCommute.Server.Models.DriverProfile", "DriverProfile")
+                        .WithMany("History")
+                        .HasForeignKey("DriverProfileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_driver_verification_history_driver_profiles_driver_profile_");
+
+                    b.Navigation("Admin");
+
+                    b.Navigation("DriverProfile");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.DriverWorkingStatus", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.User", "Driver")
+                        .WithMany()
+                        .HasForeignKey("DriverId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_driver_working_statuses_users_driver_id");
+
+                    b.Navigation("Driver");
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.FareRecord", b =>
                 {
                     b.HasOne("SmartCommute.Server.Models.User", "User")
@@ -5150,6 +5919,13 @@ namespace SmartCommute.Server.Data.Migrations
             modelBuilder.Entity("SmartCommute.Server.Models.Complaint", b =>
                 {
                     b.Navigation("Evidence");
+
+                    b.Navigation("History");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.DriverProfile", b =>
+                {
+                    b.Navigation("Documents");
 
                     b.Navigation("History");
                 });

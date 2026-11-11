@@ -55,6 +55,7 @@ public sealed class TestServerFixture : IAsyncLifetime
         // The favourite bus monitor runs on a timer in the real server; tests run it by hand at a chosen time.
         Environment.SetEnvironmentVariable("FavouriteMonitor__Enabled", "false");
         Environment.SetEnvironmentVariable("RideLifecycle__Enabled", "false");
+        Environment.SetEnvironmentVariable("DriverTrips__LifecycleEnabled", "false");
 
         Factory = new WebApplicationFactory<Program>().WithWebHostBuilder(builder => builder.UseEnvironment("Testing"));
         _ = Factory.Server; // starts the app: migrations and seeding run here

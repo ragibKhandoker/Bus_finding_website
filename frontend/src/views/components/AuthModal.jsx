@@ -5,7 +5,7 @@ import { API_BASE, apiRequest as request, isTokenExpired } from '../../models/ap
 import { t } from '../../models/i18n'
 import { lastSession } from '../../models/session'
 import { errorText } from '../../models/messages'
-import { GENDERS, ROLE_OPTIONS, signupProblem } from '../../models/user'
+import { GENDERS, signupProblem } from '../../models/user'
 
 // Label, icon-led input box and an optional hint line, shared by every field in the sign-in / sign-up form.
 export function AuthField({ label, icon: Icon, hint, tone, children, action }) {
@@ -85,7 +85,7 @@ const WRONG_ROLE = {
   admin: 'This is an admin account. Choose Admin to sign in.',
 }
 
-export function AuthModal({ mode, onMode, onClose, onSuccess, onContinue }) {
+export function AuthModal({ mode, onMode, onClose, onSuccess, onContinue, onRegister, onRegisterDriver }) {
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '', gender: 'Prefer not to say', role: 'commuter' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -135,7 +135,8 @@ export function AuthModal({ mode, onMode, onClose, onSuccess, onContinue }) {
   }
   const changeMode = (next) => { setError(''); setShowPassword(false); setForgot(false); onMode(next) }
   const chooseRole = (role) => { if (role === 'admin') { changeMode('admin'); return } setLoginRole(role); changeMode('login') }
-  const switchMode = () => changeMode(signup ? 'login' : 'signup')
+  // "Create one" opens the account-type choice (commuter or driver) when the app provides it.
+  const switchMode = () => (!signup && onRegister ? onRegister() : changeMode(signup ? 'login' : 'signup'))
   // While the form is open the page behind it does not scroll, and Escape closes it.
   useEffect(() => {
     const previous = document.body.style.overflow
@@ -152,7 +153,7 @@ export function AuthModal({ mode, onMode, onClose, onSuccess, onContinue }) {
       <header className="auth-header">
         <span className={`auth-mark${admin ? ' is-admin' : ''}`}>{admin ? <ShieldCheck size={22} /> : <BusFront size={22} />}</span>
         <div>
-          <h2 id="auth-title">{signup ? t('Create your account') : userForgot ? t('Reset your password') : admin ? t('Admin sign in') : t('Welcome back')}</h2>
+          <h2 id="auth-title">{signup ? t('Create your commuter account') : userForgot ? t('Reset your password') : admin ? t('Admin sign in') : t('Welcome back')}</h2>
           <p>{signup ? t('All fields are required.') : userForgot ? t('The admin will send you a temporary password.') : admin ? t('Sign in with an admin account to manage users.') : loginRole === 'driver' ? t('Sign in with your driver account.') : t('Sign in with your commuter account.')}</p>
         </div>
       </header>
@@ -180,14 +181,10 @@ export function AuthModal({ mode, onMode, onClose, onSuccess, onContinue }) {
           <AuthField label={t('Full name')} icon={UserRound}>
             <input autoComplete="name" value={form.name} onChange={set('name')} placeholder={t('e.g. Rahim Ahmed')} />
           </AuthField>
+          {/* This form makes commuter accounts only; drivers register through the driver form with documents (F21). */}
+          {onRegisterDriver && <button type="button" className="auth-waiting" onClick={onRegisterDriver}>
+            <BusFront size={16} /><span>{t('Are you a bus driver? Register as a driver')}</span><ArrowRight size={14} /></button>}
           <div className="auth-row">
-            <fieldset className="auth-roles">
-              <legend className="auth-label">{t('I am a')}</legend>
-              <div>{ROLE_OPTIONS.map((option) => <label key={option.value} className={`auth-role${form.role === option.value ? ' selected' : ''}`} title={t(option.text)}>
-                <input type="radio" name="role" value={option.value} checked={form.role === option.value} onChange={set('role')} />
-                {option.value === 'driver' ? <BusFront size={16} /> : <Users size={16} />}<b>{t(option.title)}</b>
-              </label>)}</div>
-            </fieldset>
             <div className="auth-field">
               <span className="auth-label" id="auth-gender-label">{t('Gender')}</span>
               <SelectMenu labelledBy="auth-gender-label" icon={UserRound} value={form.gender} onChange={(gender) => setForm((current) => ({ ...current, gender }))}

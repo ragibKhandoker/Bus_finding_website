@@ -44,7 +44,9 @@ public class AccountService(
         var role = string.IsNullOrWhiteSpace(request.Role) ? UserRoles.Commuter : request.Role.Trim().ToLowerInvariant();
         if (!UserRoles.SelfAssignable.Contains(role))
         {
-            return ServiceResult<SignedIn>.BadRequest("Role must be commuter or driver.");
+            return ServiceResult<SignedIn>.BadRequest(role == UserRoles.Driver
+                ? "Drivers register through the driver registration form, which includes document verification."
+                : "Role must be commuter.");
         }
         if (UserGenders.Normalize(request.Gender) is not { } gender)
         {
@@ -288,7 +290,7 @@ public class AccountService(
     }
 
     // Records a new sign-in and clears out this user's sessions that can no longer be used.
-    private async Task<SignedIn> StartSessionAsync(User user, ClientInfo client)
+    public async Task<SignedIn> StartSessionAsync(User user, ClientInfo client)
     {
         var now = DateTime.UtcNow;
         await db.UserSessions

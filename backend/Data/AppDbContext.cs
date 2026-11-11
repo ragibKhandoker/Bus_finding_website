@@ -66,6 +66,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ComplaintEvidence> ComplaintEvidence => Set<ComplaintEvidence>();
     public DbSet<ComplaintHistory> ComplaintHistory => Set<ComplaintHistory>();
     public DbSet<BusCrowdReport> BusCrowdReports => Set<BusCrowdReport>();
+    public DbSet<DriverProfile> DriverProfiles => Set<DriverProfile>();
+    public DbSet<DriverDocument> DriverDocuments => Set<DriverDocument>();
+    public DbSet<DriverVerificationHistory> DriverVerificationHistory => Set<DriverVerificationHistory>();
+    public DbSet<DriverBusAssignment> DriverBusAssignments => Set<DriverBusAssignment>();
+    public DbSet<DriverTrip> DriverTrips => Set<DriverTrip>();
+    public DbSet<DriverWorkingStatus> DriverWorkingStatuses => Set<DriverWorkingStatus>();
+    public DbSet<DriverStatusHistory> DriverStatusHistory => Set<DriverStatusHistory>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -689,6 +696,101 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             e.HasIndex(x => x.CreatedAt);
             e.HasIndex(x => new { x.Action, x.CreatedAt });
+        });
+
+        // F21: driver registration and verification. One profile per driver account; deleting the account deletes
+        // its profile, documents, history and assignments. The same licence or NID cannot be used twice.
+        b.Entity<DriverProfile>(e =>
+        {
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.ClaimedBus).WithMany().HasForeignKey(x => x.ClaimedBusId).OnDelete(DeleteBehavior.SetNull);
+            e.Property(x => x.Version).IsRowVersion();
+            e.HasIndex(x => x.UserId).IsUnique();
+            e.HasIndex(x => x.LicenseNumberHash).IsUnique();
+            e.HasIndex(x => x.NidNumberHash).IsUnique();
+            e.HasIndex(x => new { x.VerificationStatus, x.SubmittedAt });
+            e.HasIndex(x => x.SubmittedAt);
+            e.Ignore(x => x.ApplicationCode);
+            e.Ignore(x => x.RequestedFields);
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_driver_profiles_verification_status",
+                    "verification_status IN ('PENDING', 'UNDER_REVIEW', 'APPROVED', 'REJECTED', 'RESUBMISSION_REQUIRED')");
+                t.HasCheckConstraint("ck_driver_profiles_account_status", "account_status IN ('PENDING_VERIFICATION', 'ACTIVE', 'REJECTED')");
+                t.HasCheckConstraint("ck_driver_profiles_experience", "driving_experience_years BETWEEN 0 AND 60");
+                t.HasCheckConstraint("ck_driver_profiles_license_type", "license_type IN ('Professional', 'Heavy Vehicle', 'Other')");
+                t.HasCheckConstraint("ck_driver_profiles_employment_type", "employment_type IN ('Full-time', 'Part-time', 'Contractual', 'Self-employed')");
+            });
+        });
+
+        b.Entity<DriverDocument>(e =>
+        {
+            e.HasOne(x => x.DriverProfile).WithMany(p => p.Documents).HasForeignKey(x => x.DriverProfileId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.DriverProfileId, x.DocumentType }).IsUnique();
+            e.ToTable(t => t.HasCheckConstraint("ck_driver_documents_type",
+                "document_type IN ('license_front', 'license_back', 'nid_front', 'nid_back', 'profile_photo')"));
+        });
+
+        b.Entity<DriverVerificationHistory>(e =>
+        {
+            e.HasOne(x => x.DriverProfile).WithMany(p => p.History).HasForeignKey(x => x.DriverProfileId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Admin).WithMany().HasForeignKey(x => x.AdminId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(x => new { x.DriverProfileId, x.CreatedAt });
+        });
+
+        b.Entity<DriverBusAssignment>(e =>
+        {
+            e.HasOne(x => x.Driver).WithMany().HasForeignKey(x => x.DriverId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Bus).WithMany().HasForeignKey(x => x.BusId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.AssignedByAdmin).WithMany().HasForeignKey(x => x.AssignedByAdminId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(x => new { x.DriverId, x.IsActive });
+            // A driver has at most one active assignment to the same bus.
+            e.HasIndex(x => new { x.DriverId, x.BusId }).IsUnique().HasFilter("is_active").HasDatabaseName("ix_driver_bus_assignments_one_active");
+        });
+
+        // F22: duty schedules and trips. A driver has at most one trip in progress (partial unique index), and
+        // arrival is always after departure.
+        b.Entity<DriverBusAssignment>(e =>
+            e.HasOne(x => x.IndividualBus).WithMany().HasForeignKey(x => x.IndividualBusId).OnDelete(DeleteBehavior.SetNull));
+
+        b.Entity<DriverTrip>(e =>
+        {
+            e.HasOne(x => x.Driver).WithMany().HasForeignKey(x => x.DriverId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Bus).WithMany().HasForeignKey(x => x.BusId).OnDelete(DeleteBehavior.Restrict);
+            e.HasOne(x => x.IndividualBus).WithMany().HasForeignKey(x => x.IndividualBusId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.Assignment).WithMany().HasForeignKey(x => x.AssignmentId).OnDelete(DeleteBehavior.SetNull);
+            e.Property(x => x.Version).IsRowVersion();
+            e.Ignore(x => x.Code);
+            e.HasIndex(x => new { x.DriverId, x.ScheduleDate });
+            e.HasIndex(x => new { x.DriverId, x.Status, x.ScheduledDeparture });
+            e.HasIndex(x => new { x.BusId, x.ScheduleDate });
+            e.HasIndex(x => new { x.IndividualBusId, x.ScheduledDeparture });
+            e.HasIndex(x => new { x.Status, x.ScheduledDeparture });
+            e.HasIndex(x => x.DriverId).IsUnique().HasFilter("status = 'IN_PROGRESS'").HasDatabaseName("ix_driver_trips_one_in_progress");
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_driver_trips_status", "status IN ('SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED', 'MISSED')");
+                t.HasCheckConstraint("ck_driver_trips_direction", "direction IN ('FORWARD', 'RETURN')");
+                t.HasCheckConstraint("ck_driver_trips_times", "scheduled_arrival > scheduled_departure");
+                t.HasCheckConstraint("ck_driver_trips_actual", "actual_arrival IS NULL OR (actual_departure IS NOT NULL AND actual_arrival >= actual_departure)");
+                t.HasCheckConstraint("ck_driver_trips_duration", "duration_minutes IS NULL OR duration_minutes >= 0");
+            });
+        });
+
+        b.Entity<DriverWorkingStatus>(e =>
+        {
+            e.HasOne(x => x.Driver).WithMany().HasForeignKey(x => x.DriverId).OnDelete(DeleteBehavior.Cascade);
+            e.Property(x => x.Version).IsRowVersion();
+            e.HasIndex(x => x.CurrentStatus);
+            e.ToTable(t => t.HasCheckConstraint("ck_driver_working_statuses_status",
+                "current_status IN ('AVAILABLE', 'ON_DUTY', 'ON_TRIP', 'BREAK', 'OFF_DUTY', 'UNAVAILABLE')"));
+        });
+
+        b.Entity<DriverStatusHistory>(e =>
+        {
+            e.HasOne(x => x.Driver).WithMany().HasForeignKey(x => x.DriverId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.DriverId, x.ChangedAt });
+            e.ToTable(t => t.HasCheckConstraint("ck_driver_status_history_changed_by", "changed_by IN ('driver', 'system', 'admin')"));
         });
     }
 }

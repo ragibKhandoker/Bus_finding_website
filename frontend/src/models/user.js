@@ -35,7 +35,8 @@ export function signupProblem({ name, email, password, confirmPassword, role }) 
   if (password.length < 6) return 'Password must be at least 6 characters.'
   if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) return 'Password must contain at least one letter and one number.'
   if (password !== confirmPassword) return 'Passwords do not match.'
-  if (!['commuter', 'driver'].includes(role)) return 'Role must be commuter or driver.'
+  // Drivers register through the driver registration form (F21), never this one.
+  if (role !== 'commuter') return 'Role must be commuter.'
   return ''
 }
 

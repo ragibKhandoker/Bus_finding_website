@@ -121,3 +121,47 @@ public class ComplaintOptions
     public int MaxImages { get; set; } = 3;
     public string StoragePath { get; set; } = "App_Data/complaint-evidence";
 }
+
+// F21: driver registration documents and the encryption of licence and NID numbers.
+public class DriverVerificationOptions
+{
+    // Largest document image accepted, in bytes.
+    public int MaxImageBytes { get; set; } = 5 * 1024 * 1024;
+
+    // Private folder for document images, relative to the app folder. It must not be inside wwwroot.
+    public string StoragePath { get; set; } = "App_Data/driver-documents";
+
+    // Base64 of 32 random bytes used to encrypt licence and NID numbers (and, derived from it, to hash them for the
+    // duplicate check). Set it in appsettings.Local.json or DriverVerification__EncryptionKey. When it is empty a key
+    // is derived from Jwt:Secret, so keep that secret stable, or set this key, before drivers register: changing
+    // the key later makes the stored numbers unreadable.
+    public string EncryptionKey { get; set; } = "";
+
+    // Bangladesh NIDs are 10 or 17 digits (older cards 13).
+    public string NidPattern { get; set; } = @"^(\d{10}|\d{13}|\d{17})$";
+
+    // Bangladesh licence numbers, e.g. "DK0123456L00001": letters, digits, '-' and '/', 6 to 25 characters.
+    public string LicensePattern { get; set; } = @"^[A-Z0-9][A-Z0-9/-]{4,23}[A-Z0-9]$";
+
+    public int MinimumAge { get; set; } = 18;
+
+    // Applications per client address per 10 minutes.
+    public int RegistrationsPerWindow { get; set; } = 5;
+}
+
+// F22: when a scheduled trip may be started and when it counts as missed.
+public class DriverTripOptions
+{
+    // A trip can be started from this many minutes before its scheduled departure...
+    public int StartWindowMinutesBefore { get; set; } = 30;
+
+    // ...until this many minutes after it. A trip still not started by then is marked MISSED.
+    public int MissedAfterMinutes { get; set; } = 60;
+
+    // The "your duty starts soon" notification is sent this many minutes before departure.
+    public int ReminderMinutesBefore { get; set; } = 30;
+
+    // The background job that marks missed trips and sends reminders.
+    public bool LifecycleEnabled { get; set; } = true;
+    public int LifecycleIntervalSeconds { get; set; } = 60;
+}

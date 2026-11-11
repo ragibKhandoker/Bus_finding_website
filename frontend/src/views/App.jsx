@@ -22,7 +22,7 @@ import { UNAUTHORIZED_EVENT, apiRequest as request, isTokenExpired, tokenExpiry 
 import { formatNumber, getLang, setLang, t } from '../models/i18n'
 import { getTheme, setTheme, syncThemeColor } from '../models/theme'
 import { continueLastSession, endSession, forgetLastSession, loadSession, saveSessionUser, startSession } from '../models/session'
-import { ADMIN_FOCUS_KEY, NAVIGATE_EVENT, PAGE_LOADER_MS, PAGE_LOADER_NAMES, PAGE_PATHS, busPath, currentUrl, historyIndex, pageFromPath, paramFromPath, pushEntry, replaceEntry, ridePath } from '../controllers/router'
+import { ADMIN_FOCUS_KEY, NAVIGATE_EVENT, PAGE_LOADER_MS, PAGE_LOADER_NAMES, PAGE_PATHS, DRIVER_CONSOLE_PAGES, busPath, currentUrl, driverApplicationPath, driverTripPath, historyIndex, pageFromPath, paramFromPath, pushEntry, replaceEntry, ridePath } from '../controllers/router'
 import { ThemeMenu } from './components/common'
 import { BusDetailPage, BusRoutesPage } from './pages/BusRoutesPage'
 import { HomePage } from './pages/HomePage'
@@ -31,6 +31,22 @@ import { TripsPage } from './pages/TripsPage'
 import { WalletPage } from './pages/WalletPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { AdminPage } from './pages/AdminPage'
+import { RegistrationTypeSelectionPage } from './pages/RegistrationTypeSelectionPage'
+import { DriverRegistrationPage } from './pages/DriverRegistrationPage'
+import { DriverVerificationStatusPage } from './pages/DriverVerificationStatusPage'
+import { DriverDashboardPage } from './pages/DriverDashboardPage'
+import { DriverSchedulePage } from './pages/driver/DriverSchedulePage'
+import { DriverTripsPage } from './pages/driver/DriverTripsPage'
+import { DriverTripDetailsPage } from './pages/driver/DriverTripDetailsPage'
+import { DriverTripHistoryPage } from './pages/driver/DriverTripHistoryPage'
+import { DriverUpcomingTripsPage } from './pages/driver/DriverUpcomingTripsPage'
+import { DriverAssignedBusPage } from './pages/driver/DriverAssignedBusPage'
+import { DriverAssignedRoutesPage } from './pages/driver/DriverAssignedRoutesPage'
+import { DriverWorkingStatusPage } from './pages/driver/DriverWorkingStatusPage'
+import { DriverStatisticsPage } from './pages/driver/DriverStatisticsPage'
+import { AdminDriverOperationsPage } from './pages/AdminDriverOperationsPage'
+import { AdminDriverVerificationPage } from './pages/AdminDriverVerificationPage'
+import { AdminDriverApplicationDetailsPage } from './pages/AdminDriverApplicationDetailsPage'
 import { AuthModal } from './components/AuthModal'
 import { Toaster, useToasts } from './components/Toaster'
 import { clearPersistentState } from '../controllers/usePersistentState'
@@ -94,7 +110,8 @@ export function App() {
   // (only for redirects). 'Bus details' also takes the route to show; search adds an address query ("?with=…").
   // Opening the page already shown (e.g. clicking the active tab again) adds no entry.
   const showPage = useCallback((target, { replace = false, route = null, search = '' } = {}) => {
-    const path = target === 'Bus details' && route ? busPath(route) : target === 'Ride details' && route ? ridePath(route) : PAGE_PATHS[target] || '/'
+    const path = target === 'Bus details' && route ? busPath(route) : target === 'Ride details' && route ? ridePath(route)
+      : target === 'Driver application' && route ? driverApplicationPath(route) : target === 'Driver trip' && route ? driverTripPath(route) : PAGE_PATHS[target] || '/'
     const same = search ? currentUrl() === path + search : window.location.pathname === path
     if (!same) {
       if (replace) replaceEntry(path + search, { page: target, scrollY: 0, busView: undefined })
@@ -190,6 +207,7 @@ export function App() {
     if (captureReferralFromUrl() && !token) setAuthMode('signup')
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const isAdmin = signedIn && user.role?.toLowerCase() === 'admin'
+  const isDriver = signedIn && user.role?.toLowerCase() === 'driver'
   const unreadCount = useUnreadCount({ token, user, signedIn })
   const navigate = (target, options) => {
     showPage(target, options)
@@ -217,7 +235,7 @@ export function App() {
     navigate('Admin')
   }
   // A short loading screen each time the page changes (tabs, links, back and forward), then the page fades in.
-  const pageKey = page === 'Bus details' || page === 'Ride details' ? `${page}:${routeNumber}` : page
+  const pageKey = page === 'Bus details' || page === 'Ride details' || page === 'Driver application' || page === 'Driver trip' ? `${page}:${routeNumber}` : page
   const [loadingPage, setLoadingPage] = useState('')
   const shownKey = useRef(pageKey)
   // Scroll motion on every page: cards rise into view, and the header lifts once the page is scrolled.
@@ -227,7 +245,10 @@ export function App() {
   useHeaderShadow(headerRef)
   useEffect(() => {
     if (shownKey.current === pageKey) return
+    const from = shownKey.current.split(':')[0]
     shownKey.current = pageKey
+    // Inside the driver console the pages share one layout and show cached data at once: no loading screen.
+    if (DRIVER_CONSOLE_PAGES.includes(from) && DRIVER_CONSOLE_PAGES.includes(page)) return
     setLoadingPage(page)
     const timer = window.setTimeout(() => setLoadingPage(''), PAGE_LOADER_MS)
     return () => window.clearTimeout(timer)
@@ -248,8 +269,8 @@ export function App() {
             <button key={item} className={page === item || (item === 'Bus routes' && page === 'Bus details') || (item === 'Ride share' && (page === 'Ride details' || page === 'My rides')) ? 'nav-link active' : 'nav-link'} onClick={() => navigate(item)}>{t(item)}</button>
           ))}
           <div className="more-nav-wrap" ref={moreRef}>
-            <button className={['Friends', 'Messages', 'Notifications', 'Offers', 'Lost & found', 'Complaints', 'Crowd reports', 'My crowd reports', 'Map', 'Favourites', 'Wallet', 'GPay', 'Verification', 'Admin'].includes(page) ? 'nav-link active' : 'nav-link'} aria-expanded={moreMenu} onClick={() => setMoreMenu(!moreMenu)}>{t('More')} <ChevronDown size={13} /></button>
-            {moreMenu && <div className="more-nav-menu">{[['Friends','Friends'],['Messages','Messages'],['Notifications','Notifications'],['Offers','Offers & rewards'],['Lost & found','Lost & found'],['Complaints','Complaint & Feedback'],['Crowd reports','Bus crowd & seats'],['Map','Map & fare calculator'],['Favourites','Favourite buses'],['Wallet','My wallet'],['GPay','GPay & recharge'],['Verification','Account verification'], ['Support','Contact admin'], ...(isAdmin ? [['Admin', 'Admin · Users']] : [])].map(([target,label]) => <button key={target} className={page === target || (target === 'Crowd reports' && page === 'My crowd reports') ? 'current' : ''} onClick={() => navigate(target)}>{t(label)}<ArrowRight size={13} /></button>)}</div>}
+            <button className={['Friends', 'Messages', 'Notifications', 'Offers', 'Lost & found', 'Complaints', 'Crowd reports', 'My crowd reports', 'Map', 'Favourites', 'Wallet', 'GPay', 'Verification', 'Admin', 'Driver status', 'Driver verification', 'Driver application', 'Driver operations', ...DRIVER_CONSOLE_PAGES].includes(page) ? 'nav-link active' : 'nav-link'} aria-expanded={moreMenu} onClick={() => setMoreMenu(!moreMenu)}>{t('More')} <ChevronDown size={13} /></button>
+            {moreMenu && <div className="more-nav-menu">{[['Friends','Friends'],['Messages','Messages'],['Notifications','Notifications'],['Offers','Offers & rewards'],['Lost & found','Lost & found'],['Complaints','Complaint & Feedback'],['Crowd reports','Bus crowd & seats'],['Map','Map & fare calculator'],['Favourites','Favourite buses'],['Wallet','My wallet'],['GPay','GPay & recharge'],['Verification','Account verification'], ['Support','Contact admin'], ...(isDriver ? [['Driver dashboard', 'Driver dashboard']] : []), ...(isAdmin ? [['Admin', 'Admin · Users'], ['Driver verification', 'Admin · Driver verification'], ['Driver operations', 'Admin · Driver schedules']] : [])].map(([target,label]) => <button key={target} className={page === target || (target === 'Crowd reports' && page === 'My crowd reports') || (target === 'Driver verification' && page === 'Driver application') || (target === 'Driver dashboard' && (page === 'Driver status' || DRIVER_CONSOLE_PAGES.includes(page))) ? 'current' : ''} onClick={() => navigate(target)}>{t(label)}<ArrowRight size={13} /></button>)}</div>}
           </div>
         </nav>
         <div className="top-actions">
@@ -266,7 +287,10 @@ export function App() {
                 <span>{isAdmin ? t('Admin') : user.name?.split(' ')[0] || t('Account')}</span><ChevronDown size={14} />
               </button>
             </>
-          ) : <button className="button button-dark button-small" onClick={() => setAuthMode('login')}>{t('Sign in')} <ArrowRight size={15} /></button>}
+          ) : <>
+            <button className="button button-outline button-small top-signup" onClick={() => navigate('Register')}>{t('Sign up')}</button>
+            <button className="button button-dark button-small" onClick={() => setAuthMode('login')}>{t('Sign in')} <ArrowRight size={15} /></button>
+          </>}
         </div>
       </header>
 
@@ -295,6 +319,24 @@ export function App() {
         {page === 'GPay' && <GpayPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Verification' && <VerificationPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Admin' && <AdminPage user={user} token={token} signedIn={signedIn} isAdmin={isAdmin} navigate={navigate} openAuth={() => setAuthMode('admin')} notify={notify} />}
+        {page === 'Register' && <RegistrationTypeSelectionPage navigate={navigate} signedIn={signedIn} openCommuterSignup={() => setAuthMode('signup')} openSignIn={() => setAuthMode('login')} />}
+        {page === 'Driver registration' && <DriverRegistrationPage signedIn={signedIn} user={user} navigate={navigate} notify={notify} onRegistered={(nextUser, nextToken) => {
+          startSession(nextToken, nextUser)
+          setToken(nextToken)
+          setUser(nextUser)
+        }} />}
+        {page === 'Driver status' && <DriverVerificationStatusPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} navigate={navigate} notify={notify} />}
+        {DRIVER_CONSOLE_PAGES.includes(page) && (() => {
+          // F22: the driver console. Every page shares the sidebar layout and the verification gate.
+          const driverProps = { token, user, signedIn, openAuth: () => setAuthMode('login'), navigate, notify, signOut: () => signOut() }
+          const Page = { 'Driver dashboard': DriverDashboardPage, 'Driver bus': DriverAssignedBusPage, 'Driver schedule': DriverSchedulePage, 'Driver upcoming': DriverUpcomingTripsPage,
+            'Driver trips': DriverTripsPage, 'Driver trip': DriverTripDetailsPage, 'Driver trip history': DriverTripHistoryPage, 'Driver routes': DriverAssignedRoutesPage,
+            'Driver working status': DriverWorkingStatusPage, 'Driver statistics': DriverStatisticsPage }[page]
+          return <Page key={pageKey} {...driverProps} tripId={routeNumber} />
+        })()}
+        {page === 'Driver operations' && <AdminDriverOperationsPage token={token} signedIn={signedIn} isAdmin={isAdmin} openAuth={() => setAuthMode('admin')} navigate={navigate} notify={notify} />}
+        {page === 'Driver verification' && <AdminDriverVerificationPage token={token} signedIn={signedIn} isAdmin={isAdmin} openAuth={() => setAuthMode('admin')} navigate={navigate} />}
+        {page === 'Driver application' && <AdminDriverApplicationDetailsPage key={routeNumber} driverId={routeNumber} token={token} signedIn={signedIn} isAdmin={isAdmin} openAuth={() => setAuthMode('admin')} navigate={navigate} notify={notify} />}
         {page === 'Support' && <SupportPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} navigate={navigate} />}
       </main>
 
@@ -315,7 +357,8 @@ export function App() {
       </footer>
       <Toaster toasts={toasts} onDismiss={dismissToast} onRemove={removeToast} />
       {isAdmin && <AdminAlert alert={adminAlert} onView={openAdminAlert} onClose={dismissAdminAlert} />}
-      {authMode && <AuthModal mode={authMode} onMode={setAuthMode} onClose={() => setAuthMode('')} onContinue={continueAs} onSuccess={(nextUser, nextToken, { admin = false, password = '' } = {}) => {
+      {authMode && <AuthModal mode={authMode} onMode={setAuthMode} onClose={() => setAuthMode('')} onContinue={continueAs}
+        onRegister={() => { setAuthMode(''); navigate('Register') }} onRegisterDriver={() => { setAuthMode(''); navigate('Driver registration') }} onSuccess={(nextUser, nextToken, { admin = false, password = '' } = {}) => {
         // Signing in here changes only this tab; other tabs keep their own account.
         startSession(nextToken, nextUser)
         setToken(nextToken)
@@ -323,6 +366,8 @@ export function App() {
         setTemporaryPassword(password)
         setAuthMode('')
         if (admin) navigate('Admin')
+        // Drivers land on their dashboard, which shows the verification status until they are approved.
+        else if (nextUser.role?.toLowerCase() === 'driver') navigate('Driver dashboard')
         if (!nextUser.mustChangePassword) notify(nextUser.name ? t('Welcome, {name}!', { name: nextUser.name.split(' ')[0] }) : t('Welcome!'))
       }} />}
       {/* Signed in with a temporary password from an admin: a new password comes before anything else. */}

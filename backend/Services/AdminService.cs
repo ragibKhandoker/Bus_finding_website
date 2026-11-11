@@ -7,7 +7,7 @@ namespace SmartCommute.Server.Services;
 // Counts for the admin dashboard and profile.
 public record AdminOverview(
     int TotalUsers, int Commuters, int Drivers, int Admins, int NewThisWeek,
-    int PendingPasswordRequests, int UnreadMessages, int EmergencyMessages, int PendingVerifications);
+    int PendingPasswordRequests, int UnreadMessages, int EmergencyMessages, int PendingVerifications, int PendingDriverApplications = 0);
 
 // Account management for admins: list users and dashboard counts.
 public class AdminService(AppDbContext db, PasswordResetService passwordResets)
@@ -41,6 +41,9 @@ public class AdminService(AppDbContext db, PasswordResetService passwordResets)
             PendingPasswordRequests: await passwordResets.PendingCountAsync(),
             UnreadMessages: await db.SupportMessages.CountAsync(m => !m.FromAdmin && m.ReadAt == null),
             EmergencyMessages: await db.SupportMessages.CountAsync(m => !m.FromAdmin && m.ReadAt == null && m.IsEmergency),
-            PendingVerifications: await db.Verifications.CountAsync(v => v.Status == VerificationStatus.Hold));
+            PendingVerifications: await db.Verifications.CountAsync(v => v.Status == VerificationStatus.Hold),
+            // F21: driver applications waiting for a decision (pending or under review).
+            PendingDriverApplications: await db.DriverProfiles.CountAsync(p =>
+                p.VerificationStatus == DriverVerificationStatus.Pending || p.VerificationStatus == DriverVerificationStatus.UnderReview));
     }
 }

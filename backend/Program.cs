@@ -60,6 +60,8 @@ builder.Services.Configure<RideShareOptions>(builder.Configuration.GetSection("R
 builder.Services.Configure<VerificationOptions>(builder.Configuration.GetSection("Verification"));
 builder.Services.Configure<BusPhotoOptions>(builder.Configuration.GetSection("BusPhotos"));
 builder.Services.Configure<GoogleMapsOptions>(builder.Configuration.GetSection("GoogleMaps"));
+builder.Services.Configure<DriverVerificationOptions>(builder.Configuration.GetSection("DriverVerification"));
+builder.Services.Configure<DriverTripOptions>(builder.Configuration.GetSection("DriverTrips"));
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -122,7 +124,13 @@ builder.Services
             },
         };
     });
-builder.Services.AddAuthorization();
+// F21: whether a driver is verified (and assigned to a bus) is read from the database, never from the token.
+builder.Services.AddAuthorization(options =>
+{
+    options.AddPolicy(DriverPolicies.Approved, policy => policy.RequireAuthenticatedUser().AddRequirements(new DriverAccessRequirement(false)));
+    options.AddPolicy(DriverPolicies.Assigned, policy => policy.RequireAuthenticatedUser().AddRequirements(new DriverAccessRequirement(true)));
+});
+builder.Services.AddScoped<Microsoft.AspNetCore.Authorization.IAuthorizationHandler, DriverAccessHandler>();
 
 // ---- Rate limiting for endpoints that are easy to abuse (password/PIN guessing, SOS spam) ----
 builder.Services.AddRateLimiter(options =>
@@ -151,6 +159,11 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy("crowd-report", context => RateLimitPartition.GetFixedWindowLimiter(
         context.User.FindFirst("id")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 12, Window = TimeSpan.FromMinutes(1) }));
+    // F21: public driver registration, per client address. Each application carries several document images.
+    var driverOptions = builder.Configuration.GetSection("DriverVerification").Get<DriverVerificationOptions>() ?? new DriverVerificationOptions();
+    options.AddPolicy("driver-register", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = Math.Max(1, driverOptions.RegistrationsPerWindow), Window = TimeSpan.FromMinutes(10) }));
     options.AddPolicy("coupon", context => RateLimitPartition.GetFixedWindowLimiter(
         $"{context.User.FindFirst("id")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous"}|{context.Request.Path}",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1) }));
@@ -249,6 +262,15 @@ builder.Services.AddHostedService<PromotionLifecycleHostedService>();
 builder.Services.AddScoped<StopService>();
 builder.Services.AddScoped<VerificationService>();
 builder.Services.AddScoped<SupportService>();
+// F21: driver registration and verification.
+builder.Services.AddSingleton<SensitiveDataProtector>();
+builder.Services.AddSingleton<IPrivateDocumentStore, LocalPrivateDocumentStore>();
+builder.Services.AddScoped<DriverRegistrationService>();
+builder.Services.AddScoped<DriverVerificationService>();
+// F22: driver duty schedules, trips and working status.
+builder.Services.AddScoped<DriverTripService>();
+builder.Services.AddScoped<DriverScheduleService>();
+builder.Services.AddHostedService<DriverTripLifecycleHostedService>();
 builder.Services.AddSingleton<BusRouteCache>();
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<GoogleRoutesService>(client => client.Timeout = TimeSpan.FromSeconds(10));

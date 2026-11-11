@@ -8,8 +8,9 @@ public static class UserRoles
     public const string Driver = "driver";
     public const string Admin = "admin";
 
-    // Roles a person may pick for themselves at sign-up. Admins are seeded from configuration.
-    public static readonly string[] SelfAssignable = [Commuter, Driver];
+    // Roles a person may pick for themselves at /auth/signup. Driver accounts are only created through the driver
+    // registration form (F21), which needs documents and an admin's approval; admins are seeded from configuration.
+    public static readonly string[] SelfAssignable = [Commuter];
     public static readonly string[] All = [Commuter, Driver, Admin];
 }
 

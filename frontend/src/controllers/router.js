@@ -7,7 +7,18 @@ export const PAGE_PATHS = {
   'Map': '/map', 'Favourites': '/favourites', 'GPay': '/gpay', 'Verification': '/verification', 'Admin': '/admin', 'Support': '/support',
   'My rides': '/ride-share/my', 'Lost & found': '/lost-found', 'Complaints': '/complaints',
   'Crowd reports': '/crowd-reports', 'My crowd reports': '/crowd-reports/my',
+  // F21: choosing the account type, driver registration and verification.
+  'Register': '/register', 'Driver registration': '/driver/register', 'Driver status': '/driver/status', 'Driver dashboard': '/driver/dashboard',
+  'Driver verification': '/admin/driver-verification',
+  // F22: the driver's console and the admin's schedule management.
+  'Driver bus': '/driver/bus', 'Driver schedule': '/driver/schedule', 'Driver upcoming': '/driver/upcoming-trips', 'Driver trips': '/driver/trips',
+  'Driver trip history': '/driver/trip-history', 'Driver routes': '/driver/routes', 'Driver working status': '/driver/working-status',
+  'Driver statistics': '/driver/statistics', 'Driver operations': '/admin/driver-operations',
 }
+
+// The pages of the driver console (F22), all shown inside its sidebar layout.
+export const DRIVER_CONSOLE_PAGES = ['Driver dashboard', 'Driver bus', 'Driver schedule', 'Driver upcoming', 'Driver trips', 'Driver trip', 'Driver trip history',
+  'Driver routes', 'Driver working status', 'Driver statistics']
 
 // Each route also has its own page, e.g. /bus-routes/DBR-12.
 export const busPath = (routeNumber) => `/bus-routes/${encodeURIComponent(routeNumber)}`
@@ -25,12 +36,30 @@ export const rideFromPath = (path) => {
   return match ? match[1].toLowerCase() : null
 }
 
-// The item a detail page shows: a bus route number or a ride id.
-export const paramFromPath = (path) => routeFromPath(path) || rideFromPath(path)
+// Each driver application has its own admin page, e.g. /admin/driver-verification/3f2a…-….
+export const driverApplicationPath = (driverId) => `/admin/driver-verification/${encodeURIComponent(driverId)}`
+
+export const driverApplicationFromPath = (path) => {
+  const match = path.match(/^\/admin\/driver-verification\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i)
+  return match ? match[1].toLowerCase() : null
+}
+
+// Each driver trip has its own page, e.g. /driver/trips/3f2a…-….
+export const driverTripPath = (tripId) => `/driver/trips/${encodeURIComponent(tripId)}`
+
+export const driverTripFromPath = (path) => {
+  const match = path.match(/^\/driver\/trips\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i)
+  return match ? match[1].toLowerCase() : null
+}
+
+// The item a detail page shows: a bus route number, a ride id, a driver id or a driver trip id.
+export const paramFromPath = (path) => routeFromPath(path) || rideFromPath(path) || driverApplicationFromPath(path) || driverTripFromPath(path)
 
 export const pageFromPath = (path) => {
   if (routeFromPath(path)) return 'Bus details'
   if (rideFromPath(path)) return 'Ride details'
+  if (driverApplicationFromPath(path)) return 'Driver application'
+  if (driverTripFromPath(path)) return 'Driver trip'
   const clean = path.replace(/\/+$/, '').toLowerCase() || '/'
   return Object.keys(PAGE_PATHS).find((page) => PAGE_PATHS[page] === clean) || 'Home'
 }
@@ -74,6 +103,11 @@ export const PAGE_LOADER_NAMES = {
   'Bus details': 'Bus routes', 'Ride details': 'Ride share', 'Wallet': 'My wallet', 'Profile': 'Account', 'Offers': 'Offers & rewards', 'Map': 'Map & fare calculator',
   'Favourites': 'Favourite buses', 'GPay': 'GPay & recharge', 'Verification': 'Account verification', 'Admin': 'Admin · Users', 'Support': 'Contact admin', 'Complaints': 'Complaint & Feedback',
   'Crowd reports': 'Bus crowd & seats', 'My crowd reports': 'My crowd reports',
+  'Register': 'Create account', 'Driver registration': 'Driver registration', 'Driver status': 'Driver verification status', 'Driver dashboard': 'Driver dashboard',
+  'Driver verification': 'Driver verification', 'Driver application': 'Driver application',
+  'Driver bus': 'My assigned bus', 'Driver schedule': "Today's schedule", 'Driver upcoming': 'Upcoming trips', 'Driver trips': 'Manage trips', 'Driver trip': 'Trip details',
+  'Driver trip history': 'Trip history', 'Driver routes': 'Assigned routes', 'Driver working status': 'Working status', 'Driver statistics': 'Performance & statistics',
+  'Driver operations': 'Driver schedules & trips',
 }
 
 // Which Admin page section a profile shortcut should scroll to.

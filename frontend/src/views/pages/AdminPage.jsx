@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { ArrowRight, BadgeCheck, BellRing, Check, CircleAlert, Clock3, ClipboardList, Copy, Gift, GraduationCap, History, KeyRound, Lock, Inbox, MessageCircle, Siren, Search, ShieldCheck, UserRound, Users } from 'lucide-react'
+import { ArrowRight, BadgeCheck, BellRing, BusFront, FileCheck2, Check, CircleAlert, Clock3, ClipboardList, Copy, Gift, GraduationCap, History, KeyRound, Lock, Inbox, MessageCircle, Siren, Search, ShieldCheck, UserRound, Users } from 'lucide-react'
 import { AdminSupportInbox, PasswordRequestsCard } from './Support'
 import { AdminPromotions } from './AdminPromotions'
 import { AdminComplaints } from './AdminComplaints'
@@ -38,11 +38,38 @@ export function AdminVerificationCard({ token, navigate, pending: knownPending }
   </section>
 }
 
+// F21: driver applications waiting for a decision, with a link to the Driver Verification Dashboard.
+export function AdminDriverVerificationCard({ navigate, pending }) {
+  const waiting = pending > 0
+  return <section className="pf-panel adm-verify" id="admin-drivers" aria-labelledby="adm-drivers-title">
+    <header className="ad-toolbar">
+      <div><h2 id="adm-drivers-title"><BusFront size={18} /> {t('Driver verification')} {waiting && <span className="ad-count">{formatNumber(pending)}</span>}</h2>
+        <p>{t('Bus drivers register with their driving licence and NID. Review each application before the driver can use driver services.')}</p></div>
+    </header>
+    <div className={`adm-verify-body${waiting ? ' waiting' : ''}`}>
+      <span className="adm-verify-icon">{waiting ? <Clock3 size={26} /> : <Check size={26} />}</span>
+      <div>
+        <b>{pending == null ? t('Driver applications from new drivers.') : waiting ? t('{count} driver applications waiting for review', { count: pending }) : t('No driver applications are waiting')}</b>
+        <ul>
+          <li><FileCheck2 size={15} /> {t('Approve, reject or ask for corrected documents')}</li>
+          <li><BusFront size={15} /> {t('Assign approved drivers to their bus')}</li>
+          <li><Lock size={15} /> {t('Licence and NID documents are private and visible only to admins')}</li>
+        </ul>
+      </div>
+      <span className="ad-buttons">
+        <button type="button" className="button button-green" onClick={() => navigate('Driver verification')}>{t('Open driver verification')} <ArrowRight size={15} /></button>
+        <button type="button" className="button button-outline" onClick={() => navigate('Driver operations')}>{t('Driver schedules & trips')} <ArrowRight size={15} /></button>
+      </span>
+    </div>
+  </section>
+}
+
 // The Admin page's sections, in tab order. focus: the section id a profile shortcut asks for.
 export const ADMIN_TABS = [
   { id: 'requests', focus: 'sp-requests-title', icon: KeyRound, label: 'Password requests' },
   { id: 'inbox', focus: 'sp-inbox-title', icon: Inbox, label: 'Support inbox' },
   { id: 'verifications', focus: 'admin-verifications', icon: BadgeCheck, label: 'Verifications' },
+  { id: 'drivers', focus: 'admin-drivers', icon: BusFront, label: 'Driver verification' },
   { id: 'users', focus: 'admin-users', icon: Users, label: 'Users' },
   { id: 'complaints', focus: 'admin-complaints', icon: ClipboardList, label: 'Complaint Management' },
   { id: 'offers', focus: 'admin-offers', icon: Gift, label: 'Offers & rewards' },
@@ -99,7 +126,7 @@ export function AdminPage({ user, token, signedIn, isAdmin, openAuth, notify, na
   useEffect(() => {
     if (tab || overview.status === 'loading') return
     if (!stats) { setTab('users'); return }
-    setTab(stats.emergencyMessages ? 'inbox' : stats.pendingPasswordRequests ? 'requests' : stats.unreadMessages ? 'inbox' : stats.pendingVerifications ? 'verifications' : 'users')
+    setTab(stats.emergencyMessages ? 'inbox' : stats.pendingPasswordRequests ? 'requests' : stats.unreadMessages ? 'inbox' : stats.pendingVerifications ? 'verifications' : stats.pendingDriverApplications ? 'drivers' : 'users')
   }, [tab, overview.status, stats])
 
   const load = useCallback(async (term) => {
@@ -123,8 +150,8 @@ export function AdminPage({ user, token, signedIn, isAdmin, openAuth, notify, na
   if (!isAdmin) return <div className="page inner-page">{heading}<div className="empty-state panel"><span className="empty-icon"><Lock size={22} /></span><b>{t('Admins only')}</b><span>{t('Your account does not have access to this page.')}</span></div></div>
 
   const number = (value) => stats ? formatNumber(value || 0) : '–'
-  const waiting = stats ? stats.pendingPasswordRequests + stats.unreadMessages + stats.pendingVerifications : 0
-  const counts = { requests: stats?.pendingPasswordRequests, inbox: stats?.unreadMessages, verifications: stats?.pendingVerifications, users: stats?.totalUsers }
+  const waiting = stats ? stats.pendingPasswordRequests + stats.unreadMessages + stats.pendingVerifications + (stats.pendingDriverApplications || 0) : 0
+  const counts = { requests: stats?.pendingPasswordRequests, inbox: stats?.unreadMessages, verifications: stats?.pendingVerifications, drivers: stats?.pendingDriverApplications, users: stats?.totalUsers }
   const kpis = [
     { tab: 'users', icon: Users, label: 'Total users', value: number(stats?.totalUsers), note: stats ? t('{count} new this week', { count: stats.newThisWeek }) : '', tone: 'neutral' },
     { tab: 'requests', icon: KeyRound, label: 'Password requests', value: number(stats?.pendingPasswordRequests), note: t('Waiting for a temporary password'), tone: stats?.pendingPasswordRequests ? 'warn' : 'ok' },
@@ -181,6 +208,7 @@ export function AdminPage({ user, token, signedIn, isAdmin, openAuth, notify, na
         {tab === 'requests' && <PasswordRequestsCard token={token} notify={(message) => { notify(message); loadOverview() }} />}
         {tab === 'inbox' && <AdminSupportInbox token={token} startWith={messageUser} onStarted={() => setMessageUser(null)} />}
         {tab === 'verifications' && <AdminVerificationCard token={token} navigate={navigate} pending={stats?.pendingVerifications} />}
+        {tab === 'drivers' && <AdminDriverVerificationCard navigate={navigate} pending={stats?.pendingDriverApplications} />}
         {tab === 'complaints' && <AdminComplaints token={token} notify={notify} />}
         {tab === 'offers' && <AdminPromotions token={token} notify={notify} />}
         {tab === 'users' && <section className="pf-panel ad-panel" id="admin-users">
