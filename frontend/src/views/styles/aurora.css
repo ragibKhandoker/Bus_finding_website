@@ -1,0 +1,253 @@
+/* ============================================================================================================
+   Aurora — the site-wide visual layer, loaded after every other stylesheet.
+   A palette drawn from Dhaka itself: deep emerald (the flag and the city's parks), teal river water, saffron
+   and coral from rickshaw art. One fixed, softly drifting mesh of light sits behind the whole app with a fine
+   film grain over it, and the content floats on frosted-glass surfaces. Page layouts are untouched: this file
+   only changes surfaces, colour, type and motion, so every page picks it up.
+   ============================================================================================================ */
+
+:root{
+  --au-emerald:#0f9d6b;
+  --au-emerald-deep:#0b6b4b;
+  --au-teal:#0e9fa3;
+  --au-saffron:#f2a93b;
+  --au-coral:#ee6c58;
+  --au-ink:#0d2a21;
+
+  --au-base:#d3eadf;
+  --au-blob-1:rgba(12,150,100,.72);
+  --au-blob-2:rgba(10,150,160,.62);
+  --au-blob-3:rgba(240,160,40,.64);
+  --au-blob-4:rgba(232,96,74,.44);
+  --au-grain-opacity:.07;
+
+  --au-glass:rgba(250,255,252,.6);
+  --au-glass-strong:rgba(252,255,253,.78);
+  --au-popup:#fbfdfc;
+  --au-glass-border:rgba(255,255,255,.7);
+  --au-glass-edge:rgba(13,42,33,.09);
+  --au-glass-shadow:0 1px 0 rgba(255,255,255,.9) inset,0 1px 2px rgba(13,42,33,.06),0 18px 40px -22px rgba(13,62,44,.35);
+  --au-glass-shadow-hover:0 1px 0 rgba(255,255,255,.9) inset,0 2px 4px rgba(13,42,33,.06),0 26px 50px -24px rgba(13,62,44,.45);
+  --au-blur:saturate(165%) blur(18px);
+
+  --au-primary:linear-gradient(135deg,#12a873 0%,#0c8c62 48%,#0b7f76 100%);
+  --au-primary-glow:0 10px 26px -10px rgba(15,157,107,.65),0 0 0 1px rgba(255,255,255,.18) inset;
+  --au-ink-grad:linear-gradient(135deg,#123b2e 0%,#0d2a21 100%);
+  --au-accent-text:linear-gradient(100deg,#0f9d6b 0%,#0e9fa3 45%,#e7962a 100%);
+
+  --font-head:"Bricolage Grotesque","Manrope","DM Sans","Bangla Digits","Hind Siliguri",sans-serif;
+}
+
+html[data-theme="dark"],html[data-theme="night"]{
+  --au-base:#06120e;
+  --au-blob-1:rgba(18,168,115,.38);
+  --au-blob-2:rgba(14,159,163,.30);
+  --au-blob-3:rgba(242,169,59,.17);
+  --au-blob-4:rgba(238,108,88,.15);
+  --au-grain-opacity:.09;
+
+  --au-glass:rgba(17,36,29,.62);
+  --au-glass-strong:rgba(19,40,32,.82);
+  --au-popup:#10201a;
+  --au-glass-border:rgba(255,255,255,.08);
+  --au-glass-edge:rgba(255,255,255,.06);
+  --au-glass-shadow:0 1px 0 rgba(255,255,255,.05) inset,0 1px 2px rgba(0,0,0,.25),0 22px 44px -22px rgba(0,0,0,.7);
+  --au-glass-shadow-hover:0 1px 0 rgba(255,255,255,.07) inset,0 2px 4px rgba(0,0,0,.3),0 28px 54px -24px rgba(0,0,0,.8);
+  --au-ink-grad:linear-gradient(135deg,#1d4a3a 0%,#143428 100%);
+  --au-accent-text:linear-gradient(100deg,#3fd69b 0%,#3cc7cb 50%,#f5b956 100%);
+}
+/* Night is the navy theme: the same light, cooled to river blue and teal. */
+html[data-theme="night"]{
+  --au-base:#050914;
+  --au-blob-1:rgba(14,159,163,.30);
+  --au-blob-2:rgba(46,98,214,.30);
+  --au-blob-3:rgba(242,169,59,.12);
+  --au-blob-4:rgba(15,157,107,.18);
+  --au-glass:rgba(22,28,49,.62);
+  --au-glass-strong:rgba(22,28,49,.84);
+  --au-popup:#12172a;
+  --au-ink-grad:linear-gradient(135deg,#22305a 0%,#161c31 100%);
+}
+
+/* Page-specific cards use the shared white surface colour; letting a little light through it makes every page
+   sit on the same backdrop, not only the surfaces listed below. Opaque enough that text behind never shows. */
+html[data-theme="light"]{--bg-ffffff:rgba(252,255,253,.76)}
+html[data-theme="dark"]{--bg-ffffff:rgba(26,46,38,.80)}
+html[data-theme="night"]{--bg-ffffff:rgba(22,28,49,.82)}
+
+/* ---- The backdrop: base colour, drifting light, film grain ---- */
+html:root:root{background:var(--au-base)}
+body{background:transparent}
+body::before,body::after{content:"";position:fixed;pointer-events:none;z-index:0}
+body::before{
+  inset:-6vmax;
+  background:
+    radial-gradient(46vmax 36vmax at 6% 8%,var(--au-blob-1),transparent 66%),
+    radial-gradient(40vmax 32vmax at 96% 4%,var(--au-blob-2),transparent 64%),
+    radial-gradient(42vmax 32vmax at 92% 96%,var(--au-blob-3),transparent 66%),
+    radial-gradient(36vmax 28vmax at 4% 98%,var(--au-blob-4),transparent 64%),
+    radial-gradient(30vmax 22vmax at 52% 52%,color-mix(in srgb,var(--au-blob-2) 45%,transparent),transparent 70%);
+  filter:blur(8px);
+  animation:au-drift 46s ease-in-out infinite alternate;
+  will-change:transform;
+}
+/* Grain: an SVG noise tile. It breaks up the gradient banding, which is what makes flat CSS gradients look synthetic. */
+body::after{
+  inset:0;
+  opacity:var(--au-grain-opacity);
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode:multiply;
+}
+html[data-theme="dark"] body::after,html[data-theme="night"] body::after{mix-blend-mode:screen}
+@keyframes au-drift{
+  0%{transform:translate3d(0,0,0) rotate(0deg) scale(1)}
+  50%{transform:translate3d(3vmax,-2vmax,0) rotate(6deg) scale(1.05)}
+  100%{transform:translate3d(-2vmax,2.5vmax,0) rotate(-4deg) scale(1.02)}
+}
+.app-shell{position:relative;z-index:1;background:transparent}
+.app-shell>main,.page-view{background:transparent}
+
+/* Sections that painted their own flat background now let the aurora through. */
+.hp-hero{background:transparent!important}
+.hp-steps-section{background:var(--au-glass)!important}
+
+/* ---- Typography ---- */
+:root{letter-spacing:-.005em}
+h1,h2,h3,.brand,.page-heading h1,.hp-hero h1{font-family:var(--font-head)}
+.page-heading h1,.hp-hero h1{font-variation-settings:"opsz" 96;letter-spacing:-.035em}
+.hp-hero h1 span{
+  background:var(--au-accent-text);-webkit-background-clip:text;background-clip:text;color:transparent;
+  padding-bottom:.06em;
+}
+.eyebrow,.dv-eyebrow{letter-spacing:.18em}
+
+/* ---- Header ---- */
+.topbar{
+  background:color-mix(in srgb,var(--au-glass-strong) 82%,transparent)!important;
+  -webkit-backdrop-filter:var(--au-blur);backdrop-filter:var(--au-blur);
+  border-bottom:1px solid var(--au-glass-edge)!important;
+}
+.brand-icon{background:var(--au-primary)!important;color:#fff!important;box-shadow:var(--au-primary-glow)}
+.brand-accent{background:var(--au-accent-text);-webkit-background-clip:text;background-clip:text;color:transparent}
+
+/* ---- Glass surfaces ---- */
+:is(.panel,.dv-panel,.do-panel,.extra-panel,.adm-kpi,.rs-search-form,.hp-hero-stats,.hp-service,.hp-tool,.hp-route,.hp-stats,.hp-steps-section,
+  .hp-badge,.hp-float,.hp-map-tag,.hp-route-search,.suggestion,.do-sidebar){
+  background:var(--au-glass)!important;
+  -webkit-backdrop-filter:var(--au-blur);backdrop-filter:var(--au-blur);
+  border:1px solid var(--au-glass-border)!important;
+  box-shadow:var(--au-glass-shadow)!important;
+}
+html[data-theme="light"] :is(.panel,.dv-panel,.do-panel,.extra-panel,.hp-hero-stats,.hp-service,.hp-tool,.hp-route,.hp-stats,.suggestion){
+  outline:1px solid var(--au-glass-edge);outline-offset:-1px;
+}
+/* Popups float over other content, and a blur inside the glass header cannot see past it: they get an almost
+   solid surface so nothing behind ever shows through their text. */
+/* Each blurred surface is its own layer, so a dropdown inside one would slide under the next card on the page.
+   The card that holds an open dropdown, or the keyboard focus, is lifted above its neighbours (which sit at
+   z-index auto). Keep this small: every modal, drawer and toast in the app is at 20 or above and must stay on top. */
+:is(.panel,.dv-panel,.do-panel,.extra-panel,.rs-search-form,.suggestion,.hp-route-search):is(:focus-within,:has(.bns-menu,.location-list,.rs-suggest,.select-menu-list,.dv-bus-results)){
+  position:relative;z-index:3;
+}
+:is(.more-nav-menu,.select-menu-list,.toast-card,.page-loader-card,.location-list,.theme-menu,.dv-bus-results,.notification-menu,.bns-menu,.rs-suggest,
+  .auth-modal,.ad-dialog,.cp-modal,.cr-modal,.dv-modal,.lf-modal,.rs-dialog){
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+  background:var(--au-popup)!important;border:1px solid var(--au-glass-edge)!important;
+  box-shadow:0 24px 60px -20px rgba(6,30,22,.45),0 2px 6px rgba(6,30,22,.08)!important;
+}
+/* Glass inside glass would blur twice and turn muddy: nested surfaces are simply a lighter tint. */
+:is(.panel,.dv-panel,.do-panel,.extra-panel) :is(.panel,.dv-panel,.do-panel,.suggestion){
+  -webkit-backdrop-filter:none;backdrop-filter:none;background:var(--au-glass-strong)!important;box-shadow:none!important;
+}
+.panel,.dv-panel,.do-panel,.extra-panel{border-radius:18px}
+.modal-backdrop{background:rgba(6,22,16,.42);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px)}
+
+/* Clickable cards lift a little toward the pointer. */
+:is(.bus-result,.ride-card,.hp-route,.hp-tool,.hp-service,.route-bus,.adm-kpi){transition:transform .28s cubic-bezier(.2,.8,.2,1),box-shadow .28s ease}
+@media (hover:hover){
+  :is(.bus-result,.ride-card,.hp-route,.hp-tool,.hp-service,.route-bus,.adm-kpi):hover{transform:translateY(-3px);box-shadow:var(--au-glass-shadow-hover)!important}
+}
+
+/* ---- Buttons ---- */
+.button{border-radius:12px;transition:transform .2s cubic-bezier(.2,.8,.2,1),box-shadow .2s ease,filter .2s ease,background .2s ease}
+.button:active:not(:disabled){transform:translateY(1px) scale(.985)}
+.button-green,.hp-hero-primary{background:var(--au-primary)!important;color:#fff!important;border-color:transparent!important;box-shadow:var(--au-primary-glow)!important}
+.button-dark{background:var(--au-ink-grad)!important;color:#fff!important;box-shadow:0 10px 24px -12px rgba(13,42,33,.7)!important}
+@media (hover:hover){
+  .button-green:hover:not(:disabled),.hp-hero-primary:hover,.button-dark:hover:not(:disabled){transform:translateY(-2px);filter:saturate(1.1) brightness(1.04)}
+  .button-outline:hover:not(:disabled),.hp-hero-secondary:hover{transform:translateY(-2px)}
+}
+.button-outline,.hp-hero-secondary{
+  background:var(--au-glass)!important;-webkit-backdrop-filter:var(--au-blur);backdrop-filter:var(--au-blur);
+  border:1px solid var(--au-glass-edge)!important;
+}
+
+/* ---- Inputs: a soft emerald ring on focus ---- */
+:is(input,select,textarea):focus-visible{outline:none}
+:is(.field,.dv-control,.hp-route-search,.ride-search):focus-within{
+  border-color:color-mix(in srgb,var(--au-emerald) 55%,transparent)!important;
+  box-shadow:0 0 0 4px color-mix(in srgb,var(--au-emerald) 16%,transparent);
+  transition:box-shadow .2s ease,border-color .2s ease;
+}
+
+/* ---- Footer: deep ink with a line of light along the top ---- */
+.site-footer{
+  position:relative;
+  background:radial-gradient(60vw 220px at 50% 0,rgba(15,157,107,.28),transparent 70%),linear-gradient(180deg,#0d2a21 0%,#081b15 100%)!important;
+}
+.site-footer::before{
+  content:"";position:absolute;left:0;right:0;top:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(63,214,155,.7) 30%,rgba(245,185,86,.7) 70%,transparent);
+}
+
+/* The thin brand line at the very top of the page. */
+.topbar::before{background:linear-gradient(90deg,var(--au-emerald),var(--au-teal) 50%,var(--au-saffron))!important}
+
+/* ---- Readability on the busier backdrop ---- */
+::selection{background:color-mix(in srgb,var(--au-saffron) 45%,transparent)}
+
+
+/* ============================================================================================================
+   Edges on the coloured backdrop (light theme). The original borders were pale greys chosen for a white page;
+   over the aurora they vanish and boxes stop reading as boxes. Every pale grey border token becomes a fine
+   green-ink line (stronger for the ones that were already the stronger borders), and small controls get a
+   solid surface so their shape is always clear.
+   ============================================================================================================ */
+html[data-theme="light"]{
+  --au-edge:rgba(13,70,48,.17);
+  --au-edge-strong:rgba(13,70,48,.28);
+  --line:var(--au-edge);
+  --bd-b9cbc0:var(--au-edge-strong);--bd-b9d8c6:var(--au-edge-strong);--bd-bfdcca:var(--au-edge-strong);--bd-bfe3cd:var(--au-edge-strong);--bd-c9d9cf:var(--au-edge-strong);--bd-cdd8d0:var(--au-edge-strong);--bd-cfe0d5:var(--au-edge-strong);--bd-cfe5d8:var(--au-edge-strong);--bd-d4ddd7:var(--au-edge-strong);--bd-d5e2da:var(--au-edge-strong);--bd-d5e6da:var(--au-edge-strong);--bd-d7eadb:var(--au-edge-strong);--bd-d9e2dc:var(--au-edge-strong);--bd-dbe5de:var(--au-edge-strong);
+  --bd-dce8df:var(--au-edge);--bd-dfe8df:var(--au-edge);--bd-e0ece2:var(--au-edge);--bd-e2e9e3:var(--au-edge);--bd-e2e9e4:var(--au-edge);--bd-e4eae6:var(--au-edge);--bd-e4ebe5:var(--au-edge);--bd-e5ebe6:var(--au-edge);--bd-e5ece6:var(--au-edge);--bd-e6ece7:var(--au-edge);--bd-e7ece8:var(--au-edge);--bd-e7ede8:var(--au-edge);--bd-e8ece8:var(--au-edge);--bd-e9ede9:var(--au-edge);--bd-edf0ed:var(--au-edge);--bd-edf1ee:var(--au-edge);--bd-eef0ee:var(--au-edge);--bd-eef1ee:var(--au-edge);--bd-eef2ef:var(--au-edge);
+  --au-glass-edge:rgba(13,70,48,.16);
+}
+/* Header: the link track, and every small control on the right. */
+html[data-theme="light"] .topbar{--nb-border:rgba(13,70,48,.2);--nb-border-strong:rgba(13,70,48,.28);--nb-track:rgba(255,255,255,.62)}
+html[data-theme="light"] .topbar .nav-links{box-shadow:inset 0 1px 2px rgba(13,70,48,.06)}
+html[data-theme="light"] .topbar .nav-link.active{background:#fff}
+html[data-theme="light"] :is(.theme-toggle,.lang-toggle,.icon-button,.top-signup,.notification-bell,.profile-chip,.dv-chip,.do-icon){
+  background:#fff!important;border:1px solid var(--au-edge-strong)!important;
+  box-shadow:0 1px 2px rgba(13,70,48,.08),0 6px 14px -10px rgba(13,70,48,.4);
+}
+html[data-theme="light"] :is(.theme-toggle,.lang-toggle,.icon-button,.top-signup,.notification-bell,.profile-chip,.dv-chip,.do-icon):hover{
+  border-color:color-mix(in srgb,var(--au-emerald) 55%,transparent)!important;
+}
+/* Outline buttons and secondary hero button: solid enough to read as a button, not a ghost. */
+html[data-theme="light"] :is(.button-outline,.hp-hero-secondary){background:rgba(255,255,255,.88)!important;border:1px solid var(--au-edge-strong)!important}
+/* Inputs, pills and tabs inside cards. */
+html[data-theme="light"] :is(.bus-search-form .field,.form-fields>.field,.auth-modal .field,.dv-control,.ride-search,.hp-route-search){background-color:rgba(255,255,255,.9)!important}
+html[data-theme="light"] :is(.suggestion-pills button,.dv-pills label,.chip,.filter-chip,.segmented button.selected){background:#fff;border-color:var(--au-edge-strong)}
+html[data-theme="light"] :is(.panel,.dv-panel,.do-panel,.extra-panel,.hp-hero-stats,.hp-service,.hp-tool,.hp-route,.hp-stats,.suggestion,.rs-search-form){
+  border-color:rgba(255,255,255,.75)!important;outline:1px solid var(--au-edge)!important;outline-offset:-1px;
+}
+
+/* ---- Motion preferences ---- */
+@media (prefers-reduced-motion:reduce){
+  body::before{animation:none}
+  :is(.bus-result,.ride-card,.hp-route,.hp-tool,.hp-service,.route-bus,.adm-kpi,.button):hover{transform:none!important}
+}
+/* Phones: a lighter blur keeps scrolling smooth on modest hardware. */
+@media (max-width:700px){
+  :root{--au-blur:saturate(150%) blur(12px)}
+  body::before{animation-duration:70s}
+}

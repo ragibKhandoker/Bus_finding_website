@@ -59,6 +59,8 @@ import './styles/mobile-polish.css'
 import './styles/navbar.css'
 // Last, so its motion layers on top of every page's own stylesheet.
 import './styles/motion.css'
+// The site-wide look (backdrop, glass surfaces, type, buttons) goes over everything else.
+import './styles/aurora.css'
 
 export function PageLoader({ page }) {
   return (
