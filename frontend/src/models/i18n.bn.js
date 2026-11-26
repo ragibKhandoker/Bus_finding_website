@@ -3051,6 +3051,7 @@ export default {
   'Something went wrong while opening this page. Reload it, or go back to the home page.': 'পেজটি খুলতে গিয়ে সমস্যা হয়েছে। আবার লোড করুন, অথবা হোম পেজে ফিরে যান।',
   'Reload page': 'আবার লোড করুন',
   'Technical details': 'কারিগরি বিবরণ',
+  'Photo': 'ছবি',
   'Go to home': 'হোমে যান',
   'Registration submitted! Please wait until an administrator verifies your account.': 'রেজিস্ট্রেশন জমা হয়েছে! অ্যাডমিন আপনার অ্যাকাউন্ট যাচাই না করা পর্যন্ত অনুগ্রহ করে অপেক্ষা করুন।',
   'Your driver registration has been submitted. Please sign in to follow the review.': 'আপনার ড্রাইভার রেজিস্ট্রেশন জমা হয়েছে। যাচাইয়ের অবস্থা দেখতে সাইন ইন করুন।',

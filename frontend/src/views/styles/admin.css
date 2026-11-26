@@ -125,7 +125,7 @@
 .adm-hero-actions{position:relative;z-index:1;display:flex;gap:10px;flex-wrap:wrap}
 .adm-ghost{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:var(--fg-ffffff)}
 .adm-ghost:hover{background:rgba(255,255,255,.18)}
-.adm-updated{position:absolute;right:32px;bottom:18px;font-size:12px;color:var(--fg-a8d8bf);z-index:1}
+.adm-updated{position:absolute;right:32px;top:18px;font-size:12px;color:var(--fg-a8d8bf);z-index:1}
 @keyframes adm-blink{50%{opacity:.45}}
 
 .adm-kpis{position:relative;z-index:2;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:-34px 18px 22px}
@@ -187,9 +187,10 @@
 @media(max-width:900px){
   .adm-hero{padding:24px 22px 52px;border-radius:18px}
   .adm-hero h1{font-size:28px}
-  .adm-updated{right:22px;bottom:16px}
+  .adm-updated{right:22px;top:14px}
   .adm-kpis{grid-template-columns:repeat(2,minmax(0,1fr));margin:-30px 10px 18px;gap:10px}
-  .adm-tabs{top:72px}
+  /* Sticks under the site header while the section below scrolls; solid so nothing shows through it. */
+  .adm-tabs{position:sticky;top:78px;background:var(--au-popup,var(--bg-ffffff))}
   .adm-tab{flex:none}
 }
 @media(max-width:520px){

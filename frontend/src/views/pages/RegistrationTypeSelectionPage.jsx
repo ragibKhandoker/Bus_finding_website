@@ -1,13 +1,19 @@
 import React from 'react'
 import { ArrowRight, BadgeCheck, BusFront, FileCheck2, Map, Route, ShieldCheck, Ticket, Users, Wallet } from 'lucide-react'
 import { t } from '../../models/i18n'
-import commuterPhoto from '../../assets/home/dhaka-nagar-paribahan-bus.jpg'
-import driverPhoto from '../../assets/home/women-bus-driver.jpg'
+import commuterPhoto from '../../assets/register/commuter-dhaka-bus-passengers.jpg'
+import driverPhoto from '../../assets/register/bus-driver-at-the-wheel.jpg'
 import '../styles/driver.css'
+
+// Real, freely licensed photos from Wikimedia Commons. Their licences require the credit shown on each photo.
+const CREDITS = {
+  commuter: { by: 'Aashaa', license: 'CC BY-SA 4.0', url: 'https://commons.wikimedia.org/wiki/File:Dhaka_local_bus_and_passenger.jpg' },
+  driver: { by: 'Aditya Mopur', license: 'CC BY 2.0', url: 'https://commons.wikimedia.org/wiki/File:APSRTC_Driver_Hyderabad.jpg' },
+}
 
 const OPTIONS = [
   {
-    id: 'commuter', icon: Users, photo: commuterPhoto, eyebrow: 'For passengers', title: 'Register as Commuter',
+    id: 'commuter', icon: Users, photo: commuterPhoto, eyebrow:'For passengers', title: 'Register as Commuter',
     text: 'Join SmartCommute Dhaka to find buses, explore routes, manage trips, and enjoy commuter services.',
     points: [[Route, 'Find buses and routes across Dhaka'], [Ticket, 'Track trips, fares and rewards'], [Wallet, 'Travel wallet and ride sharing']],
     button: 'Register as Commuter', note: 'Takes less than a minute',
@@ -33,7 +39,8 @@ export function RegistrationTypeSelectionPage({ navigate, openCommuterSignup, op
     {signedIn && <div className="dv-alert info" role="status"><ShieldCheck size={18} /><span>{t('You are already signed in. Sign out first to create another account.')}</span></div>}
     <div className="dv-choose-grid">
       {OPTIONS.map(({ id, icon: Icon, photo, eyebrow, title, text, points, button, note }) => <article key={id} className={`dv-choice is-${id}`}>
-        <div className="dv-choice-photo"><img src={photo} alt="" loading="lazy" /><span className="dv-choice-icon"><Icon size={26} /></span></div>
+        <div className="dv-choice-photo"><img src={photo} alt="" loading="lazy" /><span className="dv-choice-icon"><Icon size={26} /></span>
+          <a className="dv-photo-credit" href={CREDITS[id].url} target="_blank" rel="noopener noreferrer">{t('Photo')}: {CREDITS[id].by} · {CREDITS[id].license}</a></div>
         <div className="dv-choice-body">
           <small className="dv-choice-eyebrow">{t(eyebrow)}</small>
           <h2>{t(title)}</h2>

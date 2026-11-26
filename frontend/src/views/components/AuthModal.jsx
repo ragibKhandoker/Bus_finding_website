@@ -85,7 +85,7 @@ const WRONG_ROLE = {
   admin: 'This is an admin account. Choose Admin to sign in.',
 }
 
-export function AuthModal({ mode, onMode, onClose, onSuccess, onContinue, onRegister, onRegisterDriver }) {
+export function AuthModal({ mode, onMode, onClose, onSuccess, onContinue, onRegister }) {
   const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '', gender: 'Prefer not to say', role: 'commuter' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -181,9 +181,6 @@ export function AuthModal({ mode, onMode, onClose, onSuccess, onContinue, onRegi
           <AuthField label={t('Full name')} icon={UserRound}>
             <input autoComplete="name" value={form.name} onChange={set('name')} placeholder={t('e.g. Rahim Ahmed')} />
           </AuthField>
-          {/* This form makes commuter accounts only; drivers register through the driver form with documents (F21). */}
-          {onRegisterDriver && <button type="button" className="auth-waiting" onClick={onRegisterDriver}>
-            <BusFront size={16} /><span>{t('Are you a bus driver? Register as a driver')}</span><ArrowRight size={14} /></button>}
           <div className="auth-row">
             <div className="auth-field">
               <span className="auth-label" id="auth-gender-label">{t('Gender')}</span>

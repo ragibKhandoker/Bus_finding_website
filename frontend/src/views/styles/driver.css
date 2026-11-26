@@ -438,3 +438,7 @@ html[data-theme="dark"] .dv-status-icon,html[data-theme="night"] .dv-status-icon
 
 /* The header's Sign up button (beside Sign in) makes room on small phones. */
 @media(max-width:480px){.top-signup{display:none}}
+
+/* Photo credit on the account-type photos (required by their Creative Commons licences). */
+.dv-photo-credit{position:absolute;right:8px;bottom:6px;z-index:2;font-size:10px;font-weight:600;line-height:1.2;color:rgba(255,255,255,.85);text-decoration:none;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.dv-photo-credit:hover{color:#fff;text-decoration:underline}

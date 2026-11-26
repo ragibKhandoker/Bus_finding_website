@@ -251,3 +251,7 @@ html[data-theme="light"] :is(.panel,.dv-panel,.do-panel,.extra-panel,.hp-hero-st
   :root{--au-blur:saturate(150%) blur(12px)}
   body::before{animation-duration:70s}
 }
+
+/* A form field never stretches its box to match a taller neighbour in the same row (a neighbour with a hint or
+   an error line under it): label and input stay at their natural height, extra space goes below. */
+:is(.pf-field,.rs-field,.auth-field,.ao-field,.fd-field,.location-field,.dv-field,.cp-field,.cr-field,.lf-field){align-content:start}

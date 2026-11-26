@@ -412,7 +412,7 @@ export function App() {
       <Toaster toasts={toasts} onDismiss={dismissToast} onRemove={removeToast} />
       {isAdmin && <AdminAlert alert={adminAlert} onView={openAdminAlert} onClose={dismissAdminAlert} />}
       {authMode && <AuthModal mode={authMode} onMode={setAuthMode} onClose={() => setAuthMode('')} onContinue={continueAs}
-        onRegister={() => { setAuthMode(''); navigate('Register') }} onRegisterDriver={() => { setAuthMode(''); navigate('Driver registration') }} onSuccess={(nextUser, nextToken, { admin = false, password = '' } = {}) => {
+        onRegister={() => { setAuthMode(''); navigate('Register') }} onSuccess={(nextUser, nextToken, { admin = false, password = '' } = {}) => {
         // Signing in here changes only this tab; other tabs keep their own account.
         startSession(nextToken, nextUser)
         setToken(nextToken)
