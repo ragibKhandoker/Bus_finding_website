@@ -183,7 +183,7 @@
 }
 
 /* ---- Language switch (header) ---- */
-.lang-toggle{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 13px;border:1px solid var(--bd-d5e2da);border-radius:999px;background:var(--bg-ffffff);color:var(--fg-14603f);font:700 13.5px "DM Sans","Bangla Digits","Hind Siliguri",sans-serif;transition:background .15s,border-color .15s}
+.lang-toggle{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 13px;border:1px solid var(--bd-d5e2da);border-radius:999px;background:var(--bg-ffffff);color:var(--fg-14603f);font:700 13.5px "Fraunces","Bangla Digits","Hind Siliguri",sans-serif;transition:background .15s,border-color .15s}
 .lang-toggle:hover{background:var(--bg-eef7f1);border-color:var(--bd-a9d3bc)}
 .lang-toggle svg{flex:none}
 .lang-short{display:none}

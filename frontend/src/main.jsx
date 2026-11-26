@@ -8,6 +8,8 @@ import './views/styles/admin.css'
 import './views/styles/polish.css'
 import { App } from './views/App'
 import { PageErrorBoundary } from './views/components/PageErrorBoundary'
+import { NativeControlsEnhancer } from './views/components/NativeControlsEnhancer'
+import { CursorTrail } from './views/components/CursorTrail'
 import './views/styles/driver.css'
 
 // Fade out the splash screen from index.html once the app has drawn. It stays at least a short moment
@@ -27,7 +29,7 @@ function hideSplash() {
 
 // The outer boundary covers the header and footer too, so nothing can leave a blank white screen.
 createRoot(document.getElementById('root')).render(<React.StrictMode>
-  <PageErrorBoundary onHome={() => window.location.assign('/')}><App /></PageErrorBoundary>
+  <PageErrorBoundary onHome={() => window.location.assign('/')}><App /><NativeControlsEnhancer /><CursorTrail /></PageErrorBoundary>
 </React.StrictMode>)
 
 // Start at the top once the app has drawn, in case anything moved the page while it loaded.

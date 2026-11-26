@@ -35,19 +35,21 @@
   --au-ink-grad:linear-gradient(135deg,#123b2e 0%,#0d2a21 100%);
   --au-accent-text:linear-gradient(100deg,#0f9d6b 0%,#0e9fa3 45%,#e7962a 100%);
 
-  --font-head:"Bricolage Grotesque","Manrope","DM Sans","Bangla Digits","Hind Siliguri",sans-serif;
+  --font-head:"Fraunces","Bangla Digits","Hind Siliguri",Georgia,serif;
+  --font-display:"Fraunces","Bangla Digits","Hind Siliguri",Georgia,serif;
+  --font-body:"Fraunces","Bangla Digits","Hind Siliguri",Georgia,serif;
 }
 
 html[data-theme="dark"],html[data-theme="night"]{
-  --au-base:#06120e;
-  --au-blob-1:rgba(18,168,115,.38);
-  --au-blob-2:rgba(14,159,163,.30);
-  --au-blob-3:rgba(242,169,59,.17);
-  --au-blob-4:rgba(238,108,88,.15);
+  --au-base:#132b22;
+  --au-blob-1:rgba(30,180,126,.36);
+  --au-blob-2:rgba(24,168,174,.28);
+  --au-blob-3:rgba(244,168,52,.16);
+  --au-blob-4:rgba(240,104,82,.13);
   --au-grain-opacity:.09;
 
-  --au-glass:rgba(17,36,29,.62);
-  --au-glass-strong:rgba(19,40,32,.82);
+  --au-glass:rgba(31,61,49,.95);
+  --au-glass-strong:rgba(37,70,57,.97);
   --au-popup:#10201a;
   --au-glass-border:rgba(255,255,255,.08);
   --au-glass-edge:rgba(255,255,255,.06);
@@ -58,13 +60,13 @@ html[data-theme="dark"],html[data-theme="night"]{
 }
 /* Night is the navy theme: the same light, cooled to river blue and teal. */
 html[data-theme="night"]{
-  --au-base:#050914;
-  --au-blob-1:rgba(14,159,163,.30);
-  --au-blob-2:rgba(46,98,214,.30);
-  --au-blob-3:rgba(242,169,59,.12);
-  --au-blob-4:rgba(15,157,107,.18);
-  --au-glass:rgba(22,28,49,.62);
-  --au-glass-strong:rgba(22,28,49,.84);
+  --au-base:#131d3a;
+  --au-blob-1:rgba(30,176,182,.28);
+  --au-blob-2:rgba(70,120,236,.30);
+  --au-blob-3:rgba(244,168,52,.12);
+  --au-blob-4:rgba(30,168,114,.16);
+  --au-glass:rgba(33,45,82,.95);
+  --au-glass-strong:rgba(39,52,92,.97);
   --au-popup:#12172a;
   --au-ink-grad:linear-gradient(135deg,#22305a 0%,#161c31 100%);
 }
@@ -72,8 +74,8 @@ html[data-theme="night"]{
 /* Page-specific cards use the shared white surface colour; letting a little light through it makes every page
    sit on the same backdrop, not only the surfaces listed below. Opaque enough that text behind never shows. */
 html[data-theme="light"]{--bg-ffffff:rgba(252,255,253,.72)}
-html[data-theme="dark"]{--bg-ffffff:rgba(26,46,38,.80)}
-html[data-theme="night"]{--bg-ffffff:rgba(22,28,49,.82)}
+html[data-theme="dark"]{--bg-ffffff:rgba(31,61,49,.96)}
+html[data-theme="night"]{--bg-ffffff:rgba(33,45,82,.96)}
 
 /* ---- The backdrop: base colour, drifting light, film grain ---- */
 html:root:root{background:var(--au-base)}
@@ -111,15 +113,32 @@ html[data-theme="dark"] body::after,html[data-theme="night"] body::after{mix-ble
 .hp-hero{background:transparent!important}
 .hp-steps-section{background:var(--au-glass)!important}
 
-/* ---- Typography ---- */
-:root{letter-spacing:-.005em}
-h1,h2,h3,.brand,.page-heading h1,.hp-hero h1{font-family:var(--font-head)}
-.page-heading h1,.hp-hero h1{font-variation-settings:"opsz" 96;letter-spacing:-.035em}
-.hp-hero h1 span{
-  background:var(--au-accent-text);-webkit-background-clip:text;background-clip:text;color:transparent;
-  padding-bottom:.06em;
+/* ---- Typography ----
+   One voice: every English word is set in Fraunces, a soft serif whose optical sizes redraw the letters for
+   each size, so 11px labels stay open and 60px headlines stay sharp. Its italic carries the one highlighted
+   word of a heading. Bangla falls back to Hind Siliguri. */
+:root,body{font-family:var(--font-body)}
+:root{letter-spacing:-.003em;font-feature-settings:"ss01","cv11"}
+main h1,.hp-section-head h2,.hp-cta h2,.dv-choose-head h1{
+  font-family:var(--font-display)!important;font-weight:600!important;
+  font-optical-sizing:auto;font-variation-settings:normal;letter-spacing:-.012em!important;word-spacing:.02em;line-height:1.08!important;
+  text-wrap:balance;
 }
-.eyebrow,.dv-eyebrow{letter-spacing:.18em}
+.hp-hero h1{font-weight:600!important;letter-spacing:-.02em!important}
+/* The highlighted word: italic, in the brand gradient. */
+.hp-hero h1 span{
+  font-style:italic;font-weight:500;
+  background:var(--au-accent-text);-webkit-background-clip:text;background-clip:text;color:transparent;
+  padding:0 .04em .08em 0;
+}
+/* Card and panel titles stay in the sans, heavy and tight, so they read as interface rather than headline. */
+h2,h3,.brand{font-family:var(--font-head)}
+:is(h2,h3):not(.hp-section-head h2):not(.hp-cta h2){letter-spacing:-.018em}
+/* Small caps-style labels above headings. */
+.eyebrow,.dv-eyebrow,.hp-eyebrow,.dv-choice-eyebrow,.adm-eyebrow{letter-spacing:.16em;font-weight:700}
+/* Numbers line up in stats, fares and tables. */
+:is(.adm-kpi,.hp-stats,.hp-hero-stats,.balance-amount,.trip-fare,.bus-result-side,table){font-variant-numeric:tabular-nums}
+p{text-wrap:pretty}
 
 /* ---- Header ---- */
 .topbar{
@@ -317,6 +336,270 @@ html[data-theme="light"]{
 :is(.reveal-pending,.reveal-in),:is(.reveal-pending,.reveal-in) *{
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
 }
+
+
+/* ============================================================================================================
+   Type, role by role. The cues that make an interface read as template-made are the same everywhere: every
+   label a tracked-caps pill, every number in the body face, every link a plain coloured word. Each role here
+   gets its own treatment instead, set the way a print designer would set it.
+   ============================================================================================================ */
+
+/* Labels above headings: no pill, no tint. A short rule leads into the words (an icon takes the rule's place
+   where the label has one), set small and widely spaced. */
+:is(.eyebrow,.dv-eyebrow,.hp-eyebrow,.hp-kicker,.adm-eyebrow,.cp-eyebrow,.cr-eyebrow,.lb-eyebrow,.lf-eyebrow,.of-eyebrow,.rs-eyebrow,.friend-eyebrow,.dv-choice-eyebrow,.trip-panel-kicker){
+  display:inline-flex!important;align-items:center;gap:9px;width:max-content;max-width:100%;
+  padding:0!important;border:0!important;border-radius:0!important;background:none!important;box-shadow:none!important;
+  font-family:var(--font-body)!important;font-size:11px!important;font-weight:650!important;letter-spacing:.17em!important;
+  text-transform:uppercase;line-height:1.3;
+}
+:is(.eyebrow,.dv-eyebrow,.hp-eyebrow,.hp-kicker,.adm-eyebrow,.cp-eyebrow,.cr-eyebrow,.lb-eyebrow,.lf-eyebrow,.of-eyebrow,.rs-eyebrow,.friend-eyebrow,.dv-choice-eyebrow,.trip-panel-kicker):not(:has(svg,.cr-live-dot))::before{
+  content:"";flex:none;width:22px;height:1.5px;border-radius:2px;background:currentColor;opacity:.55;
+}
+html[lang="bn"] :is(.eyebrow,.hp-kicker,.dv-eyebrow,.adm-eyebrow){letter-spacing:.02em!important;text-transform:none}
+
+/* Section titles inside panels and dialogs speak in the display serif too, one step down from the page title. */
+:is(.cp-modal-head,.cp-panel-head,.cr-modal-head,.cr-panel-head,.do-admin-head,.do-live-head,.do-section-title,.dv-modal-head,
+  .extra-panel-title,.fd-section-head,.lf-modal-head,.of-panel-head,.of-section-head,.pf-panel-head,.rs-dialog-head,.rs-panel-head,
+  .rs-results-head,.rs-search-form-head,.wallet-section-head,.results-heading) h2,
+.ride-toolbar h2,.dv-summary h3,.dv-status-hero h1,.auth-modal>h2,.auth-header h2{
+  font-family:var(--font-display)!important;font-weight:600!important;letter-spacing:-.01em!important;font-optical-sizing:auto;
+}
+
+/* Figures that are the point of a card (counts, balances, fares) are set in the serif with lining, even-width
+   digits, so they read like a printed table rather than a form field. */
+:is(.adm-kpi-text b,.balance-amount,.cr-stat b,.do-card-value,.dv-stat b,.fd-stat b,.hp-stat b,.hp-hero-stats b,.lb-hero-stat b,.of-stat b,
+  .bus-result-side>b,.trip-fare,.wallet-ledger-amounts b,.do-dist-value){
+  font-family:var(--font-display)!important;font-weight:600!important;letter-spacing:-.01em!important;
+  font-variant-numeric:lining-nums tabular-nums;
+}
+
+/* The wordmark: "smart" in the sans, "commute" in the serif italic. */
+.brand-accent{font-family:var(--font-display);font-style:italic;font-weight:600;letter-spacing:-.01em;padding-right:.06em}
+.footer-brand{font-family:var(--font-display);font-weight:600;letter-spacing:-.01em}
+
+/* Text links: a fine underline sitting low, in a lighter tint of the link colour, that firms up on hover. */
+:is(.dv-link,.signin-hint button,.auth-switch button,.hp-route-link,.dv-photo-credit,main a:not(.button):not([class*="chip"])){
+  text-decoration:underline;text-decoration-thickness:1.5px;text-underline-offset:.28em;
+  text-decoration-color:color-mix(in srgb,currentColor 35%,transparent);transition:text-decoration-color .2s ease;
+}
+:is(.dv-link,.signin-hint button,.auth-switch button,.hp-route-link,main a:not(.button):not([class*="chip"])):hover{text-decoration-color:currentColor}
+
+/* Emphasis inside running text uses the serif italic, as a book would. */
+main :is(p,li,small) :is(em,i){font-family:var(--font-display);font-style:italic;font-weight:500}
+
+/* Buttons: tight, confident sans; no wide tracking. */
+.button,.nav-link{letter-spacing:-.008em}
+.button{font-weight:650}
+
+/* Footer: column titles become quiet serif italics instead of shouted caps. */
+.site-footer-col b,.site-footer-toggle b{
+  font-family:var(--font-display)!important;font-style:italic;font-weight:500!important;
+  font-size:17px!important;letter-spacing:0!important;text-transform:none!important;
+}
+.site-footer-bottom{letter-spacing:.01em}
+
+/* Body copy: a little more air between lines in longer paragraphs. */
+main p{line-height:1.62}
+
+/* The serif sets a little wider than the old sans: button labels keep to one line, and on narrow phones the
+   hero buttons step down a size so two still fit side by side. */
+.button{white-space:nowrap}
+@media (max-width:420px){
+  :is(.hp-hero-primary,.hp-hero-secondary){font-size:14px!important;padding-left:14px!important;padding-right:14px!important;gap:7px!important}
+}
+
+
+/* ============================================================================================================
+   Dark and night: crisp boxes. The aurora stays vivid around the edges, but every card is a near-solid tinted
+   surface with a clear light edge and a lit top line, so boxes never blend into the colour behind them.
+   ============================================================================================================ */
+html[data-theme="dark"]{--au-edge-d:rgba(110,231,183,.22);--au-edge-d-strong:rgba(110,231,183,.34);--au-glass-edge:rgba(110,231,183,.18)}
+html[data-theme="night"]{--au-edge-d:rgba(125,170,255,.24);--au-edge-d-strong:rgba(125,170,255,.36);--au-glass-edge:rgba(125,170,255,.2)}
+html:is([data-theme="dark"],[data-theme="night"]){--line:var(--au-edge-d)}
+html:is([data-theme="dark"],[data-theme="night"]) :is(.panel,.dv-panel,.do-panel,.extra-panel,.adm-kpi,.rs-search-form,.hp-hero-stats,.hp-service,
+  .hp-tool,.hp-route,.hp-stats,.hp-steps-section,.suggestion,.bus-result,.ride-card,.route-bus,.do-sidebar){
+  border:1px solid var(--au-edge-d)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 0 0 1px rgba(0,0,0,.35),0 20px 40px -22px rgba(0,0,0,.85)!important;
+}
+@media (hover:hover){
+  html:is([data-theme="dark"],[data-theme="night"]) :is(.bus-result,.ride-card,.hp-route,.hp-tool,.hp-service,.route-bus,.adm-kpi):hover{
+    border-color:var(--au-edge-d-strong)!important;
+  }
+}
+/* Inputs and small controls get their own darker well and a visible edge. */
+html:is([data-theme="dark"],[data-theme="night"]) :is(.bus-search-form .field,.form-fields>.field,.auth-modal .field,.dv-control,.ride-search,.hp-route-search,
+  .pf-field input,.pf-field textarea,.pf-field .select-menu-button,.rs-field input,.select-menu-button){
+  background-color:rgba(0,0,0,.28)!important;border-color:var(--au-edge-d)!important;
+}
+html:is([data-theme="dark"],[data-theme="night"]) :is(.theme-toggle,.lang-toggle,.icon-button,.top-signup,.notification-bell,.profile-chip,.button-outline,.hp-hero-secondary){
+  border:1px solid var(--au-edge-d-strong)!important;
+}
+html:is([data-theme="dark"],[data-theme="night"]) .topbar .nav-links{border-color:var(--au-edge-d)!important}
+
+
+/* Light theme footer: a pale frosted band with ink text, so the page stays light from top to bottom. Dark and
+   night keep the deep footer above. */
+html[data-theme="light"] .site-footer{
+  background:radial-gradient(60vw 220px at 50% 0,rgba(15,157,107,.16),transparent 70%),linear-gradient(180deg,rgba(236,248,242,.92) 0%,rgba(222,241,232,.96) 100%)!important;
+  color:#3f5a4e!important;border-top:1px solid rgba(13,70,48,.14);
+}
+html[data-theme="light"] .site-footer :is(.footer-brand,.site-footer-col b,.site-footer-toggle b){color:#0d2a21!important}
+html[data-theme="light"] .site-footer :is(button,p,.site-footer-about p,.site-footer-toggle svg){color:#3f5a4e!important}
+html[data-theme="light"] .site-footer button:hover{color:#0b7f58!important}
+html[data-theme="light"] .site-footer-icon{color:#0f9d6b!important}
+html[data-theme="light"] .site-footer-bottom{color:#5d7469!important;border-top-color:rgba(13,70,48,.14)!important}
+html[data-theme="light"] .site-footer .site-footer-about>button{border-color:rgba(13,70,48,.22)!important;color:#0d2a21!important}
+@media (max-width:700px){html[data-theme="light"] .site-footer .site-footer-about>button{background:#fff!important}}
+html[data-theme="light"] .site-footer-toggle small{color:#5d7469!important}
+
+
+/* ============================================================================================================
+   Night is the blue theme all the way through: the big green blocks (page heroes, the call-to-action card,
+   the footer, primary buttons) turn to deep river blue with a teal glow, so nothing green fights the navy.
+   The small status colours (green ticks, red/amber badges) keep their meaning.
+   ============================================================================================================ */
+html[data-theme="night"]{
+  --au-primary:linear-gradient(135deg,#3b82f6 0%,#2563eb 50%,#0e9fa3 120%);
+  --au-primary-glow:0 10px 26px -10px rgba(59,130,246,.7),0 0 0 1px rgba(255,255,255,.16) inset;
+  --au-accent-text:linear-gradient(100deg,#7cc4ff 0%,#5eead4 55%,#f5b956 110%);
+  --au-night-hero:radial-gradient(110% 140% at 100% 0%,rgba(45,212,191,.28) 0%,transparent 50%),radial-gradient(90% 120% at 0% 100%,rgba(99,102,241,.32) 0%,transparent 55%),linear-gradient(135deg,#172554 0%,#1e3a8a 55%,#1d4ed8 100%);
+}
+html[data-theme="night"] :is(.hp-cta,.adm-hero,.dv-hero,.rs-hero,.lf-hero,.of-hero,.cr-hero,.lb-hero,.pf-cover,.ap-cover,.wallet-card-large,.friends-page .friend-code-card){
+  background:var(--au-night-hero)!important;
+}
+html[data-theme="night"] .site-footer{
+  background:radial-gradient(60vw 220px at 50% 0,rgba(59,130,246,.30),transparent 70%),linear-gradient(180deg,#14204a 0%,#0c1430 100%)!important;
+}
+html[data-theme="night"] .site-footer::before{background:linear-gradient(90deg,transparent,rgba(124,196,255,.75) 30%,rgba(94,234,212,.7) 70%,transparent)!important}
+html[data-theme="night"] :is(.button-green,.hp-hero-primary){background:var(--au-primary)!important;box-shadow:var(--au-primary-glow)!important}
+html[data-theme="night"] :is(.topbar .brand-icon,.brand-icon,.site-footer .brand-icon){background:var(--au-primary)!important;box-shadow:var(--au-primary-glow)}
+html[data-theme="night"] .topbar::before{background:linear-gradient(90deg,#3b82f6,#2dd4bf 50%,#f5b956)!important}
+/* Dark buttons on a blue block (e.g. "Plan a trip") become deep navy, outline buttons a light frosted edge. */
+html[data-theme="night"] :is(.hp-cta,.adm-hero,.dv-hero,.rs-hero) .button-dark{background:#0b1230!important;color:#e4ecff!important}
+html[data-theme="night"] :is(.hp-cta,.adm-hero,.dv-hero,.rs-hero) .button-outline{background:rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.35)!important;color:#fff!important}
+/* Links, active nav item and focus rings follow the blue accent. */
+html[data-theme="night"] :is(.dv-link,main a:not(.button),.signin-hint button,.auth-switch button){color:#8cc8ff}
+html[data-theme="night"] .topbar .nav-link.active{color:#8cc8ff!important}
+html[data-theme="night"] :is(.field,.dv-control,.hp-route-search,.ride-search):focus-within{border-color:rgba(124,196,255,.6)!important;box-shadow:0 0 0 4px rgba(59,130,246,.2)}
+
+
+/* Night: brand-green text, icons and soft chips are re-tinted to the blue family (generated from the green tokens
+   of the night palette, keeping each one's lightness). */
+html[data-theme="night"]{
+  --green:#60a5fa;
+  --bd-19865e:#257ca4;
+  --bd-19865e40:#257ca440;
+  --bd-20875f:#2a7da5;
+  --bd-21865d:#2b7ba4;
+  --bd-25875f:#2d7da5;
+  --bd-5fb48d:#487c9c;
+  --bd-7fc7a3:#426e8d;
+  --bd-88c8a8:#416b8a;
+  --bd-a9c6b5:#40607e;
+  --bd-a9d3bc:#3c5f7e;
+  --bd-b9d8c6:#395978;
+  --bd-bfdcca:#385675;
+  --bd-bfe3cd:#375473;
+  --bd-cfe0d5:#37506d;
+  --bd-cfe5d8:#35506e;
+  --bd-d5e6da:#344d6c;
+  --bd-d7eadb:#344a6b;
+  --bg-126849:#245676;
+  --bg-14674a:#265675;
+  --bg-14805a:#27688a;
+  --bg-19865e:#2b6d90;
+  --bg-19865e0d:#257ca40d;
+  --bg-1b9466:#2d769b;
+  --bg-1fa877:#3086ac;
+  --bg-22a06b:#317ea6;
+  --bg-269260:#33749b;
+  --bg-2bb07d:#378db4;
+  --bg-7fc7a3:#385c7b;
+  --bg-7fd3ad:#365976;
+  --bg-add2b9:#304665;
+  --fg-0f6446:#7ce2ff;
+  --fg-126849:#7bdfff;
+  --fg-14603f:#7fdcff;
+  --fg-14684a:#7bdeff;
+  --fg-14805a:#71dcff;
+  --fg-168357:#70d8ff;
+  --fg-187451:#77d9fd;
+  --fg-18805a:#71d9fd;
+  --fg-18845d:#70d8fd;
+  --fg-19734f:#78d8fc;
+  --fg-19865e:#6fd7fc;
+  --fg-1b7852:#76d6fa;
+  --fg-1f3a2e:#94d7f2;
+  --fg-216647:#7fd3f5;
+  --fg-234535:#8fd4f0;
+  --fg-238259:#73cff4;
+  --fg-247248:#7acdf3;
+  --fg-274638:#8fd2ed;
+  --fg-27845d:#72cdf1;
+  --fg-28734f:#7accf0;
+  --fg-28825b:#73ccf0;
+  --fg-28845d:#72ccf0;
+  --fg-2a4a3b:#8dd0eb;
+  --fg-2b5a45:#86ceec;
+  --fg-2f5d43:#85c9e9;
+  --fg-30805a:#75c6ea;
+  --fg-345345:#8bc9e4;
+  --fg-37805c:#76c2e4;
+  --fg-3f6651:#83c0dd;
+  --fg-3f6f56:#7fbfde;
+  --fg-42815e:#76badc;
+  --fg-438464:#76bbdc;
+  --fg-498064:#78b8d7;
+  --fg-4a8765:#75b6d7;
+  --fg-4b6b5c:#81bbd5;
+  --fg-56896b:#75afce;
+  --fg-579174:#71afce;
+  --fg-58846b:#77afcd;
+  --fg-5e816a:#78acc9;
+  --fg-7fd3ad:#6ccaf1;
+  --fg-81a18b:#6a98b6;
+  --fg-87a494:#6897b3;
+  --fg-a8d8bf:#89d5f6;
+  --fg-c5dfce:#9de0fd;
+  --fg-d6f1df:#a9f2ff;
+}
+html[data-theme="night"] .topbar .profile-chip .avatar{background:var(--au-primary)!important;color:#fff!important}
+
+
+/* ============================================================================================================
+   Header in dark and night: three clear layers. The bar is a solid deep tone, every box on it (link track,
+   theme, language, bell, wallet, profile) is a visibly lighter raised surface with a bright edge, and the text
+   is near-white so each word reads at a glance.
+   ============================================================================================================ */
+html[data-theme="dark"]{--au-hd-bar:#0c1f18;--au-hd-box:#1d3b30;--au-hd-box-hover:#26493c;--au-hd-edge:rgba(134,239,196,.32);--au-hd-ink:#eef7f2;--au-hd-muted:#c6dbd1;--au-hd-active:#2b5546;--au-hd-accent:#7ff0c2}
+html[data-theme="night"]{--au-hd-bar:#0b1430;--au-hd-box:#1f2c55;--au-hd-box-hover:#283868;--au-hd-edge:rgba(147,190,255,.36);--au-hd-ink:#eef3ff;--au-hd-muted:#c9d5f2;--au-hd-active:#2c3f78;--au-hd-accent:#9cd0ff}
+html:is([data-theme="dark"],[data-theme="night"]) .topbar{
+  background:var(--au-hd-bar)!important;-webkit-backdrop-filter:none;backdrop-filter:none;
+  border-bottom:1px solid var(--au-hd-edge)!important;box-shadow:0 10px 30px -18px rgba(0,0,0,.8)!important;
+}
+html:is([data-theme="dark"],[data-theme="night"]) .topbar .nav-links{
+  background:var(--au-hd-box)!important;border:1px solid var(--au-hd-edge)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.06)!important;
+}
+html:is([data-theme="dark"],[data-theme="night"]) .topbar .nav-link{color:var(--au-hd-muted)!important}
+html:is([data-theme="dark"],[data-theme="night"]) .topbar .nav-link:hover{color:var(--au-hd-ink)!important;background:var(--au-hd-box-hover)!important}
+html:is([data-theme="dark"],[data-theme="night"]) .topbar .nav-link.active,
+html:is([data-theme="dark"],[data-theme="night"]) .topbar .more-nav-wrap>.nav-link[aria-expanded="true"]{
+  color:var(--au-hd-accent)!important;background:var(--au-hd-active)!important;box-shadow:inset 0 0 0 1px var(--au-hd-edge),0 4px 12px -6px rgba(0,0,0,.6)!important;
+}
+html:is([data-theme="dark"],[data-theme="night"]) .topbar :is(.theme-toggle,.lang-toggle,.icon-button,.top-signup,.notification-bell,.profile-chip,.mobile-menu){
+  background:var(--au-hd-box)!important;border:1px solid var(--au-hd-edge)!important;color:var(--au-hd-ink)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06),0 4px 12px -8px rgba(0,0,0,.7)!important;
+}
+html:is([data-theme="dark"],[data-theme="night"]) .topbar :is(.theme-toggle,.lang-toggle,.icon-button,.top-signup,.notification-bell,.profile-chip,.mobile-menu):hover{
+  background:var(--au-hd-box-hover)!important;border-color:var(--au-hd-accent)!important;
+}
+html:is([data-theme="dark"],[data-theme="night"]) .topbar :is(.profile-chip b,.profile-chip-text b,.brand>span:last-child){color:var(--au-hd-ink)!important}
+html:is([data-theme="dark"],[data-theme="night"]) .topbar :is(.profile-chip small,.profile-chip-text small,.brand small){color:var(--au-hd-muted)!important}
+html:is([data-theme="dark"],[data-theme="night"]) .topbar :is(.nav-icon,.icon-button svg,.lang-toggle svg,.theme-toggle svg){opacity:1}
+
+/* Body text in dark and night: secondary text one step brighter, so sentences never sink into the background. */
+html:is([data-theme="dark"],[data-theme="night"]){--muted:var(--au-hd-muted)}
+html:is([data-theme="dark"],[data-theme="night"]) main :is(p,small,li){color:color-mix(in srgb,currentColor 82%,var(--au-hd-ink))}
 
 /* ---- Motion preferences ---- */
 @media (prefers-reduced-motion:reduce){

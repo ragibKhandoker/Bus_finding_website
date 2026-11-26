@@ -1,0 +1,75 @@
+/* Designed dropdown lists and calendar (NativeControlsEnhancer), for every <select> and date field in the app. */
+.ncx-panel{
+  --ncx-bg:#fbfdfc;--ncx-ink:#0d2a21;--ncx-muted:#5d7469;--ncx-edge:rgba(13,70,48,.16);--ncx-hover:rgba(15,157,107,.09);
+  --ncx-accent:#0f9d6b;--ncx-accent-ink:#fff;--ncx-accent-soft:rgba(15,157,107,.14);--ncx-weekend:#c2553f;
+  position:fixed;z-index:1000;box-sizing:border-box;
+  background:var(--ncx-bg);color:var(--ncx-ink);border:1px solid var(--ncx-edge);border-radius:14px;
+  box-shadow:0 2px 6px rgba(6,30,22,.08),0 24px 54px -18px rgba(6,30,22,.42);
+  font-family:var(--font-body,inherit);
+  animation:ncx-in .14s cubic-bezier(.2,.8,.2,1);transform-origin:top center;
+}
+.ncx-panel.is-up{transform-origin:bottom center}
+@keyframes ncx-in{from{opacity:0;transform:translateY(-4px) scale(.98)}to{opacity:1;transform:none}}
+html[data-theme="dark"] .ncx-panel{--ncx-bg:#10221b;--ncx-ink:#e6f3ec;--ncx-muted:#9fb8ac;--ncx-edge:rgba(110,231,183,.24);--ncx-hover:rgba(110,231,183,.1);
+  --ncx-accent:#22b07d;--ncx-accent-soft:rgba(63,214,155,.18);--ncx-weekend:#f08a72}
+html[data-theme="night"] .ncx-panel{--ncx-bg:#141c36;--ncx-ink:#e4e9f7;--ncx-muted:#a3aec9;--ncx-edge:rgba(125,170,255,.26);--ncx-hover:rgba(125,170,255,.12);
+  --ncx-accent:#3b82f6;--ncx-accent-soft:rgba(59,130,246,.22);--ncx-weekend:#f08a72}
+html:is([data-theme="dark"],[data-theme="night"]) .ncx-panel{box-shadow:0 2px 6px rgba(0,0,0,.3),0 26px 56px -18px rgba(0,0,0,.8)}
+
+/* ---- List ---- */
+.ncx-list{padding:6px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin}
+.ncx-option{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:38px;padding:8px 12px;border-radius:9px;
+  font-size:14.5px;line-height:1.25;cursor:pointer;user-select:none}
+.ncx-option.is-active{background:var(--ncx-hover)}
+.ncx-option.is-selected{font-weight:650;color:var(--ncx-accent)}
+.ncx-option.is-selected svg{flex:none}
+.ncx-option.is-disabled{opacity:.42;cursor:default}
+
+/* ---- Calendar ---- */
+.ncx-cal{padding:12px 12px 10px;user-select:none}
+.ncx-cal-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 2px 10px}
+.ncx-cal-head b{font-family:var(--font-display,inherit);font-size:16.5px;font-weight:600;letter-spacing:-.01em}
+.ncx-cal-nav{display:grid;place-items:center;width:32px;height:32px;border-radius:9px;border:1px solid var(--ncx-edge);background:transparent;color:var(--ncx-ink);cursor:pointer}
+.ncx-cal-nav:hover:not(:disabled){background:var(--ncx-hover)}
+.ncx-cal-nav:disabled{opacity:.35;cursor:default}
+.ncx-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.ncx-cal-wd{display:grid;place-items:center;height:28px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ncx-muted)}
+.ncx-cal-wd.is-weekend{color:var(--ncx-weekend)}
+.ncx-day{display:grid;place-items:center;aspect-ratio:1;border:0;border-radius:10px;background:transparent;color:var(--ncx-ink);
+  font:inherit;font-size:14px;font-variant-numeric:tabular-nums;cursor:pointer;position:relative;transition:background .12s}
+.ncx-day:hover:not(:disabled){background:var(--ncx-hover)}
+.ncx-day.is-weekend:not(.is-selected){color:var(--ncx-weekend)}
+.ncx-day.is-outside{opacity:.38}
+.ncx-day.is-today:not(.is-selected){box-shadow:inset 0 0 0 1.5px var(--ncx-accent);font-weight:700}
+.ncx-day.is-focus:not(.is-selected){background:var(--ncx-accent-soft)}
+.ncx-day.is-selected{background:var(--ncx-accent);color:var(--ncx-accent-ink);font-weight:700;box-shadow:0 6px 14px -8px var(--ncx-accent)}
+.ncx-day:disabled{opacity:.28;cursor:default}
+.ncx-cal-foot{display:flex;justify-content:space-between;gap:8px;margin-top:8px;padding-top:9px;border-top:1px solid var(--ncx-edge)}
+.ncx-cal-link{border:0;background:none;padding:5px 8px;border-radius:8px;font:inherit;font-size:13.5px;font-weight:650;color:var(--ncx-accent);cursor:pointer}
+.ncx-cal-link:hover:not(:disabled){background:var(--ncx-hover)}
+.ncx-cal-link.muted{color:var(--ncx-muted)}
+.ncx-cal-link:disabled{opacity:.4;cursor:default}
+
+/* ---- The fields themselves ----
+   The browser's calendar button inside date fields becomes a quiet calendar icon in the theme's colour. */
+html.sc-custom-date input[type="date"]{cursor:pointer}
+html.sc-custom-date input[type="date"]::-webkit-calendar-picker-indicator{
+  cursor:pointer;opacity:.75;width:16px;height:16px;padding:2px;border-radius:6px;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230f9d6b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4.5' width='18' height='16.5' rx='3'/%3E%3Cpath d='M16 2.5v4M8 2.5v4M3 10h18'/%3E%3C/svg%3E") center/16px no-repeat;
+}
+html:is([data-theme="dark"],[data-theme="night"]).sc-custom-date input[type="date"]::-webkit-calendar-picker-indicator{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236ee7b7' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='3' y='4.5' width='18' height='16.5' rx='3'/%3E%3Cpath d='M16 2.5v4M8 2.5v4M3 10h18'/%3E%3C/svg%3E");
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover{opacity:1}
+/* A field that already shows its own calendar icon does not need the browser's second one. */
+html.sc-custom-date svg ~ input[type="date"]::-webkit-calendar-picker-indicator{display:none}
+/* The part of the date being typed (day, month or year) is marked in the theme colour, not the system blue. */
+input[type="date"]::-webkit-datetime-edit-day-field:focus,
+input[type="date"]::-webkit-datetime-edit-month-field:focus,
+input[type="date"]::-webkit-datetime-edit-year-field:focus{background-color:rgba(15,157,107,.2)!important;color:inherit!important;border-radius:4px}
+html:is([data-theme="dark"],[data-theme="night"]) input[type="date"]::-webkit-datetime-edit-day-field:focus,
+html:is([data-theme="dark"],[data-theme="night"]) input[type="date"]::-webkit-datetime-edit-month-field:focus,
+html:is([data-theme="dark"],[data-theme="night"]) input[type="date"]::-webkit-datetime-edit-year-field:focus{background-color:rgba(110,231,183,.24)!important}
+/* An open field shows it is open. */
+:is(select,input[type="date"])[aria-expanded="true"]{outline:none;border-color:color-mix(in srgb,#0f9d6b 60%,transparent)!important;box-shadow:0 0 0 4px rgba(15,157,107,.16)!important}
+@media (prefers-reduced-motion:reduce){.ncx-panel{animation:none}}
