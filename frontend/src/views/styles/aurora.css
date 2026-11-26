@@ -14,14 +14,14 @@
   --au-coral:#ee6c58;
   --au-ink:#0d2a21;
 
-  --au-base:#d3eadf;
-  --au-blob-1:rgba(12,150,100,.72);
-  --au-blob-2:rgba(10,150,160,.62);
-  --au-blob-3:rgba(240,160,40,.64);
-  --au-blob-4:rgba(232,96,74,.44);
+  --au-base:#bfe0cf;
+  --au-blob-1:rgba(10,140,92,.86);
+  --au-blob-2:rgba(8,138,152,.76);
+  --au-blob-3:rgba(236,150,28,.76);
+  --au-blob-4:rgba(226,86,64,.56);
   --au-grain-opacity:.07;
 
-  --au-glass:rgba(250,255,252,.6);
+  --au-glass:rgba(250,255,252,.56);
   --au-glass-strong:rgba(252,255,253,.78);
   --au-popup:#fbfdfc;
   --au-glass-border:rgba(255,255,255,.7);
@@ -71,7 +71,7 @@ html[data-theme="night"]{
 
 /* Page-specific cards use the shared white surface colour; letting a little light through it makes every page
    sit on the same backdrop, not only the surfaces listed below. Opaque enough that text behind never shows. */
-html[data-theme="light"]{--bg-ffffff:rgba(252,255,253,.76)}
+html[data-theme="light"]{--bg-ffffff:rgba(252,255,253,.72)}
 html[data-theme="dark"]{--bg-ffffff:rgba(26,46,38,.80)}
 html[data-theme="night"]{--bg-ffffff:rgba(22,28,49,.82)}
 
@@ -239,6 +239,83 @@ html[data-theme="light"] :is(.bus-search-form .field,.form-fields>.field,.auth-m
 html[data-theme="light"] :is(.suggestion-pills button,.dv-pills label,.chip,.filter-chip,.segmented button.selected){background:#fff;border-color:var(--au-edge-strong)}
 html[data-theme="light"] :is(.panel,.dv-panel,.do-panel,.extra-panel,.hp-hero-stats,.hp-service,.hp-tool,.hp-route,.hp-stats,.suggestion,.rs-search-form){
   border-color:rgba(255,255,255,.75)!important;outline:1px solid var(--au-edge)!important;outline-offset:-1px;
+}
+
+
+/* Muted grey text was tuned for a white page; on the deeper backdrop it fades. In light mode every pale grey
+   text colour is pulled a third of the way toward ink, so hints and captions stay comfortably readable. */
+html[data-theme="light"]{
+  --fg-58846b:color-mix(in srgb,#58846b 68%,#0d2a21);
+  --fg-5a7766:color-mix(in srgb,#5a7766 68%,#0d2a21);
+  --fg-5c7766:color-mix(in srgb,#5c7766 68%,#0d2a21);
+  --fg-5e816a:color-mix(in srgb,#5e816a 68%,#0d2a21);
+  --fg-5f7068:color-mix(in srgb,#5f7068 68%,#0d2a21);
+  --fg-63736b:color-mix(in srgb,#63736b 68%,#0d2a21);
+  --fg-647269:color-mix(in srgb,#647269 68%,#0d2a21);
+  --fg-668476:color-mix(in srgb,#668476 68%,#0d2a21);
+  --fg-6b7a71:color-mix(in srgb,#6b7a71 68%,#0d2a21);
+  --fg-6e7c73:color-mix(in srgb,#6e7c73 68%,#0d2a21);
+  --fg-6e7e74:color-mix(in srgb,#6e7e74 68%,#0d2a21);
+  --fg-6f7d75:color-mix(in srgb,#6f7d75 68%,#0d2a21);
+  --fg-6f8178:color-mix(in srgb,#6f8178 68%,#0d2a21);
+  --fg-718078:color-mix(in srgb,#718078 68%,#0d2a21);
+  --fg-738078:color-mix(in srgb,#738078 68%,#0d2a21);
+  --fg-748278:color-mix(in srgb,#748278 68%,#0d2a21);
+  --fg-74847a:color-mix(in srgb,#74847a 68%,#0d2a21);
+  --fg-74867b:color-mix(in srgb,#74867b 68%,#0d2a21);
+  --fg-78847e:color-mix(in srgb,#78847e 68%,#0d2a21);
+  --fg-78867e:color-mix(in srgb,#78867e 68%,#0d2a21);
+  --fg-78877e:color-mix(in srgb,#78877e 68%,#0d2a21);
+  --fg-7b8d84:color-mix(in srgb,#7b8d84 68%,#0d2a21);
+  --fg-7d8982:color-mix(in srgb,#7d8982 68%,#0d2a21);
+  --fg-7d8e85:color-mix(in srgb,#7d8e85 68%,#0d2a21);
+  --fg-7f8d85:color-mix(in srgb,#7f8d85 68%,#0d2a21);
+  --fg-7f958a:color-mix(in srgb,#7f958a 68%,#0d2a21);
+  --fg-818e86:color-mix(in srgb,#818e86 68%,#0d2a21);
+  --fg-81a18b:color-mix(in srgb,#81a18b 68%,#0d2a21);
+  --fg-828e86:color-mix(in srgb,#828e86 68%,#0d2a21);
+  --fg-829087:color-mix(in srgb,#829087 68%,#0d2a21);
+  --fg-839087:color-mix(in srgb,#839087 68%,#0d2a21);
+  --fg-849088:color-mix(in srgb,#849088 68%,#0d2a21);
+  --fg-849089:color-mix(in srgb,#849089 68%,#0d2a21);
+  --fg-87938c:color-mix(in srgb,#87938c 68%,#0d2a21);
+  --fg-87938d:color-mix(in srgb,#87938d 68%,#0d2a21);
+  --fg-87a494:color-mix(in srgb,#87a494 68%,#0d2a21);
+  --fg-88958e:color-mix(in srgb,#88958e 68%,#0d2a21);
+  --fg-89948d:color-mix(in srgb,#89948d 68%,#0d2a21);
+  --fg-8a958e:color-mix(in srgb,#8a958e 68%,#0d2a21);
+  --fg-8a958f:color-mix(in srgb,#8a958f 68%,#0d2a21);
+  --fg-8a9a91:color-mix(in srgb,#8a9a91 68%,#0d2a21);
+  --fg-8b9690:color-mix(in srgb,#8b9690 68%,#0d2a21);
+  --fg-8c9791:color-mix(in srgb,#8c9791 68%,#0d2a21);
+  --fg-8d9991:color-mix(in srgb,#8d9991 68%,#0d2a21);
+  --fg-8e796c:color-mix(in srgb,#8e796c 68%,#0d2a21);
+  --fg-8e817d:color-mix(in srgb,#8e817d 68%,#0d2a21);
+  --fg-909a93:color-mix(in srgb,#909a93 68%,#0d2a21);
+  --fg-929d96:color-mix(in srgb,#929d96 68%,#0d2a21);
+  --fg-98a19c:color-mix(in srgb,#98a19c 68%,#0d2a21);
+  --fg-98a29c:color-mix(in srgb,#98a29c 68%,#0d2a21);
+  --fg-99a29d:color-mix(in srgb,#99a29d 68%,#0d2a21);
+  --fg-9aa69f:color-mix(in srgb,#9aa69f 68%,#0d2a21);
+  --fg-9aaaa1:color-mix(in srgb,#9aaaa1 68%,#0d2a21);
+  --fg-9eaba4:color-mix(in srgb,#9eaba4 68%,#0d2a21);
+  --fg-a3afa7:color-mix(in srgb,#a3afa7 68%,#0d2a21);
+  --fg-a3b2aa:color-mix(in srgb,#a3b2aa 68%,#0d2a21);
+  --fg-a4ada7:color-mix(in srgb,#a4ada7 68%,#0d2a21);
+  --fg-a7b0aa:color-mix(in srgb,#a7b0aa 68%,#0d2a21);
+  --fg-a9bcb2:color-mix(in srgb,#a9bcb2 68%,#0d2a21);
+  --fg-b2cbbb:color-mix(in srgb,#b2cbbb 68%,#0d2a21);
+  --muted:color-mix(in srgb,var(--fg-78847e) 100%,transparent);
+}
+
+
+/* Chrome draws a blurred surface wrongly when it (or a parent) is fading or sliding: the blur shows as a plain
+   square box and the card itself can vanish. Cards that move (scroll reveal, home-page entrance, hover lift)
+   therefore skip the blur. The backdrop behind them is already a soft gradient, so they look the same. */
+:is(.hp-route,.hp-tool,.hp-service,.hp-stats,.hp-hero-stats,.bus-result,.ride-card,.route-bus,.adm-kpi),
+.hp-motion :is(.panel,.hp-steps-section,.suggestion,.hp-badge,.hp-float,.hp-map-tag,.hp-route-search),
+:is(.reveal-pending,.reveal-in),:is(.reveal-pending,.reveal-in) *{
+  -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
 }
 
 /* ---- Motion preferences ---- */
