@@ -601,6 +601,30 @@ html:is([data-theme="dark"],[data-theme="night"]) .topbar :is(.nav-icon,.icon-bu
 html:is([data-theme="dark"],[data-theme="night"]){--muted:var(--au-hd-muted)}
 html:is([data-theme="dark"],[data-theme="night"]) main :is(p,small,li){color:color-mix(in srgb,currentColor 82%,var(--au-hd-ink))}
 
+
+/* Cards that overlap a coloured hero (the ride search form, the admin stat cards) must not share its colour.
+   In dark they become a neutral slate surface, in night a lighter steel blue, each with a bright edge, a lit top
+   line and a deep shadow that lifts them clearly off the hero. */
+html[data-theme="dark"]{--au-over-hero:#26302d;--au-over-edge:rgba(134,239,196,.42)}
+html[data-theme="night"]{--au-over-hero:#28335a;--au-over-edge:rgba(156,200,255,.45)}
+html:is([data-theme="dark"],[data-theme="night"]) :is(.rs-search-form,.adm-kpi,.adm-kpis>*){
+  background:var(--au-over-hero)!important;
+  border:1px solid var(--au-over-edge)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.10),0 -10px 30px -12px rgba(0,0,0,.55),0 24px 44px -20px rgba(0,0,0,.9)!important;
+}
+html:is([data-theme="dark"],[data-theme="night"]) .rs-search-form :is(input,select,.rs-field>div,.ride-search){background-color:rgba(0,0,0,.30)}
+
+
+/* Coloured heroes in dark and night: a bright edge and a deep shadow all round, and in dark a gradient that starts
+   a step lighter, so no corner of a hero melts into the page behind it. */
+html:is([data-theme="dark"],[data-theme="night"]) :is(.hp-cta,.adm-hero,.dv-hero,.rs-hero,.lf-hero,.of-hero,.cr-hero,.cp-hero,.lb-hero,.wallet-card-large){
+  border:1px solid var(--au-over-edge)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 0 0 1px rgba(0,0,0,.35),0 26px 56px -24px rgba(0,0,0,.9)!important;
+}
+html[data-theme="dark"] :is(.hp-cta,.adm-hero,.dv-hero,.rs-hero){
+  background:radial-gradient(110% 140% at 100% 0%,rgba(63,214,155,.30) 0%,transparent 55%),linear-gradient(135deg,#1a5a44 0%,#17694f 55%,#1d7d5c 100%)!important;
+}
+
 /* ---- Motion preferences ---- */
 @media (prefers-reduced-motion:reduce){
   body::before{animation:none}
