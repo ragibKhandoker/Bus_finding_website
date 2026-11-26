@@ -10,8 +10,15 @@ import '../styles/driver.css'
 export function DriverRegistrationPage({ signedIn, user, navigate, onRegistered, notify }) {
   const submit = async (body) => {
     const data = await driverApi.register(body)
+    // The account now exists, so nothing below may surface as a failed submission (a retry would only hit
+    // "email already exists"). Without a sign-in in the reply, send them to sign in instead of a blank page.
+    if (!data?.token || !data?.user) {
+      notify(t('Your driver registration has been submitted. Please sign in to follow the review.'), 'info')
+      navigate('Home')
+      return
+    }
     onRegistered(data.user, data.token)
-    notify(t('Your driver registration has been submitted.'))
+    notify(t('Registration submitted! Please wait until an administrator verifies your account.'))
     navigate('Driver status')
   }
 

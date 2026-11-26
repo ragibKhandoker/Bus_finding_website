@@ -422,3 +422,32 @@ html[data-theme="dark"] .do-sidebar nav button.current svg,html[data-theme="nigh
   .do-td-action .button{width:100%}
 }
 .do-tr .do-trip-badge{white-space:nowrap}
+
+/* ---- F23: Live Bus Location card on the driver dashboard ---- */
+.do-live-card{--c:var(--do-slate);display:grid;gap:14px;border-top:4px solid var(--c)}
+.do-live-card.is-live{--c:var(--dv-green)}
+.do-live-card.is-delayed{--c:#d08f00}
+.do-live-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.do-live-head h2{display:flex;align-items:center;gap:8px;margin:0;font:800 18px var(--font-head);color:var(--ink)}
+.do-live-head h2 svg{color:var(--dv-green)}
+.do-live-head p{margin:3px 0 0;font-size:13px;color:var(--muted)}
+.do-gps{--c:var(--do-slate);display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;border:1px solid color-mix(in srgb,var(--c) 40%,transparent);
+  background:color-mix(in srgb,var(--c) 12%,var(--surface));color:var(--c);font-size:12.5px;font-weight:800;white-space:nowrap}
+.do-gps i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.do-gps.is-live{--c:var(--dv-green)}
+.do-gps.is-live i{animation:do-pulse 1.4s ease-in-out infinite}
+.do-gps.is-delayed{--c:#d08f00}
+.do-live-facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:0}
+.do-live-facts>div{display:grid;gap:3px;padding:10px 12px;border-radius:12px;background:var(--dv-inset);border:1px solid var(--dv-border);min-width:0}
+.do-live-facts dt{display:flex;align-items:center;gap:5px;font-size:11.5px;font-weight:700;color:var(--muted)}
+.do-live-facts dd{margin:0;font-size:13.5px;font-weight:700;color:var(--ink);overflow-wrap:anywhere}
+.do-live-facts small{font-weight:500;color:var(--muted)}
+.do-live-warning{display:flex;align-items:flex-start;gap:8px;margin:0;padding:10px 12px;border-radius:12px;border:1px solid color-mix(in srgb,#d08f00 40%,transparent);background:color-mix(in srgb,#d08f00 9%,var(--surface));font-size:13px;color:var(--ink)}
+.do-live-warning svg{flex:none;margin-top:2px;color:#d08f00}
+.do-live-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.do-live-actions .button{height:44px;min-width:180px}
+.do-live-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border:0;border-radius:999px;background:#e5533d;color:#fff;font-size:11.5px;font-weight:800;letter-spacing:.06em;cursor:pointer}
+.do-live-chip i{width:7px;height:7px;border-radius:50%;background:#fff;animation:do-blink 1.2s ease-in-out infinite}
+@keyframes do-blink{50%{opacity:.3}}
+@media(max-width:960px){.do-live-facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:560px){.do-live-facts{grid-template-columns:1fr 1fr}.do-live-actions .button{flex:1;min-width:0}}

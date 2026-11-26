@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowRight, BadgeCheck, Bell, BusFront, ChevronDown, CircleHelp, ClipboardList, CreditCard, Gift, Heart, House, Languages, LayoutDashboard, LayoutGrid, Map as MapIcon, MessageCircle, Menu, PackageSearch, Route, Search, ShieldCheck, Ticket, UserPlus, Users, Wallet, X } from 'lucide-react'
+import { Radio, ArrowRight, BadgeCheck, Bell, BusFront, ChevronDown, CircleHelp, ClipboardList, CreditCard, Gift, Heart, House, Languages, LayoutDashboard, LayoutGrid, Map as MapIcon, MessageCircle, Menu, PackageSearch, Route, Search, ShieldCheck, Ticket, UserPlus, Users, Wallet, X } from 'lucide-react'
 import { MapPage } from './pages/MorePages'
 import { GpayPage } from './pages/Gpay'
 import { VerificationPage } from './pages/Verification'
@@ -45,11 +45,14 @@ import { DriverAssignedRoutesPage } from './pages/driver/DriverAssignedRoutesPag
 import { DriverWorkingStatusPage } from './pages/driver/DriverWorkingStatusPage'
 import { DriverStatisticsPage } from './pages/driver/DriverStatisticsPage'
 import { AdminDriverOperationsPage } from './pages/AdminDriverOperationsPage'
+import { LiveBusTrackingPage } from './pages/LiveBusTrackingPage'
 import { AdminDriverVerificationPage } from './pages/AdminDriverVerificationPage'
 import { AdminDriverApplicationDetailsPage } from './pages/AdminDriverApplicationDetailsPage'
 import { AuthModal } from './components/AuthModal'
+import { PageErrorBoundary } from './components/PageErrorBoundary'
 import { Toaster, useToasts } from './components/Toaster'
 import { clearPersistentState } from '../controllers/usePersistentState'
+import { stopLiveShare } from '../models/liveLocation'
 import { captureReferralFromUrl } from '../models/promotions'
 import { useHeaderShadow, useRevealOnScroll } from '../controllers/useRevealOnScroll'
 import './styles/mobile-polish.css'
@@ -84,7 +87,7 @@ const NAV_ITEMS = [['Home', House], ['Find a bus', Search], ['Bus routes', Route
 
 // The More menu, in sections. Driver and admin sections appear only for those accounts.
 const MORE_SECTIONS = (isDriver, isAdmin) => [
-  ['Commute', [['Crowd reports', 'Bus crowd & seats', Users], ['Map', 'Map & fare calculator', MapIcon], ['Favourites', 'Favourite buses', Heart]]],
+  ['Commute', [['Live tracking', 'Live bus tracking', Radio], ['Crowd reports', 'Bus crowd & seats', Users], ['Map', 'Map & fare calculator', MapIcon], ['Favourites', 'Favourite buses', Heart]]],
   ['People', [['Friends', 'Friends', UserPlus], ['Messages', 'Messages', MessageCircle], ['Notifications', 'Notifications', Bell]]],
   ['Payments & rewards', [['Wallet', 'My wallet', Wallet], ['GPay', 'GPay & recharge', CreditCard], ['Offers', 'Offers & rewards', Gift]]],
   ['Help', [['Lost & found', 'Lost & found', PackageSearch], ['Complaints', 'Complaint & Feedback', ClipboardList], ['Verification', 'Account verification', BadgeCheck], ['Support', 'Contact admin', CircleHelp]]],
@@ -175,6 +178,8 @@ export function App() {
   // Signs this tab out; other tabs keep their own sign-in. revoke: also end the session on the server, which is
   // skipped when the server already rejected the token, and when this tab only borrowed another tab's session.
   const signOut = useCallback((message = t('You have been signed out.'), { revoke = true } = {}) => {
+    // A driver sharing their location stops when they sign out (sent before the token is dropped).
+    stopLiveShare()
     const { token: current, owned } = endSession()
     // Work kept on pages (searches, drafts, forms) belongs to this account; the next person on this tab starts clean.
     clearPersistentState()
@@ -294,7 +299,7 @@ export function App() {
               <Icon size={16} aria-hidden="true" className="nav-icon" /><span>{t(item)}</span></button>
           })}
           <div className="more-nav-wrap" ref={moreRef}>
-            <button className={['Friends', 'Messages', 'Notifications', 'Offers', 'Lost & found', 'Complaints', 'Crowd reports', 'My crowd reports', 'Map', 'Favourites', 'Wallet', 'GPay', 'Verification', 'Admin', 'Driver status', 'Driver verification', 'Driver application', 'Driver operations', ...DRIVER_CONSOLE_PAGES].includes(page) ? 'nav-link active' : 'nav-link'} aria-expanded={moreMenu} onClick={() => setMoreMenu(!moreMenu)}><LayoutGrid size={16} aria-hidden="true" className="nav-icon" /><span>{t('More')}</span> <ChevronDown size={13} className="nav-chevron" /></button>
+            <button className={['Friends', 'Messages', 'Notifications', 'Offers', 'Lost & found', 'Complaints', 'Crowd reports', 'My crowd reports', 'Map', 'Favourites', 'Wallet', 'GPay', 'Verification', 'Admin', 'Driver status', 'Driver verification', 'Driver application', 'Driver operations', 'Live tracking', ...DRIVER_CONSOLE_PAGES].includes(page) ? 'nav-link active' : 'nav-link'} aria-expanded={moreMenu} onClick={() => setMoreMenu(!moreMenu)}><LayoutGrid size={16} aria-hidden="true" className="nav-icon" /><span>{t('More')}</span> <ChevronDown size={13} className="nav-chevron" /></button>
             {moreMenu && <div className="more-nav-menu">{MORE_SECTIONS(isDriver, isAdmin).map(([heading, items]) => <div key={heading} className="more-nav-section">
               <small className="more-nav-heading">{t(heading)}</small>
               {items.map(([target, label, Icon]) => {
@@ -330,6 +335,7 @@ export function App() {
 
       {loadingPage && <PageLoader page={loadingPage} />}
       <main key={pageKey} ref={mainRef} className={loadingPage ? 'page-view is-loading' : 'page-view'}>
+        <PageErrorBoundary key={pageKey} onHome={() => navigate('Home')}>
         {page === 'Home' && <HomePage user={user} token={token} signedIn={signedIn} navigate={navigate} openAuth={() => setAuthMode('login')} />}
         {page === 'Find a bus' && <BusPage token={token} signedIn={signedIn} user={user} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
         {page === 'Bus routes' && <BusRoutesPage navigate={navigate} />}
@@ -368,10 +374,12 @@ export function App() {
             'Driver working status': DriverWorkingStatusPage, 'Driver statistics': DriverStatisticsPage }[page]
           return <Page key={pageKey} {...driverProps} tripId={routeNumber} />
         })()}
+        {page === 'Live tracking' && <LiveBusTrackingPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} />}
         {page === 'Driver operations' && <AdminDriverOperationsPage token={token} signedIn={signedIn} isAdmin={isAdmin} openAuth={() => setAuthMode('admin')} navigate={navigate} notify={notify} />}
         {page === 'Driver verification' && <AdminDriverVerificationPage token={token} signedIn={signedIn} isAdmin={isAdmin} openAuth={() => setAuthMode('admin')} navigate={navigate} />}
         {page === 'Driver application' && <AdminDriverApplicationDetailsPage key={routeNumber} driverId={routeNumber} token={token} signedIn={signedIn} isAdmin={isAdmin} openAuth={() => setAuthMode('admin')} navigate={navigate} notify={notify} />}
         {page === 'Support' && <SupportPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} navigate={navigate} />}
+        </PageErrorBoundary>
       </main>
 
       <footer className="site-footer">
@@ -383,7 +391,7 @@ export function App() {
           </div>
           {/* On phones each group folds open like an app's settings list; on wider screens all groups are shown. */}
           {[
-            ['Commute', [['Find a bus', 'Find a bus', Search], ['Crowd reports', 'Bus crowd & seats', Users], ['Ride share', 'Ride share', Users], ['Map', 'Map & fare calculator', MapIcon], ['Favourites', 'Favourite buses', Heart], ['My trips', 'My trips', Ticket]]],
+            ['Commute', [['Find a bus', 'Find a bus', Search], ['Live tracking', 'Live bus tracking', Radio], ['Crowd reports', 'Bus crowd & seats', Users], ['Ride share', 'Ride share', Users], ['Map', 'Map & fare calculator', MapIcon], ['Favourites', 'Favourite buses', Heart], ['My trips', 'My trips', Ticket]]],
             ['Payments', [['Wallet', 'Travel wallet', Wallet], ['GPay', 'GPay & recharge', CreditCard], ['Offers', 'Offers & rewards', Gift]]],
             ['Community', [['Complaints', 'Complaint & Feedback', ClipboardList], ['Lost & found', 'Lost & found', PackageSearch], ['Friends', 'Friends', UserPlus], ['Messages', 'Messages', MessageCircle], ['Notifications', 'Notifications', Bell], ['Verification', 'Account verification', BadgeCheck]]],
           ].map(([heading, links]) => {

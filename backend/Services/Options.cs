@@ -165,3 +165,30 @@ public class DriverTripOptions
     public bool LifecycleEnabled { get; set; } = true;
     public int LifecycleIntervalSeconds { get; set; } = 60;
 }
+
+// F23: live bus locations.
+public class LiveLocationOptions
+{
+    // A fix this recent is "live"; up to DelayedSeconds old it is "delayed"; older it is "unavailable" (last known).
+    public int LiveSeconds { get; set; } = 15;
+    public int DelayedSeconds { get; set; } = 60;
+
+    // Buses with no update for this long drop off the active map (they are still shown, as unavailable, when
+    // opened directly while sharing).
+    public int ActiveListMinutes { get; set; } = 10;
+
+    // Updates closer together than this are accepted but not written again.
+    public int MinUpdateIntervalSeconds { get; set; } = 2;
+
+    // Coordinates must fall in this box around Dhaka (the routes are Dhaka-only).
+    public double MinLatitude { get; set; } = 23.55;
+    public double MaxLatitude { get; set; } = 24.10;
+    public double MinLongitude { get; set; } = 90.15;
+    public double MaxLongitude { get; set; } = 90.70;
+
+    // Fixes less precise than this (metres) are refused, so a wildly wrong position is never shown as live.
+    public double MaxAccuracyMeters { get; set; } = 500;
+
+    // How long the shared list of active buses may be reused between commuter requests.
+    public int CacheSeconds { get; set; } = 2;
+}

@@ -4,6 +4,7 @@ import { t } from '../../../../models/i18n'
 import { clock, driverTripApi, minutes, routeText } from '../../../../models/driverTrips'
 import { DvModal } from '../DriverModals'
 import { useDriverArea } from './DriverShell'
+import { endLiveShareLocally } from '../../../../models/liveLocation'
 
 function TripSummary({ trip }) {
   return <dl className="do-confirm-facts">
@@ -51,6 +52,7 @@ export function useTripActions({ token, notify, onDone }) {
     try {
       const res = pending.kind === 'start' ? await driverTripApi.start(pending.trip.id, token) : await driverTripApi.complete(pending.trip.id, token)
       notify(t(res.message))
+      if (pending.kind === 'complete') endLiveShareLocally('Trip completed: live location sharing stopped.')
       setPending(null)
       refreshStatus()
       onDone?.(res.data)

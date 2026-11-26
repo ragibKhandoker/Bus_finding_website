@@ -2297,6 +2297,103 @@ namespace SmartCommute.Server.Data.Migrations
                     b.ToTable("individual_buses", (string)null);
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.LiveLocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<double?>("Accuracy")
+                        .HasColumnType("double precision")
+                        .HasColumnName("accuracy");
+
+                    b.Property<Guid>("BusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bus_id");
+
+                    b.Property<Guid>("DriverId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("driver_id");
+
+                    b.Property<double?>("Heading")
+                        .HasColumnType("double precision")
+                        .HasColumnName("heading");
+
+                    b.Property<Guid?>("IndividualBusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("individual_bus_id");
+
+                    b.Property<bool>("IsSharing")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_sharing");
+
+                    b.Property<DateTime?>("LastUpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_updated_at");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("double precision")
+                        .HasColumnName("latitude");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("double precision")
+                        .HasColumnName("longitude");
+
+                    b.Property<double?>("Speed")
+                        .HasColumnType("double precision")
+                        .HasColumnName("speed");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("started_at");
+
+                    b.Property<string>("StopReason")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("stop_reason");
+
+                    b.Property<DateTime?>("StoppedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("stopped_at");
+
+                    b.Property<Guid>("TripId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trip_id");
+
+                    b.Property<int>("UpdateCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("update_count");
+
+                    b.HasKey("Id")
+                        .HasName("pk_live_locations");
+
+                    b.HasIndex("IndividualBusId")
+                        .HasDatabaseName("ix_live_locations_individual_bus_id");
+
+                    b.HasIndex("TripId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_live_locations_trip_id");
+
+                    b.HasIndex("BusId", "IsSharing")
+                        .HasDatabaseName("ix_live_locations_bus_id_is_sharing");
+
+                    b.HasIndex("DriverId", "IsSharing")
+                        .HasDatabaseName("ix_live_locations_driver_id_is_sharing");
+
+                    b.HasIndex("IsSharing", "LastUpdatedAt")
+                        .HasDatabaseName("ix_live_locations_is_sharing_last_updated_at");
+
+                    b.ToTable("live_locations", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_live_locations_heading", "heading IS NULL OR heading BETWEEN 0 AND 360");
+
+                            t.HasCheckConstraint("ck_live_locations_latitude", "latitude IS NULL OR latitude BETWEEN -90 AND 90");
+
+                            t.HasCheckConstraint("ck_live_locations_longitude", "longitude IS NULL OR longitude BETWEEN -180 AND 180");
+                        });
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.LostFound", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5335,6 +5432,44 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasConstraintName("fk_individual_buses_buses_bus_id");
 
                     b.Navigation("Bus");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.LiveLocation", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.Bus", "Bus")
+                        .WithMany()
+                        .HasForeignKey("BusId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_live_locations_buses_bus_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "Driver")
+                        .WithMany()
+                        .HasForeignKey("DriverId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_live_locations_users_driver_id");
+
+                    b.HasOne("SmartCommute.Server.Models.IndividualBus", "IndividualBus")
+                        .WithMany()
+                        .HasForeignKey("IndividualBusId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_live_locations_individual_buses_individual_bus_id");
+
+                    b.HasOne("SmartCommute.Server.Models.DriverTrip", "Trip")
+                        .WithMany()
+                        .HasForeignKey("TripId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_live_locations_driver_trips_trip_id");
+
+                    b.Navigation("Bus");
+
+                    b.Navigation("Driver");
+
+                    b.Navigation("IndividualBus");
+
+                    b.Navigation("Trip");
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.LostFound", b =>

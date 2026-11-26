@@ -14,6 +14,8 @@ export const PAGE_PATHS = {
   'Driver bus': '/driver/bus', 'Driver schedule': '/driver/schedule', 'Driver upcoming': '/driver/upcoming-trips', 'Driver trips': '/driver/trips',
   'Driver trip history': '/driver/trip-history', 'Driver routes': '/driver/routes', 'Driver working status': '/driver/working-status',
   'Driver statistics': '/driver/statistics', 'Driver operations': '/admin/driver-operations',
+  // F23: commuters following a bus live.
+  'Live tracking': '/live-tracking',
 }
 
 // The pages of the driver console (F22), all shown inside its sidebar layout.
@@ -108,6 +110,7 @@ export const PAGE_LOADER_NAMES = {
   'Driver bus': 'My assigned bus', 'Driver schedule': "Today's schedule", 'Driver upcoming': 'Upcoming trips', 'Driver trips': 'Manage trips', 'Driver trip': 'Trip details',
   'Driver trip history': 'Trip history', 'Driver routes': 'Assigned routes', 'Driver working status': 'Working status', 'Driver statistics': 'Performance & statistics',
   'Driver operations': 'Driver schedules & trips',
+  'Live tracking': 'Live bus tracking',
 }
 
 // Which Admin page section a profile shortcut should scroll to.

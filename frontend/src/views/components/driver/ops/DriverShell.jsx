@@ -7,6 +7,7 @@ import { t } from '../../../../models/i18n'
 import { driverApi } from '../../../../models/driver'
 import { WORK_STATUS_LABELS, fullDay } from '../../../../models/driverTrips'
 import { cached, driverRequests, fetchInto, prefetchDriverConsole } from '../../../../models/driverRequests'
+import { subscribeLiveShare } from '../../../../models/liveLocation'
 import { DriverVerificationStatusPage } from '../../../pages/DriverVerificationStatusPage'
 import { SignInPrompt } from '../../common'
 import { LoadingSkeleton, WorkingStatusPill } from './DriverWidgets'
@@ -93,7 +94,11 @@ export function DriverSidebar({ page, navigate, signOut, open, onClose, driver, 
 }
 
 export function DriverHeader({ driver, token, status, navigate, onMenu, title }) {
-  const first = (driver?.name || '').split(' ')[0]
+  // "Md. Rezaul", not just "Md.": a title before the first name is kept with it.
+  const words = (driver?.name || '').trim().split(/\s+/).filter(Boolean)
+  const first = words.length > 1 && /^(md|mohammad|mohammed|muhammad|mst|mrs?|ms|dr|engr)\.?$/i.test(words[0]) ? `${words[0]} ${words[1]}` : words[0] || ''
+  const [sharing, setSharing] = useState(false)
+  useEffect(() => subscribeLiveShare((s) => setSharing(s.status === 'sharing')), [])
   return <header className="do-header">
     <button type="button" className="do-icon do-menu" onClick={onMenu} aria-label={t('Open menu')}><Menu size={18} /></button>
     {driver && <DriverAvatar token={token} name={driver.name} hasPhoto={driver.hasPhoto} size={52} />}
@@ -101,7 +106,8 @@ export function DriverHeader({ driver, token, status, navigate, onMenu, title })
       <small>{fullDay(new Date().toISOString())}</small>
       <h1>{title || t('Welcome back, {name}!', { name: first || t('driver') })}</h1>
       <span className="do-header-meta"><span className="do-verified"><BadgeCheck size={14} /> {t('Verified Driver')}</span>
-        {status && <WorkingStatusPill status={status} />}</span>
+        {status && <WorkingStatusPill status={status} />}
+        {sharing && <button type="button" className="do-live-chip" onClick={() => navigate('Driver dashboard')} title={t('Your live location is being shared')}><i aria-hidden="true" /> {t('LIVE GPS')}</button>}</span>
     </div>
     <div className="do-header-actions">
       <button type="button" className="do-icon" onClick={() => navigate('Notifications')} aria-label={t('Notifications')}><Bell size={17} /></button>

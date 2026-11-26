@@ -370,6 +370,9 @@ public class DriverTripService(AppDbContext db, NotificationService notification
             var more = await db.DriverTrips.AnyAsync(t => t.DriverId == driverId && t.Id != trip.Id && t.Status == DriverTripStatus.Scheduled && t.ScheduleDate == today);
             await ChangeStatusAsync(driverId, more ? DriverWorkStatus.OnDuty : DriverWorkStatus.Available,
                 $"Completed trip {trip.TripNumber} ({trip.Code}).", "system", now, trip.Id);
+            // F23: the trip is over, so its live location sharing ends with it (in this same transaction).
+            await db.LiveLocations.Where(l => l.TripId == trip.Id && l.IsSharing).ExecuteUpdateAsync(u => u
+                .SetProperty(l => l.IsSharing, false).SetProperty(l => l.StoppedAt, now).SetProperty(l => l.StopReason, "trip-completed"));
             notifications.Notify(driverId, "Trip completed successfully!",
                 $"Trip {trip.TripNumber} on {trip.Bus?.BusName} ({trip.StartStop} → {trip.EndStop}) took {trip.DurationMinutes} minutes.",
                 NotificationTypes.Success, $"/driver/trips/{trip.Id}", NotificationCategories.Account, null, trip.Id);

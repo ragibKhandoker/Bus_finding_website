@@ -152,6 +152,10 @@ public class DriverRegistrationService(
             db.DriverProfiles.Add(profile);
             await NotifyAdminsAsync("New driver application",
                 $"{user.Name} applied to drive with SmartCommute ({profile.ApplicationCode}). Review their documents.", user.Id, profile.Id);
+            // The driver's own confirmation, waiting in their notifications when they land on the status page.
+            notifications.Notify(user.Id, "Application submitted",
+                $"Your driver application {profile.ApplicationCode} has been received. Please wait until an administrator verifies your documents. We will notify you of the decision.",
+                NotificationTypes.Info, "/driver/status", NotificationCategories.Account, user.Id, profile.Id);
 
             for (var attempt = 1; ; attempt++)
             {

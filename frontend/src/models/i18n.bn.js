@@ -3046,4 +3046,15 @@ export default {
   'Preview': 'প্রিভিউ',
   'Other commuters will see': 'অন্য যাত্রীরা দেখবেন',
   'Choose a bus': 'একটি বাস বেছে নিন',
+  // Page error screen and driver registration confirmation.
+  'This page could not be shown': 'পেজটি দেখানো যায়নি',
+  'Something went wrong while opening this page. Reload it, or go back to the home page.': 'পেজটি খুলতে গিয়ে সমস্যা হয়েছে। আবার লোড করুন, অথবা হোম পেজে ফিরে যান।',
+  'Reload page': 'আবার লোড করুন',
+  'Technical details': 'কারিগরি বিবরণ',
+  'Go to home': 'হোমে যান',
+  'Registration submitted! Please wait until an administrator verifies your account.': 'রেজিস্ট্রেশন জমা হয়েছে! অ্যাডমিন আপনার অ্যাকাউন্ট যাচাই না করা পর্যন্ত অনুগ্রহ করে অপেক্ষা করুন।',
+  'Your driver registration has been submitted. Please sign in to follow the review.': 'আপনার ড্রাইভার রেজিস্ট্রেশন জমা হয়েছে। যাচাইয়ের অবস্থা দেখতে সাইন ইন করুন।',
+  'Your driver registration has been submitted successfully. Our administration team is reviewing your documents. Please wait until an administrator verifies your account.': 'আপনার ড্রাইভার রেজিস্ট্রেশন সফলভাবে জমা হয়েছে। আমাদের অ্যাডমিন টিম আপনার কাগজপত্র যাচাই করছে। অ্যাডমিন আপনার অ্যাকাউন্ট যাচাই না করা পর্যন্ত অনুগ্রহ করে অপেক্ষা করুন।',
+  'Please wait for admin verification': 'অ্যাডমিনের যাচাইয়ের জন্য অপেক্ষা করুন',
+  'Your driver dashboard opens once an administrator approves your application. You will get a notification as soon as they decide — you can close this page meanwhile.': 'অ্যাডমিন আপনার আবেদন অনুমোদন করলেই ড্রাইভার ড্যাশবোর্ড খুলবে। সিদ্ধান্ত হওয়ামাত্র আপনি নোটিফিকেশন পাবেন — এর মধ্যে এই পেজটি বন্ধ করতে পারেন।',
 }

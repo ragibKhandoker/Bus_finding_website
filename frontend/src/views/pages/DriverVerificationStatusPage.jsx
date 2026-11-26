@@ -11,7 +11,7 @@ import { SignInPrompt } from '../components/common'
 import '../styles/driver.css'
 
 const VIEW = {
-  PENDING: { icon: Clock3, tone: 'amber', title: 'Application submitted', message: 'Your driver registration has been submitted successfully. Our administration team is reviewing your documents.' },
+  PENDING: { icon: Clock3, tone: 'amber', title: 'Application submitted', message: 'Your driver registration has been submitted successfully. Our administration team is reviewing your documents. Please wait until an administrator verifies your account.' },
   UNDER_REVIEW: { icon: Search, tone: 'blue', title: 'Under review', message: 'Your documents are currently being reviewed.' },
   REJECTED: { icon: CircleX, tone: 'red', title: 'Not approved', message: 'Unfortunately, your application was not approved.' },
   RESUBMISSION_REQUIRED: { icon: FileWarning, tone: 'orange', title: 'Action needed', message: 'Some information or documents need correction.' },
@@ -83,7 +83,12 @@ export function DriverVerificationStatusPage({ token, user, signedIn, openAuth, 
       </div>
     </div>
 
-    {s.verificationStatus === 'REJECTED' && s.rejectionReason && <div className="dv-reason danger"><b>{t('Reason from the administrator')}</b><p>{s.rejectionReason}</p></div>}
+    {(s.verificationStatus === 'PENDING' || s.verificationStatus === 'UNDER_REVIEW') && <div className="dv-reason warn" role="status">
+      <b><Clock3 size={15} aria-hidden="true" /> {t('Please wait for admin verification')}</b>
+      <p>{t('Your driver dashboard opens once an administrator approves your application. You will get a notification as soon as they decide — you can close this page meanwhile.')}</p>
+    </div>}
+
+    {s.verificationStatus === 'REJECTED' && s.rejectionReason &&<div className="dv-reason danger"><b>{t('Reason from the administrator')}</b><p>{s.rejectionReason}</p></div>}
 
     {s.verificationStatus === 'RESUBMISSION_REQUIRED' && <ResubmissionForm token={token} status={s} notify={notify} onDone={load} />}
 

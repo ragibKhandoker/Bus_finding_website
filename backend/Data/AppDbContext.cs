@@ -73,6 +73,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<DriverTrip> DriverTrips => Set<DriverTrip>();
     public DbSet<DriverWorkingStatus> DriverWorkingStatuses => Set<DriverWorkingStatus>();
     public DbSet<DriverStatusHistory> DriverStatusHistory => Set<DriverStatusHistory>();
+    public DbSet<LiveLocation> LiveLocations => Set<LiveLocation>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -784,6 +785,26 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(x => x.CurrentStatus);
             e.ToTable(t => t.HasCheckConstraint("ck_driver_working_statuses_status",
                 "current_status IN ('AVAILABLE', 'ON_DUTY', 'ON_TRIP', 'BREAK', 'OFF_DUTY', 'UNAVAILABLE')"));
+        });
+
+        // F23: one live-location row per trip, updated in place.
+        b.Entity<LiveLocation>(e =>
+        {
+            e.HasOne(x => x.Driver).WithMany().HasForeignKey(x => x.DriverId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Trip).WithMany().HasForeignKey(x => x.TripId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Bus).WithMany().HasForeignKey(x => x.BusId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.IndividualBus).WithMany().HasForeignKey(x => x.IndividualBusId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(x => x.TripId).IsUnique();
+            e.HasIndex(x => new { x.DriverId, x.IsSharing });
+            e.HasIndex(x => new { x.BusId, x.IsSharing });
+            e.HasIndex(x => x.IndividualBusId);
+            e.HasIndex(x => new { x.IsSharing, x.LastUpdatedAt });
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_live_locations_latitude", "latitude IS NULL OR latitude BETWEEN -90 AND 90");
+                t.HasCheckConstraint("ck_live_locations_longitude", "longitude IS NULL OR longitude BETWEEN -180 AND 180");
+                t.HasCheckConstraint("ck_live_locations_heading", "heading IS NULL OR heading BETWEEN 0 AND 360");
+            });
         });
 
         b.Entity<DriverStatusHistory>(e =>

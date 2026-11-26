@@ -7,6 +7,7 @@ import {
   AssignedBusCard, DashboardSummaryCard, ErrorBanner, LoadingSkeleton, SectionTitle, TodayScheduleTimeline, TripStatusBadge, UpcomingTripCard, WorkingStatusPill,
 } from '../components/driver/ops/DriverWidgets'
 import { useTripActions } from '../components/driver/ops/TripActionModals'
+import { LiveLocationCard } from '../components/driver/ops/LiveLocationCard'
 import { driverRequests } from '../../models/driverRequests'
 import { useDriverData } from './driver/useDriverData'
 
@@ -35,6 +36,8 @@ function DashboardBody({ token, navigate, notify }) {
         <span>{t('Started {time}', { time: clock(d.activeTrip.actualDeparture) })} · {t('expected arrival {time}', { time: clock(d.activeTrip.scheduledArrival) })}</span></div>
       <button type="button" className="button do-button-amber" onClick={() => actions.onComplete(d.activeTrip)}><Flag size={16} /> {t('Complete Trip')}</button>
     </section>}
+
+    <LiveLocationCard token={token} notify={notify} refreshKey={d.activeTrip?.id || 'none'} />
 
     <div className="do-cards">
       <DashboardSummaryCard icon={BusFront} label="Assigned Bus" action={main ? 'View Bus Details' : undefined} onAction={() => navigate('Driver bus')}>

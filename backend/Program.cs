@@ -62,6 +62,7 @@ builder.Services.Configure<BusPhotoOptions>(builder.Configuration.GetSection("Bu
 builder.Services.Configure<GoogleMapsOptions>(builder.Configuration.GetSection("GoogleMaps"));
 builder.Services.Configure<DriverVerificationOptions>(builder.Configuration.GetSection("DriverVerification"));
 builder.Services.Configure<DriverTripOptions>(builder.Configuration.GetSection("DriverTrips"));
+builder.Services.Configure<LiveLocationOptions>(builder.Configuration.GetSection("LiveLocation"));
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -164,6 +165,10 @@ builder.Services.AddRateLimiter(options =>
     options.AddPolicy("driver-register", context => RateLimitPartition.GetFixedWindowLimiter(
         context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = Math.Max(1, driverOptions.RegistrationsPerWindow), Window = TimeSpan.FromMinutes(10) }));
+    // F23: a driver's GPS updates. A phone sends one every few seconds; this leaves room for retries, no more.
+    options.AddPolicy("live-location", context => RateLimitPartition.GetFixedWindowLimiter(
+        context.User.FindFirst("id")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous",
+        _ => new FixedWindowRateLimiterOptions { PermitLimit = 40, Window = TimeSpan.FromMinutes(1) }));
     options.AddPolicy("coupon", context => RateLimitPartition.GetFixedWindowLimiter(
         $"{context.User.FindFirst("id")?.Value ?? context.Connection.RemoteIpAddress?.ToString() ?? "anonymous"}|{context.Request.Path}",
         _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1) }));
@@ -271,6 +276,8 @@ builder.Services.AddScoped<DriverVerificationService>();
 builder.Services.AddScoped<DriverTripService>();
 builder.Services.AddScoped<DriverScheduleService>();
 builder.Services.AddHostedService<DriverTripLifecycleHostedService>();
+// F23: live bus locations.
+builder.Services.AddScoped<LiveLocationService>();
 builder.Services.AddSingleton<BusRouteCache>();
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<GoogleRoutesService>(client => client.Timeout = TimeSpan.FromSeconds(10));
