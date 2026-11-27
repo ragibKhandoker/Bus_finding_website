@@ -55,6 +55,7 @@ builder.Services.Configure<RewardOptions>(builder.Configuration.GetSection("Rewa
 builder.Services.Configure<PromotionOptions>(builder.Configuration.GetSection("Promotions"));
 builder.Services.Configure<LostFoundOptions>(builder.Configuration.GetSection("LostFound"));
 builder.Services.Configure<ComplaintOptions>(builder.Configuration.GetSection("Complaints"));
+builder.Services.Configure<RouteSuggestionOptions>(builder.Configuration.GetSection("RouteSuggestions"));
 builder.Services.Configure<GeoOptions>(builder.Configuration.GetSection("Geo"));
 builder.Services.Configure<RideShareOptions>(builder.Configuration.GetSection("RideShare"));
 builder.Services.Configure<VerificationOptions>(builder.Configuration.GetSection("Verification"));
@@ -242,6 +243,7 @@ builder.Services.AddScoped<LostFoundService>();
 builder.Services.AddScoped<LostFoundChatService>();
 builder.Services.AddScoped<ComplaintService>();
 builder.Services.AddScoped<CommuterProfileService>();
+builder.Services.AddScoped<RouteSuggestionService>();
 builder.Services.AddScoped<BusCrowdReportService>();
 builder.Services.AddScoped<GpayService>();
 builder.Services.AddScoped<WalletService>();

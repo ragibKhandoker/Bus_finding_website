@@ -122,6 +122,15 @@ public class ComplaintOptions
     public string StoragePath { get; set; } = "App_Data/complaint-evidence";
 }
 
+// F20: the optional photo on a route or stop suggestion.
+public class RouteSuggestionOptions
+{
+    public int MaxImageBytes { get; set; } = 5 * 1024 * 1024;
+
+    // Private folder for the photos, relative to the app folder. It must not be inside wwwroot.
+    public string StoragePath { get; set; } = "App_Data/route-suggestions";
+}
+
 // F21: driver registration documents and the encryption of licence and NID numbers.
 public class DriverVerificationOptions
 {

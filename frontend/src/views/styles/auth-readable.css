@@ -1,0 +1,53 @@
+/* Sign-in / sign-up dialog: the site's own typeface, set a little larger and darker so it reads clearly, and without
+   the browser's autofill box. Loaded after aurora.css so these win over the glass theme. */
+
+.modal-backdrop .auth-modal{
+  --auth-text:#0f241b;--auth-muted:#3f5047;--auth-subtle:#5b6b63;--auth-link:#0e7a51;--auth-field-bg:#ffffff;
+}
+html:is([data-theme="dark"],[data-theme="night"]) .modal-backdrop .auth-modal{
+  --auth-text:var(--dialog-text,#eef5f1);--auth-muted:var(--dialog-muted,#b9c8c0);--auth-subtle:var(--dialog-muted,#b9c8c0);
+  --auth-link:#5fd3a2;--auth-field-bg:var(--dialog-field,#16261f);
+}
+html[data-theme="night"] .modal-backdrop .auth-modal{--auth-link:#8cc8ff}
+
+/* Title stays in the serif; the line under it is plain and dark enough to read. */
+.modal-backdrop .auth-modal .auth-header h2{color:var(--auth-text);font-size:22px}
+.modal-backdrop .auth-modal .auth-header p{font-size:14.5px;line-height:1.45;color:var(--auth-muted)}
+
+/* Role tabs */
+.modal-backdrop .auth-modal .auth-tabs button{font-family:inherit;font-size:15px;font-weight:600;color:var(--auth-muted)}
+.modal-backdrop .auth-modal .auth-tabs button.selected{color:var(--auth-text)}
+
+/* "Continue as …" card */
+.modal-backdrop .auth-modal .auth-continue{font-family:inherit}
+.modal-backdrop .auth-modal .auth-continue b{font-size:15px;font-weight:700;color:var(--auth-text)}
+.modal-backdrop .auth-modal .auth-continue small{font-size:13.5px;color:var(--auth-muted)}
+.modal-backdrop .auth-modal .auth-or{font-size:13.5px;font-weight:500;color:var(--auth-subtle)}
+
+/* Fields */
+.modal-backdrop .auth-modal .auth-label{font-size:14px;font-weight:600;color:var(--auth-text);letter-spacing:0}
+.modal-backdrop .auth-modal .auth-input{height:46px;background:var(--auth-field-bg);color:var(--auth-subtle)}
+.modal-backdrop .auth-modal .auth-input input,
+.modal-backdrop .auth-modal .auth-input select{font-family:inherit;font-size:15.5px;font-weight:500;color:var(--auth-text);letter-spacing:.01em}
+.modal-backdrop .auth-modal .auth-input input::placeholder{color:var(--auth-subtle);opacity:.85;font-weight:400}
+/* The browser's autofill paints its own pale-blue box inside the field; keep the field's own colours instead. */
+.modal-backdrop .auth-modal .auth-input input:-webkit-autofill,
+.modal-backdrop .auth-modal .auth-input input:-webkit-autofill:hover,
+.modal-backdrop .auth-modal .auth-input input:-webkit-autofill:focus{
+  -webkit-text-fill-color:var(--auth-text);caret-color:var(--auth-text);
+  -webkit-box-shadow:0 0 0 60px var(--auth-field-bg) inset;box-shadow:0 0 0 60px var(--auth-field-bg) inset;
+  transition:background-color 9999s ease-out 0s;
+}
+.modal-backdrop .auth-modal .auth-hint,
+.modal-backdrop .auth-modal .auth-rules li,
+.modal-backdrop .auth-modal .auth-error,
+.modal-backdrop .auth-modal .auth-forgot-info{font-family:inherit;font-size:13.5px}
+.modal-backdrop .auth-modal .auth-rules li:not(.ok){color:var(--auth-muted)}
+
+/* Links and the main button */
+.modal-backdrop .auth-modal .auth-forgot{font-family:inherit;font-size:14px;font-weight:600;color:var(--auth-link)}
+.modal-backdrop .auth-modal .auth-submit,
+.modal-backdrop .auth-modal button[type="submit"]{font-family:inherit;font-size:16px;font-weight:600;letter-spacing:.01em}
+.modal-backdrop .auth-modal .auth-switch{font-size:14.5px;color:var(--auth-muted)}
+.modal-backdrop .auth-modal .auth-switch button{font-family:inherit;font-size:14.5px;font-weight:600;color:var(--auth-link)}
+.modal-backdrop .auth-modal .auth-api{font-size:12px;color:var(--auth-subtle)}

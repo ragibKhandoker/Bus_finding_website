@@ -75,6 +75,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<DriverStatusHistory> DriverStatusHistory => Set<DriverStatusHistory>();
     public DbSet<LiveLocation> LiveLocations => Set<LiveLocation>();
     public DbSet<TravelPreference> TravelPreferences => Set<TravelPreference>();
+    public DbSet<RouteSuggestion> RouteSuggestions => Set<RouteSuggestion>();
+    public DbSet<RouteSuggestionStop> RouteSuggestionStops => Set<RouteSuggestionStop>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -831,6 +833,36 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                     "travel_purpose IN ('University', 'Office', 'Coaching', 'Shopping', 'Medical', 'Personal', 'Other')");
                 t.HasCheckConstraint("ck_travel_preferences_text", @"preference_name ~ '\S' AND start_location ~ '\S' AND destination ~ '\S'");
             });
+        });
+
+        // F20: route and stop suggestions. Only an admin's approval changes buses / bus_stops.
+        b.Entity<RouteSuggestion>(e =>
+        {
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.ReviewedBy).WithMany().HasForeignKey(x => x.ReviewedById).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.RelatedBus).WithMany().HasForeignKey(x => x.RelatedBusId).OnDelete(DeleteBehavior.SetNull);
+            e.HasOne(x => x.RelatedBusStop).WithMany().HasForeignKey(x => x.RelatedBusStopId).OnDelete(DeleteBehavior.SetNull);
+            e.Property(x => x.Version).IsRowVersion();
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            e.HasIndex(x => new { x.Status, x.CreatedAt });
+            e.HasIndex(x => x.RelatedBusId);
+            e.HasIndex(x => x.RelatedBusStopId);
+            e.HasIndex(x => x.ReviewedById);
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_route_suggestions_type", "type IN ('NEW_ROUTE', 'NEW_STOP', 'INCORRECT_INFORMATION')");
+                t.HasCheckConstraint("ck_route_suggestions_status", "status IN ('PENDING', 'APPROVED', 'REJECTED')");
+                t.HasCheckConstraint("ck_route_suggestions_text", @"title ~ '\S' AND description ~ '\S'");
+                t.HasCheckConstraint("ck_route_suggestions_coordinates",
+                    "(latitude IS NULL) = (longitude IS NULL) AND (latitude IS NULL OR (latitude BETWEEN -90 AND 90 AND longitude BETWEEN -180 AND 180))");
+                t.HasCheckConstraint("ck_route_suggestions_reviewed", "status = 'PENDING' OR reviewed_at IS NOT NULL");
+            });
+        });
+
+        b.Entity<RouteSuggestionStop>(e =>
+        {
+            e.HasOne(x => x.Suggestion).WithMany(s => s.Stops).HasForeignKey(x => x.SuggestionId).OnDelete(DeleteBehavior.Cascade);
+            e.HasIndex(x => new { x.SuggestionId, x.Order }).IsUnique();
         });
     }
 }

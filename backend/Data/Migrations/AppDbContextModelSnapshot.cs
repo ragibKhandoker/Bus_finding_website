@@ -4023,6 +4023,228 @@ namespace SmartCommute.Server.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.RouteSuggestion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AdminReviewNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("admin_review_note");
+
+                    b.Property<Guid?>("AppliedBusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("applied_bus_id");
+
+                    b.Property<string>("AppliedChange")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("applied_change");
+
+                    b.Property<string>("BusStopName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("bus_stop_name");
+
+                    b.Property<string>("BusType")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("bus_type");
+
+                    b.Property<string>("CorrectedValue")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("corrected_value");
+
+                    b.Property<string>("CorrectionField")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("correction_field");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("description");
+
+                    b.Property<string>("ImageContentType")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("image_content_type");
+
+                    b.Property<string>("ImageKey")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("image_key");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("double precision")
+                        .HasColumnName("latitude");
+
+                    b.Property<string>("LocationName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("location_name");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("double precision")
+                        .HasColumnName("longitude");
+
+                    b.Property<Guid?>("RelatedBusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("related_bus_id");
+
+                    b.Property<string>("RelatedBusName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("related_bus_name");
+
+                    b.Property<Guid?>("RelatedBusStopId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("related_bus_stop_id");
+
+                    b.Property<string>("RelatedRouteNumber")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("related_route_number");
+
+                    b.Property<string>("RelatedStopName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("related_stop_name");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("reviewed_at");
+
+                    b.Property<Guid?>("ReviewedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reviewed_by_id");
+
+                    b.Property<string>("RouteName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("route_name");
+
+                    b.Property<string>("RouteNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("route_number");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)")
+                        .HasColumnName("title");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("type");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.HasKey("Id")
+                        .HasName("pk_route_suggestions");
+
+                    b.HasIndex("RelatedBusId")
+                        .HasDatabaseName("ix_route_suggestions_related_bus_id");
+
+                    b.HasIndex("RelatedBusStopId")
+                        .HasDatabaseName("ix_route_suggestions_related_bus_stop_id");
+
+                    b.HasIndex("ReviewedById")
+                        .HasDatabaseName("ix_route_suggestions_reviewed_by_id");
+
+                    b.HasIndex("Status", "CreatedAt")
+                        .HasDatabaseName("ix_route_suggestions_status_created_at");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_route_suggestions_user_id_created_at");
+
+                    b.ToTable("route_suggestions", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_route_suggestions_coordinates", "(latitude IS NULL) = (longitude IS NULL) AND (latitude IS NULL OR (latitude BETWEEN -90 AND 90 AND longitude BETWEEN -180 AND 180))");
+
+                            t.HasCheckConstraint("ck_route_suggestions_reviewed", "status = 'PENDING' OR reviewed_at IS NOT NULL");
+
+                            t.HasCheckConstraint("ck_route_suggestions_status", "status IN ('PENDING', 'APPROVED', 'REJECTED')");
+
+                            t.HasCheckConstraint("ck_route_suggestions_text", "title ~ '\\S' AND description ~ '\\S'");
+
+                            t.HasCheckConstraint("ck_route_suggestions_type", "type IN ('NEW_ROUTE', 'NEW_STOP', 'INCORRECT_INFORMATION')");
+                        });
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.RouteSuggestionStop", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("IsExisting")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_existing");
+
+                    b.Property<double?>("Lat")
+                        .HasColumnType("double precision")
+                        .HasColumnName("lat");
+
+                    b.Property<double?>("Lng")
+                        .HasColumnType("double precision")
+                        .HasColumnName("lng");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("Order")
+                        .HasColumnType("integer")
+                        .HasColumnName("order");
+
+                    b.Property<Guid>("SuggestionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("suggestion_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_route_suggestion_stops");
+
+                    b.HasIndex("SuggestionId", "Order")
+                        .IsUnique()
+                        .HasDatabaseName("ix_route_suggestion_stops_suggestion_id_order");
+
+                    b.ToTable("route_suggestion_stops", (string)null);
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.SupportMessage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5965,6 +6187,54 @@ namespace SmartCommute.Server.Data.Migrations
                     b.Navigation("RidePost");
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.RouteSuggestion", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.Bus", "RelatedBus")
+                        .WithMany()
+                        .HasForeignKey("RelatedBusId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_route_suggestions_buses_related_bus_id");
+
+                    b.HasOne("SmartCommute.Server.Models.BusStop", "RelatedBusStop")
+                        .WithMany()
+                        .HasForeignKey("RelatedBusStopId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_route_suggestions_bus_stops_related_bus_stop_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "ReviewedBy")
+                        .WithMany()
+                        .HasForeignKey("ReviewedById")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_route_suggestions_users_reviewed_by_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_route_suggestions_users_user_id");
+
+                    b.Navigation("RelatedBus");
+
+                    b.Navigation("RelatedBusStop");
+
+                    b.Navigation("ReviewedBy");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.RouteSuggestionStop", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.RouteSuggestion", "Suggestion")
+                        .WithMany("Stops")
+                        .HasForeignKey("SuggestionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_route_suggestion_stops_route_suggestions_suggestion_id");
+
+                    b.Navigation("Suggestion");
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.SupportMessage", b =>
                 {
                     b.HasOne("SmartCommute.Server.Models.User", "Sender")
@@ -6208,6 +6478,11 @@ namespace SmartCommute.Server.Data.Migrations
             modelBuilder.Entity("SmartCommute.Server.Models.RidePost", b =>
                 {
                     b.Navigation("Requests");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.RouteSuggestion", b =>
+                {
+                    b.Navigation("Stops");
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.User", b =>

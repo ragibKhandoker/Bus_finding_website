@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { Radio, ArrowRight, BadgeCheck, Bell, BusFront, ChevronDown, CircleHelp, ClipboardList, CreditCard, Gift, Heart, House, Languages, LayoutDashboard, LayoutGrid, Map as MapIcon, MessageCircle, Menu, PackageSearch, Route, Search, ShieldCheck, Ticket, UserPlus, Users, Wallet, X } from 'lucide-react'
+import { Radio, ArrowRight, BadgeCheck, Bell, BusFront, ChevronDown, CircleHelp, ClipboardList, CreditCard, Gift, Heart, Lightbulb, House, Languages, LayoutDashboard, LayoutGrid, Map as MapIcon, MessageCircle, Menu, PackageSearch, Route, Search, ShieldCheck, Ticket, UserPlus, Users, Wallet, X } from 'lucide-react'
 import { MapPage } from './pages/MorePages'
 import { GpayPage } from './pages/Gpay'
 import { VerificationPage } from './pages/Verification'
@@ -7,6 +7,7 @@ import { OffersPage } from './pages/Offers'
 import { LostFoundPage } from './pages/LostFound'
 import { ComplaintPage } from './pages/Complaints'
 import { TravelPreferencePage } from './pages/TravelPreferences'
+import { RouteSuggestionPage } from './pages/RouteSuggestions'
 import { BusCrowdReportPage, MyCrowdReportsPage } from './pages/BusCrowdReports'
 import { useUnreadCount } from '../controllers/useUnreadCount'
 import { ADMIN_FOCUS_EVENT, useAdminAlerts } from '../controllers/useAdminAlerts'
@@ -62,6 +63,8 @@ import './styles/navbar.css'
 import './styles/motion.css'
 // The site-wide look (backdrop, glass surfaces, type, buttons) goes over everything else.
 import './styles/aurora.css'
+// The sign-in dialog's text, kept plain and high-contrast over the glass theme.
+import './styles/auth-readable.css'
 
 export function PageLoader({ page }) {
   return (
@@ -93,7 +96,7 @@ const MORE_SECTIONS = (isDriver, isAdmin) => [
   ['Commute', [['Live tracking', 'Live bus tracking', Radio], ['Crowd reports', 'Bus crowd & seats', Users], ['Map', 'Map & fare calculator', MapIcon], ['Favourites', 'Favourite buses', Heart], ['Travel preferences', 'Travel preferences', Route]]],
   ['People', [['Friends', 'Friends', UserPlus], ['Messages', 'Messages', MessageCircle], ['Notifications', 'Notifications', Bell]]],
   ['Payments & rewards', [['Wallet', 'My wallet', Wallet], ['GPay', 'GPay & recharge', CreditCard], ['Offers', 'Offers & rewards', Gift]]],
-  ['Help', [['Lost & found', 'Lost & found', PackageSearch], ['Complaints', 'Complaint & Feedback', ClipboardList], ['Verification', 'Account verification', BadgeCheck], ['Support', 'Contact admin', CircleHelp]]],
+  ['Help', [['Lost & found', 'Lost & found', PackageSearch], ['Complaints', 'Complaint & Feedback', ClipboardList], ['Route suggestions', 'Suggest a route or stop', Lightbulb], ['Verification', 'Account verification', BadgeCheck], ['Support', 'Contact admin', CircleHelp]]],
   ...(isDriver ? [['Driver', [['Driver dashboard', 'Driver dashboard', LayoutDashboard]]]] : []),
   ...(isAdmin ? [['Admin', [['Admin', 'Admin · Users', ShieldCheck], ['Driver verification', 'Admin · Driver verification', BadgeCheck], ['Driver operations', 'Admin · Driver schedules', BusFront]]]] : []),
 ]
@@ -302,7 +305,7 @@ export function App() {
               <Icon size={16} aria-hidden="true" className="nav-icon" /><span>{t(item)}</span></button>
           })}
           <div className="more-nav-wrap" ref={moreRef}>
-            <button className={['Friends', 'Messages', 'Notifications', 'Offers', 'Lost & found', 'Complaints', 'Travel preferences', 'Crowd reports', 'My crowd reports', 'Map', 'Favourites', 'Wallet', 'GPay', 'Verification', 'Admin', 'Driver status', 'Driver verification', 'Driver application', 'Driver operations', 'Live tracking', ...DRIVER_CONSOLE_PAGES].includes(page) ? 'nav-link active' : 'nav-link'} aria-expanded={moreMenu} onClick={() => setMoreMenu(!moreMenu)}><LayoutGrid size={16} aria-hidden="true" className="nav-icon" /><span>{t('More')}</span> <ChevronDown size={13} className="nav-chevron" /></button>
+            <button className={['Friends', 'Messages', 'Notifications', 'Offers', 'Lost & found', 'Complaints', 'Travel preferences', 'Route suggestions', 'Crowd reports', 'My crowd reports', 'Map', 'Favourites', 'Wallet', 'GPay', 'Verification', 'Admin', 'Driver status', 'Driver verification', 'Driver application', 'Driver operations', 'Live tracking', ...DRIVER_CONSOLE_PAGES].includes(page) ? 'nav-link active' : 'nav-link'} aria-expanded={moreMenu} onClick={() => setMoreMenu(!moreMenu)}><LayoutGrid size={16} aria-hidden="true" className="nav-icon" /><span>{t('More')}</span> <ChevronDown size={13} className="nav-chevron" /></button>
             {moreMenu && <div className="more-nav-menu">{MORE_SECTIONS(isDriver, isAdmin).map(([heading, items]) => <div key={heading} className="more-nav-section">
               <small className="more-nav-heading">{t(heading)}</small>
               {items.map(([target, label, Icon]) => {
@@ -355,6 +358,7 @@ export function App() {
         {page === 'Crowd reports' && <BusCrowdReportPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} navigate={navigate} />}
         {page === 'My crowd reports' && <MyCrowdReportsPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} navigate={navigate} />}
         {page === 'Complaints' && <ComplaintPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
+        {page === 'Route suggestions' && <RouteSuggestionPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Travel preferences' && <TravelPreferencePage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Lost & found' && <LostFoundPage token={token} user={user} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Offers' && <OffersPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} navigate={navigate} />}
@@ -397,7 +401,7 @@ export function App() {
           {[
             ['Commute', [['Find a bus', 'Find a bus', Search], ['Live tracking', 'Live bus tracking', Radio], ['Crowd reports', 'Bus crowd & seats', Users], ['Ride share', 'Ride share', Users], ['Map', 'Map & fare calculator', MapIcon], ['Favourites', 'Favourite buses', Heart], ['Travel preferences', 'Travel preferences', Route], ['My trips', 'My trips', Ticket]]],
             ['Payments', [['Wallet', 'Travel wallet', Wallet], ['GPay', 'GPay & recharge', CreditCard], ['Offers', 'Offers & rewards', Gift]]],
-            ['Community', [['Complaints', 'Complaint & Feedback', ClipboardList], ['Lost & found', 'Lost & found', PackageSearch], ['Friends', 'Friends', UserPlus], ['Messages', 'Messages', MessageCircle], ['Notifications', 'Notifications', Bell], ['Verification', 'Account verification', BadgeCheck]]],
+            ['Community', [['Complaints', 'Complaint & Feedback', ClipboardList], ['Route suggestions', 'Suggest a route or stop', Lightbulb], ['Lost & found', 'Lost & found', PackageSearch], ['Friends', 'Friends', UserPlus], ['Messages', 'Messages', MessageCircle], ['Notifications', 'Notifications', Bell], ['Verification', 'Account verification', BadgeCheck]]],
           ].map(([heading, links]) => {
             const open = footerOpen === heading
             return <nav key={heading} className={`site-footer-col${open ? ' open' : ''}`} aria-label={t(heading)}>
