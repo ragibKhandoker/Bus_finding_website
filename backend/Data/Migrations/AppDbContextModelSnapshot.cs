@@ -4079,6 +4079,106 @@ namespace SmartCommute.Server.Data.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.TravelPreference", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("BusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bus_id");
+
+                    b.Property<string>("BusRouteNumber")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("bus_route_number");
+
+                    b.Property<string>("BusType")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("bus_type");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Destination")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("destination");
+
+                    b.Property<string>("FrequentlyUsedBus")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("frequently_used_bus");
+
+                    b.Property<string>("PreferenceName")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("preference_name");
+
+                    b.Property<TimeOnly>("PreferredTravelTime")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("preferred_travel_time");
+
+                    b.Property<string>("StartLocation")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("start_location");
+
+                    b.PrimitiveCollection<List<string>>("TravelDays")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("travel_days");
+
+                    b.Property<string>("TravelPurpose")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("travel_purpose");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<int>("WeeklyFrequency")
+                        .HasColumnType("integer")
+                        .HasColumnName("weekly_frequency");
+
+                    b.HasKey("Id")
+                        .HasName("pk_travel_preferences");
+
+                    b.HasIndex("BusId")
+                        .HasDatabaseName("ix_travel_preferences_bus_id");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_travel_preferences_user_id_created_at");
+
+                    b.ToTable("travel_preferences", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_travel_preferences_bus_type", "bus_type IN ('AC', 'Non-AC', 'Both')");
+
+                            t.HasCheckConstraint("ck_travel_preferences_purpose", "travel_purpose IN ('University', 'Office', 'Coaching', 'Shopping', 'Medical', 'Personal', 'Other')");
+
+                            t.HasCheckConstraint("ck_travel_preferences_text", "preference_name ~ '\\S' AND start_location ~ '\\S' AND destination ~ '\\S'");
+
+                            t.HasCheckConstraint("ck_travel_preferences_travel_days", "cardinality(travel_days) BETWEEN 1 AND 7");
+
+                            t.HasCheckConstraint("ck_travel_preferences_weekly_frequency", "weekly_frequency BETWEEN 1 AND 7");
+                        });
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.Trip", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5881,6 +5981,26 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasConstraintName("fk_support_messages_users_user_id");
 
                     b.Navigation("Sender");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.TravelPreference", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.Bus", "Bus")
+                        .WithMany()
+                        .HasForeignKey("BusId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_travel_preferences_buses_bus_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_travel_preferences_users_user_id");
+
+                    b.Navigation("Bus");
 
                     b.Navigation("User");
                 });

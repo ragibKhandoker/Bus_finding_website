@@ -241,6 +241,7 @@ builder.Services.AddScoped<PromotionLifecycle>();
 builder.Services.AddScoped<LostFoundService>();
 builder.Services.AddScoped<LostFoundChatService>();
 builder.Services.AddScoped<ComplaintService>();
+builder.Services.AddScoped<CommuterProfileService>();
 builder.Services.AddScoped<BusCrowdReportService>();
 builder.Services.AddScoped<GpayService>();
 builder.Services.AddScoped<WalletService>();

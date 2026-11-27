@@ -74,6 +74,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<DriverWorkingStatus> DriverWorkingStatuses => Set<DriverWorkingStatus>();
     public DbSet<DriverStatusHistory> DriverStatusHistory => Set<DriverStatusHistory>();
     public DbSet<LiveLocation> LiveLocations => Set<LiveLocation>();
+    public DbSet<TravelPreference> TravelPreferences => Set<TravelPreference>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -812,6 +813,24 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasOne(x => x.Driver).WithMany().HasForeignKey(x => x.DriverId).OnDelete(DeleteBehavior.Cascade);
             e.HasIndex(x => new { x.DriverId, x.ChangedAt });
             e.ToTable(t => t.HasCheckConstraint("ck_driver_status_history_changed_by", "changed_by IN ('driver', 'system', 'admin')"));
+        });
+
+        // F19: a commuter's travel preferences. One user has many (UserId is indexed, never unique).
+        b.Entity<TravelPreference>(e =>
+        {
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.Bus).WithMany().HasForeignKey(x => x.BusId).OnDelete(DeleteBehavior.SetNull);
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            e.HasIndex(x => x.BusId);
+            e.ToTable(t =>
+            {
+                t.HasCheckConstraint("ck_travel_preferences_weekly_frequency", "weekly_frequency BETWEEN 1 AND 7");
+                t.HasCheckConstraint("ck_travel_preferences_travel_days", "cardinality(travel_days) BETWEEN 1 AND 7");
+                t.HasCheckConstraint("ck_travel_preferences_bus_type", "bus_type IN ('AC', 'Non-AC', 'Both')");
+                t.HasCheckConstraint("ck_travel_preferences_purpose",
+                    "travel_purpose IN ('University', 'Office', 'Coaching', 'Shopping', 'Medical', 'Personal', 'Other')");
+                t.HasCheckConstraint("ck_travel_preferences_text", @"preference_name ~ '\S' AND start_location ~ '\S' AND destination ~ '\S'");
+            });
         });
     }
 }

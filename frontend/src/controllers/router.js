@@ -6,6 +6,8 @@ export const PAGE_PATHS = {
   'Profile': '/profile', 'Friends': '/friends', 'Messages': '/messages', 'Notifications': '/notifications', 'Offers': '/offers',
   'Map': '/map', 'Favourites': '/favourites', 'GPay': '/gpay', 'Verification': '/verification', 'Admin': '/admin', 'Support': '/support',
   'My rides': '/ride-share/my', 'Lost & found': '/lost-found', 'Complaints': '/complaints',
+  // F19: a commuter's saved journeys.
+  'Travel preferences': '/travel-preferences',
   'Crowd reports': '/crowd-reports', 'My crowd reports': '/crowd-reports/my',
   // F21: choosing the account type, driver registration and verification.
   'Register': '/register', 'Driver registration': '/driver/register', 'Driver status': '/driver/status', 'Driver dashboard': '/driver/dashboard',
@@ -104,6 +106,7 @@ export const PAGE_LOADER_MS = 550
 export const PAGE_LOADER_NAMES = {
   'Bus details': 'Bus routes', 'Ride details': 'Ride share', 'Wallet': 'My wallet', 'Profile': 'Account', 'Offers': 'Offers & rewards', 'Map': 'Map & fare calculator',
   'Favourites': 'Favourite buses', 'GPay': 'GPay & recharge', 'Verification': 'Account verification', 'Admin': 'Admin · Users', 'Support': 'Contact admin', 'Complaints': 'Complaint & Feedback',
+  'Travel preferences': 'Travel preferences',
   'Crowd reports': 'Bus crowd & seats', 'My crowd reports': 'My crowd reports',
   'Register': 'Create account', 'Driver registration': 'Driver registration', 'Driver status': 'Driver verification status', 'Driver dashboard': 'Driver dashboard',
   'Driver verification': 'Driver verification', 'Driver application': 'Driver application',

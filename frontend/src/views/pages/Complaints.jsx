@@ -27,11 +27,13 @@ function Field({ label, htmlFor, error, hint, optional = false, children, wide =
 }
 
 // Every Dhaka bus by name, each with its routes (one route = one bus row) and their stops, from the route list.
-function useDhakaBuses() {
+// cityOnly leaves out routes that run outside Dhaka City (the travel preferences page only accepts city buses).
+export function useDhakaBuses({ cityOnly = false } = {}) {
   const [routes] = useBusRoutes()
   const buses = useMemo(() => {
     const byName = new Map()
     for (const b of routes.status === 'ready' ? routes.buses : []) {
+      if (cityOnly && b.isDhakaCity === false) continue
       const name = (b.busName || '').trim()
       if (!name || !(b._id || b.id)) continue
       const stops = (b.stops || []).map((s) => s.name)
@@ -40,11 +42,11 @@ function useDhakaBuses() {
       byName.set(name, entry)
     }
     return [...byName.values()].sort((a, b) => a.name.localeCompare(b.name))
-  }, [routes])
+  }, [routes, cityOnly])
   return { buses, status: routes.status }
 }
 
-function BusSearch({ buses, status, value, onPick, invalid }) {
+export function BusSearch({ buses, status, value, onPick, invalid, id = 'cp-bus' }) {
   const [text, setText] = useState(value || '')
   const [open, setOpen] = useState(false)
   const box = useRef(null)
@@ -62,11 +64,11 @@ function BusSearch({ buses, status, value, onPick, invalid }) {
   }, [buses, text])
   return <div className="cp-picker" ref={box}>
     <span className={`cp-input${invalid ? ' invalid' : ''}`}><BusFront size={16} aria-hidden="true" />
-      <input id="cp-bus" value={text} role="combobox" aria-expanded={open} aria-controls="cp-bus-list" autoComplete="off" aria-invalid={invalid || undefined}
+      <input id={id} value={text} role="combobox" aria-expanded={open} aria-controls={`${id}-list`} autoComplete="off" aria-invalid={invalid || undefined}
         placeholder={status === 'loading' ? t('Loading Dhaka buses…') : status === 'error' ? t('Could not load the buses. Refresh the page.') : t('Search a bus, e.g. Raida or 36')}
         onFocus={() => setOpen(true)} onChange={(e) => { setText(e.target.value); setOpen(true); if (value) onPick(null) }} />
     </span>
-    {open && status === 'ready' && <ul className="cp-options" id="cp-bus-list" role="listbox" aria-label={t('Dhaka buses')}>
+    {open && status === 'ready' && <ul className="cp-options" id={`${id}-list`} role="listbox" aria-label={t('Dhaka buses')}>
       {!list.length ? <li className="cp-option-note">{t('No Dhaka bus matches. Try another name or route number.')}</li>
         : list.map((b) => <li key={b.name} role="option" aria-selected={b.name === value} className={b.name === value ? 'selected' : ''}
           onPointerDown={(e) => e.preventDefault()} onClick={() => { onPick(b); setText(b.name); setOpen(false) }}>

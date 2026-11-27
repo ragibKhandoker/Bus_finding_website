@@ -82,6 +82,8 @@ export function ProfilePage({ user, token, signedIn, updateUser, signOut, openAu
           <span className="pf-bar"><i style={{ width: `${completeness}%` }} /></span>
           {completeness < 100 && !editing && <button onClick={() => setEditing(true)}>{t('Complete your profile')} <ArrowRight size={13} /></button>}
         </div>
+        {navigate && (user.role || 'commuter') === 'commuter' && <button type="button" className="link-button pf-verify-link" onClick={() => navigate('Travel preferences')}>
+          <Route size={14} /> {t('Manage my travel preferences')} <ArrowRight size={13} /></button>}
         <button className="pf-signout" onClick={() => signOut()}><LogOut size={16} /> {t('Sign out')}</button>
       </aside>
 
