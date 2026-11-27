@@ -37,7 +37,7 @@ export function Timeline({ history, status, forAdmin = false }) {
   return <ol className="cp-timeline" aria-label={t('Complaint timeline')}>
     {steps.map((h, i) => <li key={`${h.toStatus}-${h.createdAt}-${i}`} className={`done ${h.toStatus.toLowerCase()}`}>
       <span className="cp-dot" aria-hidden="true" />
-      <div><b>{i === 0 ? t('Submitted') : t(STATUS_LABELS[h.toStatus] || h.toStatus)}</b>
+      <div><b>{i === 0 ? t('Submitted') : h.fromStatus && h.fromStatus === h.toStatus ? t('Message from SmartCommute') : t(STATUS_LABELS[h.toStatus] || h.toStatus)}</b>
         <small>{dayTime(h.createdAt)} · {h.actorRole === 'admin' || forAdmin ? h.actorName : t('You')}</small>
         {h.note && i > 0 && <p>{h.note}</p>}</div>
     </li>)}

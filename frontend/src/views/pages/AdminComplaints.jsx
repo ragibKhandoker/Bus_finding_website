@@ -62,15 +62,18 @@ function Review({ id, token, onClose, onChanged, notify }) {
   const load = useCallback(() => complaintApi.get(id, token).then((res) => setState({ status: 'ready', c: res.data })).catch((e) => setState({ status: 'error', error: errorText(e) })), [id, token])
   useEffect(() => { load() }, [load])
   const c = state.c
-  const choose = (status) => { setNext(status); setNote(NOTE_TEMPLATES[status] || ''); setError(''); setSaved('') }
+  // Choosing the status it already has sends a message only (no ready-made note: the admin writes the update).
+  const choose = (status) => { setNext(status); setNote(status === c?.status ? '' : NOTE_TEMPLATES[status] || ''); setError(''); setSaved('') }
   const save = async (event) => {
     event.preventDefault()
     if (!next) { setError(t('Choose the new status.')); return }
     if (note.trim().length < 5) { setError(t('Write a note of at least 5 characters for the user.')); return }
     setBusy(true); setError('')
     try {
+      const messageOnly = next === c.status
       const res = await complaintApi.setStatus(c.id, next, note.trim(), token)
-      setSaved(t('Saved. The complaint is now {status} and the passenger was notified.', { status: t(STATUS_LABELS[res.data.status] || res.data.status) }))
+      setSaved(messageOnly ? t('Message sent. The passenger was notified and can read it now.')
+        : t('Saved. The complaint is now {status} and the passenger was notified.', { status: t(STATUS_LABELS[res.data.status] || res.data.status) }))
       setState({ status: 'ready', c: res.data }); setNext(''); setNote('')
       onChanged()
     } catch (e) { setError(errorText(e)) } finally { setBusy(false) }
@@ -100,6 +103,10 @@ function Review({ id, token, onClose, onChanged, notify }) {
             {c.nextStatuses.length ? <form className="cpa-review" onSubmit={save} noValidate>
               <h4 className="cpa-step"><span>2</span> {t('Choose what happens next')}</h4>
               <div className="cpa-choices" role="radiogroup" aria-label={t('New status')}>
+                <label className={`cpa-choice message${next === c.status ? ' selected' : ''}`}>
+                  <input type="radio" name="cpa-next" value={c.status} checked={next === c.status} onChange={() => choose(c.status)} aria-label={t('Send a message only')} />
+                  <b>{t('Send a message only')}</b><small>{t('Keep it {status} and send the user an update.', { status: t(STATUS_LABELS[c.status]) })}</small>
+                </label>
                 {c.nextStatuses.map((s) => <label key={s} className={`cpa-choice ${s.toLowerCase()}${next === s ? ' selected' : ''}`}>
                   <input type="radio" name="cpa-next" value={s} checked={next === s} onChange={() => choose(s)} aria-label={t(STATUS_LABELS[s])} />
                   <b>{t(STATUS_LABELS[s])}</b><small>{t(CHOICE_HELP[s])}</small>
@@ -111,7 +118,7 @@ function Review({ id, token, onClose, onChanged, notify }) {
                 placeholder={next ? t('A ready-made note is filled in. Change it to say what you did.') : t('Choose a status first. A ready-made note will be filled in.')} aria-label={t('Note for the user (required)')} />
               {error && <small className="cp-error" role="alert">{error}</small>}
               {saved && !error && <p className="cpa-saved" role="status"><CheckCircle2 size={15} /> {saved}</p>}
-              <button type="submit" className="button cp-primary" disabled={busy}>{busy ? <Loader2 size={15} className="cp-spin" /> : <MessageSquareText size={15} />} {t('Save review')}</button>
+              <button type="submit" className="button cp-primary" disabled={busy}>{busy ? <Loader2 size={15} className="cp-spin" /> : <MessageSquareText size={15} />} {next && next === c.status ? t('Send message') : t('Save review')}</button>
               <small className="cp-muted">{t('The user gets a notification with your note.')}</small>
             </form> : <p className="cp-muted">{t('No further status change is possible.')}</p>}
             <h4>{t('Review history')}</h4>

@@ -258,7 +258,8 @@ public class ComplaintService(AppDbContext db, BusRouteCache routes, IWebHostEnv
     }
 
     // Admins only (checked by the controller). Moves the complaint along ComplaintStatus.Next with a note, records it
-    // in the history, and tells the person who complained.
+    // in the history, and tells the person who complained. Sending the status the complaint already has keeps it and
+    // only sends the note: a message to the user (e.g. an update while it is still being reviewed).
     public async Task<ServiceResult<Complaint>> SetStatusAsync(Guid adminId, Guid id, string status, string? note)
     {
         status = (status ?? "").Trim().ToUpperInvariant();
@@ -276,11 +277,10 @@ public class ComplaintService(AppDbContext db, BusRouteCache routes, IWebHostEnv
         {
             return ServiceResult<Complaint>.NotFound("Complaint not found.");
         }
-        if (!ComplaintStatus.CanMove(complaint.Status, status))
+        var messageOnly = complaint.Status == status;
+        if (!messageOnly && !ComplaintStatus.CanMove(complaint.Status, status))
         {
-            return ServiceResult<Complaint>.Conflict(complaint.Status == status
-                ? $"The complaint is already {status}."
-                : $"A {complaint.Status} complaint cannot be moved to {status}.");
+            return ServiceResult<Complaint>.Conflict($"A {complaint.Status} complaint cannot be moved to {status}.");
         }
         var now = DateTime.UtcNow;
         db.ComplaintHistory.Add(new ComplaintHistory { ComplaintId = id, FromStatus = complaint.Status, ToStatus = status, Note = note, ActorId = adminId, ActorRole = "admin", CreatedAt = now });
@@ -288,8 +288,11 @@ public class ComplaintService(AppDbContext db, BusRouteCache routes, IWebHostEnv
         complaint.AdminNotes = note;
         complaint.ReviewedById = adminId;
         complaint.UpdatedAt = now;
-        complaint.ResolvedAt = status is ComplaintStatus.Resolved or ComplaintStatus.Rejected ? now : null;
-        var label = status switch
+        if (!messageOnly)
+        {
+            complaint.ResolvedAt = status is ComplaintStatus.Resolved or ComplaintStatus.Rejected ? now : null;
+        }
+        var label = messageOnly ? "has a new message" : status switch
         {
             ComplaintStatus.Reviewing => "is being reviewed",
             ComplaintStatus.Resolved => "was resolved",
@@ -297,7 +300,7 @@ public class ComplaintService(AppDbContext db, BusRouteCache routes, IWebHostEnv
             _ => "is pending again",
         };
         notifications.Notify(complaint.UserId, $"Complaint {ComplaintViewModel.CodeOf(id)} {label}", $"\"{Cut(complaint.Subject, 80)}\" {label}. Admin note: {Cut(note, 300)}",
-            status == ComplaintStatus.Rejected ? NotificationTypes.Warning : status == ComplaintStatus.Resolved ? NotificationTypes.Success : NotificationTypes.Info,
+            messageOnly ? NotificationTypes.Info : status == ComplaintStatus.Rejected ? NotificationTypes.Warning : status == ComplaintStatus.Resolved ? NotificationTypes.Success : NotificationTypes.Info,
             "/complaints", NotificationCategories.General, adminId, id);
         try
         {
@@ -308,6 +311,6 @@ public class ComplaintService(AppDbContext db, BusRouteCache routes, IWebHostEnv
             db.ChangeTracker.Clear();
             return ServiceResult<Complaint>.Conflict("Another admin changed this complaint at the same moment. Reload it and try again.");
         }
-        return ServiceResult<Complaint>.Ok((await FindAsync(id, adminId, true))!, $"Complaint marked {status}.");
+        return ServiceResult<Complaint>.Ok((await FindAsync(id, adminId, true))!, messageOnly ? "Message sent to the user." : $"Complaint marked {status}.");
     }
 }

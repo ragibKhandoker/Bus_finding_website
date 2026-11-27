@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArrowRight, BusFront, Calendar, Camera, Check, CircleAlert, Clock3, Copy, Edit3, ImagePlus, Loader2, MapPin, PackageSearch, Phone, Plus,
-  RefreshCw, Search, ShieldCheck, Trash2, X,
+  PackageCheck, RefreshCw, Search, ShieldCheck, Tag, Trash2, X,
 } from 'lucide-react'
 import { useBusRoutes } from '../../controllers/useBusRoutes'
 import { formatDate, formatNumber, t } from '../../models/i18n'
@@ -27,7 +27,7 @@ function StatusBadge({ status }) {
   return <span className={`lf-status ${status}`}>{t(STATUS_LABELS[status] || status)}</span>
 }
 
-function Modal({ title, onClose, children, wide = false, chat = false }) {
+function Modal({ title, subtitle, icon: Icon, tone, onClose, children, wide = false, chat = false, form = false }) {
   useEffect(() => {
     const onKey = (event) => { if (event.key === 'Escape') onClose() }
     document.addEventListener('keydown', onKey)
@@ -36,8 +36,11 @@ function Modal({ title, onClose, children, wide = false, chat = false }) {
     return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = overflow }
   }, [onClose])
   return <div className="lf-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose() }}>
-    <div className={`lf-modal${wide ? ' wide' : ''}${chat ? ' chat' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
-      <header className="lf-modal-head"><h2>{title}</h2><button type="button" className="lf-icon" onClick={onClose} aria-label={t('Close')}><X size={18} /></button></header>
+    <div className={`lf-modal${wide ? ' wide' : ''}${chat ? ' chat' : ''}${form ? ' form' : ''}`} role="dialog" aria-modal="true" aria-label={title}>
+      <header className={`lf-modal-head${tone ? ` ${tone}` : ''}`}>
+        {Icon && <span className="lf-modal-icon" aria-hidden="true"><Icon size={20} /></span>}
+        <div className="lf-modal-title"><h2>{title}</h2>{subtitle && <p>{subtitle}</p>}</div>
+        <button type="button" className="lf-icon" onClick={onClose} aria-label={t('Close')}><X size={18} /></button></header>
       <div className="lf-modal-body">{children}</div>
     </div>
   </div>
@@ -108,12 +111,26 @@ function BusPicker({ value, busName, onPick, invalid }) {
 
 // ---- Form ----
 
-function Field({ label, error, hint, htmlFor, children, optional = false }) {
-  return <div className={`lf-field${error ? ' has-error' : ''}`}>
-    <label htmlFor={htmlFor}>{label}{optional && <em> · {t('optional')}</em>}</label>
+// One field: its label (required ones get a star, drawn by the stylesheet so the label text stays the field's name),
+// the control, and below it the error or a hint, with an optional counter on the right.
+function Field({ label, error, hint, htmlFor, children, optional = false, wide = false, counter }) {
+  return <div className={`lf-field${error ? ' has-error' : ''}${wide ? ' wide' : ''}${optional ? '' : ' required'}`}>
+    <label htmlFor={htmlFor}>{label}{optional && <em>{t('optional')}</em>}</label>
     {children}
-    {error ? <small className="lf-error" role="alert">{error}</small> : hint ? <small className="lf-hint">{hint}</small> : null}
+    {(error || hint || counter) && <div className="lf-field-foot">
+      {error ? <small className="lf-error" role="alert"><CircleAlert size={13} aria-hidden="true" /> {error}</small> : hint ? <small className="lf-hint">{hint}</small> : <span />}
+      {counter && <small className="lf-counter">{counter}</small>}
+    </div>}
   </div>
+}
+
+// A titled, numbered part of the form.
+function FormSection({ step, title, text, children }) {
+  return <section className="lf-section" aria-labelledby={`lf-step-${step}`}>
+    <header className="lf-section-head"><span className="lf-step" aria-hidden="true">{formatNumber(step)}</span>
+      <div><h3 id={`lf-step-${step}`}>{title}</h3>{text && <p>{text}</p>}</div></header>
+    <div className="lf-grid">{children}</div>
+  </section>
 }
 
 export function LostFoundForm({ token, initial, editing, onDone, onCancel }) {
@@ -126,9 +143,14 @@ export function LostFoundForm({ token, initial, editing, onDone, onCancel }) {
   const set = (key) => (e) => { setForm((f) => ({ ...f, [key]: e.target.value })); setProblems((p) => ({ ...p, [key]: undefined })) }
   const lost = form.reportType === 'lost'
 
-  const pickImage = async (event) => {
+  const [dragging, setDragging] = useState(false)
+  const pickImage = (event) => {
     const file = event.target.files?.[0]
     event.target.value = ''
+    addImage(file)
+  }
+  const dropFile = (event) => { event.preventDefault(); setDragging(false); addImage(event.dataTransfer?.files?.[0]) }
+  const addImage = async (file) => {
     if (!file) return
     try {
       const data = await readImage(file)
@@ -151,31 +173,44 @@ export function LostFoundForm({ token, initial, editing, onDone, onCancel }) {
     } catch (e) { setError(errorText(e)); setBusy(false) }
   }
 
+  const descriptionLength = form.description.trim().length
   return <form className="lf-form" onSubmit={submit} noValidate>
     <div className="lf-switch" role="radiogroup" aria-label={t('Report type')}>
-      {[['lost', 'I lost something', 'Tell people what you lost'], ['found', 'I found something', 'Help the owner get it back']].map(([value, title, text]) =>
+      {[['lost', 'I lost something', 'Tell people what you lost', PackageSearch], ['found', 'I found something', 'Help the owner get it back', PackageCheck]].map(([value, title, text, Icon]) =>
         <label key={value} className={`lf-switch-option ${value}${form.reportType === value ? ' selected' : ''}`}>
           <input type="radio" name="lf-type" value={value} checked={form.reportType === value} onChange={set('reportType')} />
-          <b>{t(title)}</b><small>{t(text)}</small>
+          <span className="lf-switch-icon" aria-hidden="true"><Icon size={19} /></span>
+          <span className="lf-switch-text"><b>{t(title)}</b><small>{t(text)}</small></span>
+          <span className="lf-switch-dot" aria-hidden="true"><Check size={12} /></span>
         </label>)}
     </div>
 
-    <div className="lf-grid">
+    <FormSection step={1} title={t('About the item')} text={t('What it is, so people can recognise it.')}>
       <Field label={t('Item name')} htmlFor="lf-item" error={problems.itemName}>
-        <input id="lf-item" className="lf-text" value={form.itemName} onChange={set('itemName')} maxLength={100} placeholder={t('e.g. Black Samsung phone')} />
+        <span className={`lf-input${problems.itemName ? ' invalid' : ''}`}><Tag size={16} aria-hidden="true" />
+          <input id="lf-item" value={form.itemName} onChange={set('itemName')} maxLength={100} placeholder={t('e.g. Black Samsung phone')} aria-invalid={Boolean(problems.itemName) || undefined} /></span>
       </Field>
       <Field label={t('Category')} htmlFor="lf-category" error={problems.category}>
-        <select id="lf-category" className="lf-text" value={form.category} onChange={set('category')}>
+        <select id="lf-category" className="lf-text" value={form.category} onChange={set('category')} aria-invalid={Boolean(problems.category) || undefined}>
           <option value="">{t('Choose a category')}</option>
           {CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_ICONS[c]} {t(c)}</option>)}
         </select>
       </Field>
-      <Field label={t('Bus and route')} htmlFor="lf-bus" error={problems.busId} hint={t('Only Dhaka city buses are listed.')}>
+      <Field label={t('Description')} htmlFor="lf-description" error={problems.description} wide
+        hint={t('Colour, brand, marks, what was inside…')} counter={`${formatNumber(descriptionLength)}/${formatNumber(1000)}`}>
+        <textarea id="lf-description" className="lf-text" rows={4} value={form.description} onChange={set('description')} maxLength={1000}
+          placeholder={lost ? t('e.g. Black phone with a blue cover, a crack on the top corner.') : t('e.g. Brown leather wallet. Describe it, but keep a detail back so the owner can prove it is theirs.')} />
+      </Field>
+    </FormSection>
+
+    <FormSection step={2} title={t('Where and when')} text={lost ? t('The bus you were on and when you last had it.') : t('The bus it was on and when you found it.')}>
+      <Field label={t('Bus and route')} htmlFor="lf-bus" error={problems.busId} hint={t('Only Dhaka city buses are listed.')} wide>
         <BusPicker value={form.busId} busName={form.busName} invalid={Boolean(problems.busId)}
           onPick={(o) => { setForm((f) => ({ ...f, busId: o?.id || '', busName: o?.name || f.busName })); setProblems((p) => ({ ...p, busId: undefined })) }} />
       </Field>
-      <Field label={lost ? t('Where did you lose it?') : t('Where did you find it?')} htmlFor="lf-location" error={problems.location}>
-        <input id="lf-location" className="lf-text" value={form.location} onChange={set('location')} maxLength={200} placeholder={t('e.g. Back seat, near Farmgate stop')} />
+      <Field label={lost ? t('Where did you lose it?') : t('Where did you find it?')} htmlFor="lf-location" error={problems.location} wide>
+        <span className={`lf-input${problems.location ? ' invalid' : ''}`}><MapPin size={16} aria-hidden="true" />
+          <input id="lf-location" value={form.location} onChange={set('location')} maxLength={200} placeholder={t('e.g. Back seat, near Farmgate stop')} aria-invalid={Boolean(problems.location) || undefined} /></span>
       </Field>
       <Field label={t('Date')} htmlFor="lf-date" error={problems.incidentDate}>
         <input id="lf-date" type="date" className="lf-text" value={form.incidentDate} max={dhakaToday()} onChange={set('incidentDate')} />
@@ -183,34 +218,42 @@ export function LostFoundForm({ token, initial, editing, onDone, onCancel }) {
       <Field label={t('Time')} htmlFor="lf-time" error={problems.incidentTime} optional>
         <input id="lf-time" type="time" className="lf-text" value={form.incidentTime} onChange={set('incidentTime')} />
       </Field>
-      <Field label={t('Description')} htmlFor="lf-description" error={problems.description} hint={`${formatNumber(form.description.trim().length)}/1000 · ${t('Colour, brand, marks, what was inside…')}`}>
-        <textarea id="lf-description" className="lf-text" rows={4} value={form.description} onChange={set('description')} maxLength={1000}
-          placeholder={lost ? t('e.g. Black phone with a blue cover, a crack on the top corner.') : t('e.g. Brown leather wallet. Describe it, but keep a detail back so the owner can prove it is theirs.')} />
-      </Field>
-      <Field label={t('Contact information')} htmlFor="lf-contact" error={problems.contactInformation} hint={t('Shown to signed-in SmartCommute users so they can reach you.')}>
-        <input id="lf-contact" className="lf-text" value={form.contactInformation} onChange={set('contactInformation')} maxLength={150} placeholder={t('e.g. 01712-345678')} />
-      </Field>
-      <Field label={t('Picture')} htmlFor="lf-image" error={imageError} hint={t('JPG, PNG or WEBP, up to 5 MB.')} optional>
+    </FormSection>
+
+    <FormSection step={3} title={t('Photo and contact')} text={t('A photo and a way to reach you.')}>
+      <Field label={t('Picture')} htmlFor="lf-image" error={imageError} hint={t('JPG, PNG or WEBP, up to 5 MB.')} optional wide>
         <input ref={fileInput} id="lf-image" type="file" accept="image/jpeg,image/png,image/webp" onChange={pickImage} hidden />
         {form.imagePreview
           ? <div className="lf-preview"><img src={form.imagePreview} alt={t('Preview of the picture')} />
-            <div><button type="button" className="button button-outline button-small" onClick={() => fileInput.current?.click()}><Camera size={14} /> {t('Change')}</button>
-              <button type="button" className="button button-outline button-small" onClick={dropImage}><Trash2 size={14} /> {t('Remove')}</button></div></div>
-          : <button type="button" className="lf-upload" onClick={() => fileInput.current?.click()}><ImagePlus size={22} /><b>{t('Add a picture')}</b><small>{t('A clear photo helps people recognise the item.')}</small></button>}
+            <div className="lf-preview-text"><b>{t('Picture added')}</b><small>{t('A clear photo helps people recognise the item.')}</small>
+              <div><button type="button" className="button button-outline button-small" onClick={() => fileInput.current?.click()}><Camera size={14} /> {t('Change')}</button>
+                <button type="button" className="button button-outline button-small lf-danger-outline" onClick={dropImage}><Trash2 size={14} /> {t('Remove')}</button></div></div></div>
+          : <button type="button" className={`lf-upload${dragging ? ' is-dragging' : ''}`} onClick={() => fileInput.current?.click()}
+            onDragOver={(e) => { e.preventDefault(); setDragging(true) }} onDragLeave={() => setDragging(false)} onDrop={dropFile}>
+            <span className="lf-upload-icon" aria-hidden="true"><ImagePlus size={20} /></span>
+            <span className="lf-upload-text"><b>{t('Add a picture')}</b><small>{t('Click to choose, or drop a photo here.')}</small></span>
+          </button>}
+      </Field>
+      <Field label={t('Contact information')} htmlFor="lf-contact" error={problems.contactInformation} hint={t('Shown to signed-in SmartCommute users so they can reach you.')} wide>
+        <span className={`lf-input${problems.contactInformation ? ' invalid' : ''}`}><Phone size={16} aria-hidden="true" />
+          <input id="lf-contact" value={form.contactInformation} onChange={set('contactInformation')} maxLength={150} placeholder={t('e.g. 01712-345678')} aria-invalid={Boolean(problems.contactInformation) || undefined} /></span>
       </Field>
       {editing && <Field label={t('Status')} htmlFor="lf-status">
         <select id="lf-status" className="lf-text" value={form.status} onChange={set('status')}>
           {(OWNER_STATUSES.includes(form.status) ? OWNER_STATUSES : [form.status, ...OWNER_STATUSES]).map((s) => <option key={s} value={s}>{t(STATUS_LABELS[s])}</option>)}
         </select>
       </Field>}
-    </div>
+    </FormSection>
 
     {error && <p className="lf-form-error" role="alert"><CircleAlert size={15} /> {error}</p>}
     <div className="lf-actions">
-      <button type="button" className="button button-outline" onClick={onCancel} disabled={busy}>{t('Cancel')}</button>
-      <button type="submit" className={`button button-green${lost ? '' : ''}`} disabled={busy} aria-busy={busy}>
-        {busy ? <><Loader2 size={15} className="lf-spin" /> {t('Saving…')}</> : <><Check size={15} /> {editing ? t('Save changes') : t('Submit report')}</>}
-      </button>
+      <p className="lf-actions-note"><ShieldCheck size={15} aria-hidden="true" /> {t('Fields marked * are required.')}</p>
+      <div className="lf-actions-buttons">
+        <button type="button" className="button button-outline" onClick={onCancel} disabled={busy}>{t('Cancel')}</button>
+        <button type="submit" className={`button button-green lf-submit ${lost ? 'lost' : 'found'}`} disabled={busy} aria-busy={busy}>
+          {busy ? <><Loader2 size={15} className="lf-spin" /> {t('Saving…')}</> : <><Check size={15} /> {editing ? t('Save changes') : t('Submit report')}</>}
+        </button>
+      </div>
     </div>
   </form>
 }
@@ -432,7 +475,10 @@ export function LostFoundPage({ token, signedIn, user, openAuth, notify = () => 
               </>}
       </section>}
 
-    {form && <Modal title={form.editing ? t('Edit report') : form.initial.reportType === 'lost' ? t('Report a lost item') : t('Report a found item')} onClose={() => setForm(null)}>
+    {form && <Modal title={form.editing ? t('Edit report') : form.initial.reportType === 'lost' ? t('Report a lost item') : t('Report a found item')}
+      subtitle={form.editing ? t('Update the details or mark it as resolved.') : t('Takes about a minute. Other commuters can then see it and get in touch.')}
+      icon={form.editing ? Edit3 : form.initial.reportType === 'lost' ? PackageSearch : PackageCheck}
+      tone={form.editing ? '' : form.initial.reportType} onClose={() => setForm(null)} form>
       <LostFoundForm token={token} initial={form.initial} editing={form.editing} onDone={finished} onCancel={() => setForm(null)} />
     </Modal>}
     {openId && <ReportDetails id={openId} token={token} isAdmin={isAdmin} notify={notify} onClose={() => setOpenId(null)} onEdit={startEdit} onDeleted={changed} onOpenChat={openChat} />}

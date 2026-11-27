@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Check, ChevronLeft, ChevronRight } from 'lucide-react'
+import { Check, ChevronLeft, ChevronRight, Clock } from 'lucide-react'
 import { getLang, t } from '../../models/i18n'
 import '../styles/controls.css'
 
 // The browser draws <select> lists and date pickers itself, in the operating system's style, and CSS cannot reach
-// them. This component, mounted once for the whole app, opens a designed list or calendar in their place. The
+// them. This component, mounted once for the whole app, opens a designed list, calendar or clock in their place. The
 // native element stays the source of truth: a choice is written to it and announced with the same input/change
 // events a person would cause, so every form keeps working exactly as before (React state, validation, tests).
 // Skipped for <select multiple>, list boxes, disabled or read-only fields, and anything marked data-native.
@@ -13,6 +13,7 @@ import '../styles/controls.css'
 const usable = (el) => el && !el.disabled && !el.readOnly && !el.closest('[data-native]')
 const isSelect = (el) => el instanceof HTMLSelectElement && usable(el) && !el.multiple && !(el.size > 1)
 const isDate = (el) => el instanceof HTMLInputElement && el.type === 'date' && usable(el)
+const isTime = (el) => el instanceof HTMLInputElement && el.type === 'time' && usable(el)
 
 // Chrome, Edge and Safari let us replace the date picker; elsewhere the browser's own picker is kept.
 const canReplaceDatePicker = typeof CSS !== 'undefined' && CSS.supports?.('selector(::-webkit-calendar-picker-indicator)')
@@ -79,9 +80,9 @@ export function NativeControlsEnhancer() {
     }
     const onClick = (event) => {
       const target = event.target
-      if (canReplaceDatePicker && isDate(target) && event.pointerType !== 'touch' && !event.sourceCapabilities?.firesTouchEvents) {
-        event.preventDefault() // stops the browser's own calendar from opening
-        if (openRef.current?.el !== target) show('date', target)
+      if (canReplaceDatePicker && (isDate(target) || isTime(target)) && event.pointerType !== 'touch' && !event.sourceCapabilities?.firesTouchEvents) {
+        event.preventDefault() // stops the browser's own calendar or clock from opening
+        if (openRef.current?.el !== target) show(isTime(target) ? 'time' : 'date', target)
       }
     }
     const onKeyDown = (event) => {
@@ -89,7 +90,7 @@ export function NativeControlsEnhancer() {
       if (openRef.current) return // the open panel handles its own keys
       const opener = event.key === ' ' || event.key === 'Enter' || event.key === 'F4' || (event.altKey && event.key === 'ArrowDown')
       if (opener && isSelect(target)) { event.preventDefault(); show('select', target) }
-      else if ((event.key === 'F4' || (event.altKey && event.key === 'ArrowDown')) && canReplaceDatePicker && isDate(target)) { event.preventDefault(); show('date', target) }
+      else if ((event.key === 'F4' || (event.altKey && event.key === 'ArrowDown')) && canReplaceDatePicker && (isDate(target) || isTime(target))) { event.preventDefault(); show(isTime(target) ? 'time' : 'date', target) }
     }
     document.addEventListener('mousedown', onPointerDown, true)
     document.addEventListener('click', onClick, true)
@@ -102,9 +103,9 @@ export function NativeControlsEnhancer() {
   }, [close, show])
 
   if (!open) return null
-  return createPortal(open.kind === 'select'
-    ? <SelectPanel key="s" el={open.el} onClose={close} />
-    : <DatePanel key="d" el={open.el} onClose={close} />, document.body)
+  return createPortal(open.kind === 'select' ? <SelectPanel key="s" el={open.el} onClose={close} />
+    : open.kind === 'time' ? <TimePanel key="t" el={open.el} onClose={close} />
+      : <DatePanel key="d" el={open.el} onClose={close} />, document.body)
 }
 
 // Keeps the panel attached to its field while the page scrolls or resizes, and closes it if the field goes away.
@@ -236,6 +237,72 @@ function DatePanel({ el, onClose }) {
     <div className="ncx-cal-foot">
       <button type="button" className="ncx-cal-link" disabled={!allowed(today)} onClick={() => pick(today)}>{t('Today')}</button>
       {!el.required && el.value && <button type="button" className="ncx-cal-link muted" onClick={() => { writeValue(el, ''); onClose() }}>{t('Clear')}</button>}
+    </div>
+  </div>
+}
+
+// The time field's clock: the chosen time large at the top, then hours, minutes (every 5, plus the minute already
+// set) and AM/PM. Each pick is written to the field at once; Done or a click outside closes it.
+const fromTime = (s) => (/^\d{2}:\d{2}/.test(s || '') ? { h: Number(s.slice(0, 2)), m: Number(s.slice(3, 5)) } : null)
+const toTime = ({ h, m }) => `${pad(h)}:${pad(m)}`
+
+function TimePanel({ el, onClose }) {
+  const now = new Date()
+  const [time, setTime] = useState(() => fromTime(el.value) || { h: now.getHours(), m: Math.floor(now.getMinutes() / 5) * 5 })
+  const set = useCallback((next) => { setTime(next); writeValue(el, toTime(next)) }, [el])
+  const pos = useFollow(el, 340, 280, onClose)
+  const columns = useRef(null)
+  const num = (n, two = true) => new Intl.NumberFormat(locale(), { minimumIntegerDigits: two ? 2 : 1, useGrouping: false }).format(n)
+
+  const hour12 = time.h % 12 || 12
+  const pm = time.h >= 12
+  const minutes = [...new Set([...Array.from({ length: 12 }, (_, i) => i * 5), time.m])].sort((a, b) => a - b)
+  const setHour = (h12) => set({ ...time, h: (h12 % 12) + (pm ? 12 : 0) })
+  const setHalf = (toPm) => set({ ...time, h: (time.h % 12) + (toPm ? 12 : 0) })
+
+  // The chosen hour and minute are scrolled to the middle of their columns when the clock opens.
+  useLayoutEffect(() => {
+    columns.current?.querySelectorAll('.ncx-time-col').forEach((col) => {
+      const chosen = col.querySelector('.is-selected')
+      if (chosen) col.scrollTop = chosen.offsetTop - col.clientHeight / 2 + chosen.offsetHeight / 2
+    })
+  }, [])
+
+  useEffect(() => {
+    const onKey = (event) => {
+      if (event.target !== el) return
+      if (event.key === 'Escape') { event.preventDefault(); onClose() }
+      else if (event.key === 'Enter') { event.preventDefault(); if (!el.value) set(time); onClose() }
+      else if (event.key === 'Tab') onClose(false)
+    }
+    document.addEventListener('keydown', onKey, true)
+    return () => document.removeEventListener('keydown', onKey, true)
+  })
+
+  const cell = (label, selected, onPick, aria) => <button type="button" className={`ncx-time-cell${selected ? ' is-selected' : ''}`}
+    aria-pressed={selected} aria-label={aria} onClick={onPick}>{label}</button>
+
+  return <div className={`ncx-panel ncx-time${pos.up ? ' is-up' : ''}`} role="dialog" aria-label={t('Choose a time')}
+    style={{ left: pos.left, width: 280, top: pos.top, bottom: pos.bottom }} onMouseDown={(e) => e.preventDefault()}>
+    <div className="ncx-time-head"><Clock size={16} aria-hidden="true" /><b aria-live="polite">{num(hour12, false)}:{num(time.m)}</b><span>{pm ? t('PM') : t('AM')}</span></div>
+    <div className="ncx-time-cols" ref={columns}>
+      <div className="ncx-time-col" role="group" aria-label={t('Hour')}>
+        {Array.from({ length: 12 }, (_, i) => i + 1).map((h) => <React.Fragment key={h}>{cell(num(h, false), h === hour12, () => setHour(h), `${h}`)}</React.Fragment>)}
+      </div>
+      <div className="ncx-time-col" role="group" aria-label={t('Minute')}>
+        {minutes.map((m) => <React.Fragment key={m}>{cell(num(m), m === time.m, () => set({ ...time, m }), `${m}`)}</React.Fragment>)}
+      </div>
+      <div className="ncx-time-col ncx-time-half" role="group" aria-label={t('AM or PM')}>
+        {cell(t('AM'), !pm, () => setHalf(false))}
+        {cell(t('PM'), pm, () => setHalf(true))}
+      </div>
+    </div>
+    <div className="ncx-cal-foot">
+      <button type="button" className="ncx-cal-link" onClick={() => { const d = new Date(); set({ h: d.getHours(), m: d.getMinutes() }) }}>{t('Now')}</button>
+      <span className="ncx-time-actions">
+        {!el.required && el.value && <button type="button" className="ncx-cal-link muted" onClick={() => { writeValue(el, ''); onClose() }}>{t('Clear')}</button>}
+        <button type="button" className="ncx-time-done" onClick={() => { if (!el.value) set(time); onClose() }}>{t('Done')}</button>
+      </span>
     </div>
   </div>
 }

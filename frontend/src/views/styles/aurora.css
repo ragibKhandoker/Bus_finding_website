@@ -169,6 +169,7 @@ html[data-theme="light"] :is(.panel,.dv-panel,.do-panel,.extra-panel,.hp-hero-st
   position:relative;z-index:3;
 }
 :is(.more-nav-menu,.select-menu-list,.toast-card,.page-loader-card,.location-list,.theme-menu,.dv-bus-results,.notification-menu,.bns-menu,.rs-suggest,
+  .lf-options,.cp-options,.cr-options,
   .auth-modal,.ad-dialog,.cp-modal,.cr-modal,.dv-modal,.lf-modal,.rs-dialog){
   -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
   background:var(--au-popup)!important;border:1px solid var(--au-glass-edge)!important;

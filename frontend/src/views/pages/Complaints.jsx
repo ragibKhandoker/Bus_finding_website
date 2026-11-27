@@ -202,6 +202,21 @@ export function ComplaintForm({ token, onSubmitted }) {
 
 // ---- My complaints ----
 
+// How often an open list or complaint asks the server again, so an admin's new status or message shows up without
+// leaving the page. It also asks at once when the person comes back to this browser tab.
+export const COMPLAINT_REFRESH_MS = 15000
+function useKeepFresh(refresh) {
+  const latest = useRef(refresh)
+  latest.current = refresh
+  useEffect(() => {
+    const run = () => { if (document.visibilityState !== 'hidden') latest.current() }
+    const timer = window.setInterval(run, COMPLAINT_REFRESH_MS)
+    window.addEventListener('focus', run)
+    document.addEventListener('visibilitychange', run)
+    return () => { window.clearInterval(timer); window.removeEventListener('focus', run); document.removeEventListener('visibilitychange', run) }
+  }, [])
+}
+
 export function ComplaintStatusCard({ complaint: c, onOpen }) {
   return <article className={`cp-card ${c.status.toLowerCase()}`} data-testid="cp-card">
     <header><span className="cp-code">{c.code}</span><StatusBadge status={c.status} /></header>
@@ -221,9 +236,11 @@ function ComplaintDetails({ id, token, onClose, onDeleted, notify }) {
   const [state, setState] = useState({ status: 'loading' })
   const [confirm, setConfirm] = useState(false)
   const [busy, setBusy] = useState(false)
-  useEffect(() => {
-    complaintApi.get(id, token).then((res) => setState({ status: 'ready', c: res.data })).catch((e) => setState({ status: 'error', error: errorText(e) }))
-  }, [id, token])
+  // A refresh that fails keeps what is shown; only the first load shows an error.
+  const load = useCallback(() => complaintApi.get(id, token).then((res) => setState({ status: 'ready', c: res.data }))
+    .catch((e) => setState((now) => (now.c ? now : { status: 'error', error: errorText(e) }))), [id, token])
+  useEffect(() => { load() }, [load])
+  useKeepFresh(() => { if (!busy && !confirm) load() })
   const c = state.c
   const remove = async () => {
     setBusy(true)
@@ -267,9 +284,11 @@ export function MyComplaintsSection({ token, refreshKey, onOpen, onNew }) {
   const [state, setState] = useState({ status: 'loading', items: [] })
   const [filter, setFilter] = useState('all')
   const load = useCallback(async () => {
-    try { const res = await complaintApi.my(token); setState({ status: 'ready', items: res.data || [] }) } catch (e) { setState({ status: 'error', items: [], error: errorText(e) }) }
+    try { const res = await complaintApi.my(token); setState({ status: 'ready', items: res.data || [] }) }
+    catch (e) { setState((now) => (now.status === 'ready' ? now : { status: 'error', items: [], error: errorText(e) })) }
   }, [token])
   useEffect(() => { load() }, [load, refreshKey])
+  useKeepFresh(load)
   const counts = Object.fromEntries(STATUSES.map((s) => [s, state.items.filter((c) => c.status === s).length]))
   const shown = filter === 'all' ? state.items : state.items.filter((c) => c.status === filter)
   return <section className="cp-panel" aria-labelledby="cp-my-title">

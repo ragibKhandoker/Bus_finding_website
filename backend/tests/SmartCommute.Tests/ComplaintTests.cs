@@ -163,6 +163,11 @@ public class ComplaintFlowTests(TestServerFixture server)
         Assert.Equal(HttpStatusCode.OK, (await admin.PutAsJsonAsync($"/api/complaints/{id}/status", new { status = "REVIEWING", adminNotes = "We are checking with the bus company." })).StatusCode);
         // Once it is being reviewed, the owner can no longer delete it.
         Assert.Equal(HttpStatusCode.Conflict, (await ownerClient.DeleteAsync($"/api/complaints/{id}")).StatusCode);
+        // The same status again sends a message only: the owner sees it at once, and it stays REVIEWING.
+        Assert.Equal(HttpStatusCode.OK, (await admin.PutAsJsonAsync($"/api/complaints/{id}/status", new { status = "REVIEWING", adminNotes = "The operator has replied; we are checking the CCTV." })).StatusCode);
+        var update = (await JsonOf(await ownerClient.GetAsync($"/api/complaints/{id}"))).GetProperty("data");
+        Assert.Equal("REVIEWING", update.GetProperty("status").GetString());
+        Assert.Equal("The operator has replied; we are checking the CCTV.", update.GetProperty("adminNotes").GetString());
         var resolved = await admin.PutAsJsonAsync($"/api/complaints/{id}/status", new { status = "RESOLVED", adminNotes = "Complaint reviewed. Necessary action has been taken." });
         Assert.Equal(HttpStatusCode.OK, resolved.StatusCode);
 
@@ -170,11 +175,12 @@ public class ComplaintFlowTests(TestServerFixture server)
         Assert.Equal("RESOLVED", seen.GetProperty("status").GetString());
         Assert.Equal("Complaint reviewed. Necessary action has been taken.", seen.GetProperty("adminNotes").GetString());
         var history = (await JsonOf(await ownerClient.GetAsync($"/api/complaints/{id}/history"))).GetProperty("data");
-        Assert.Equal(["PENDING", "REVIEWING", "RESOLVED"], history.EnumerateArray().Select(h => h.GetProperty("toStatus").GetString()).ToArray());
+        Assert.Equal(["PENDING", "REVIEWING", "REVIEWING", "RESOLVED"], history.EnumerateArray().Select(h => h.GetProperty("toStatus").GetString()).ToArray());
 
         var stats = (await JsonOf(await admin.GetAsync("/api/complaints/stats"))).GetProperty("data");
         Assert.True(stats.GetProperty("resolved").GetInt32() >= 1);
         await using var scope = server.Scope();
         Assert.True(await scope.ServiceProvider.GetRequiredService<AppDbContext>().Notifications.AnyAsync(n => n.UserId == owner.Id && n.Title.Contains("was resolved")));
+        Assert.True(await scope.ServiceProvider.GetRequiredService<AppDbContext>().Notifications.AnyAsync(n => n.UserId == owner.Id && n.Title.Contains("has a new message")));
     }
 }

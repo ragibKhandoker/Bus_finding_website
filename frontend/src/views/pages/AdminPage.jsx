@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { ArrowRight, BadgeCheck, BellRing, BusFront, FileCheck2, Check, CircleAlert, Clock3, ClipboardList, Copy, Gift, GraduationCap, History, KeyRound, Lock, Inbox, MessageCircle, Siren, Search, ShieldCheck, UserRound, Users } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, BadgeCheck, BellRing, BusFront, FileCheck2, Check, CircleAlert, Clock3, ClipboardList, Copy, Gift, GraduationCap, History, KeyRound, Lock, Inbox, MessageCircle, Siren, Search, ShieldCheck, UserRound, Users } from 'lucide-react'
 import { AdminSupportInbox, PasswordRequestsCard } from './Support'
 import { AdminPromotions } from './AdminPromotions'
 import { AdminComplaints } from './AdminComplaints'
@@ -184,8 +184,8 @@ export function AdminPage({ user, token, signedIn, isAdmin, openAuth, notify, na
       {kpis.map((kpi) => {
         const Icon = kpi.icon
         return <button key={kpi.tab} type="button" className={`adm-kpi ${kpi.tone}${tab === kpi.tab ? ' current' : ''}`} onClick={() => setTab(kpi.tab)} data-testid="admin-kpi">
-          <span className="adm-kpi-icon"><Icon size={19} /></span>
-          <span className="adm-kpi-text"><small>{t(kpi.label)}</small><b>{kpi.value}</b><em>{kpi.note}</em></span>
+          <span className="adm-kpi-head"><span className="adm-kpi-icon"><Icon size={18} /></span><small>{t(kpi.label)}</small><ArrowUpRight size={16} className="adm-kpi-go" aria-hidden="true" /></span>
+          <span className="adm-kpi-text"><b>{kpi.value}</b><em>{kpi.note}</em></span>
         </button>
       })}
     </div>

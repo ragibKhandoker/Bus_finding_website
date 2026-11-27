@@ -17,14 +17,39 @@ import { PageHeading } from '../components/common'
 import { VoiceSearchButton } from '../components/VoiceSearch'
 import { readRouteSearch, splitFromTo } from '../../models/voiceQuery'
 import { pageFromPath, previousUrl, routeFromPath } from '../../controllers/router'
+import { PERSIST_PREFIX } from '../../controllers/usePersistentState'
 
 export const ROUTES_PAGE_SIZE = 24
+const ROUTES_KEPT = ['routes:query', 'routes:type', 'routes:limit']
+const ROUTES_ENTRY_KEY = 'sc_routes_entry'
+
+// Whether this tab was opened by reloading the page; only the first page shown after the reload counts.
+let reloadPending = (() => {
+  try { return performance.getEntriesByType('navigation')[0]?.type === 'reload' } catch { return false }
+})()
+
+// The search and filter are kept only for going back to the same list with the browser's Back or Forward (e.g.
+// from a route's page). Opening Bus routes from the menu, a link or by reloading the page starts with a clear list.
+export function forgetRoutesSearchUnlessReturning() {
+  const reloaded = reloadPending
+  reloadPending = false
+  // Each visit marks its history entry; Back or Forward to that entry finds the mark, a new visit does not.
+  const mark = window.history.state?.routesVisit
+  let returning = false
+  try { returning = Boolean(mark) && !reloaded && sessionStorage.getItem(ROUTES_ENTRY_KEY) === mark } catch { /* storage blocked */ }
+  if (returning) return
+  try { ROUTES_KEPT.forEach((key) => sessionStorage.removeItem(PERSIST_PREFIX + key)) } catch { /* nothing kept */ }
+  const visit = `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 7)}`
+  window.history.replaceState({ ...(window.history.state || {}), routesVisit: visit }, '', window.location.href)
+  try { sessionStorage.setItem(ROUTES_ENTRY_KEY, visit) } catch { /* not remembered */ }
+}
 
 // Every route stored in the database, searchable by bus, route number or stop and filterable by bus type.
 export function BusRoutesPage({ navigate }) {
   const [state, load] = useBusRoutes()
   // The search, the filter and how many routes are shown are kept, so Back from a route's page lands on the
-  // same list.
+  // same list; a fresh visit (a tab, a link, a reload) clears them first. Runs before they are read.
+  useState(forgetRoutesSearchUnlessReturning)
   const [query, setQuery] = usePersistentState('routes:query', '')
   const [type, setType] = usePersistentState('routes:type', 'all')
   const [limit, setLimit] = usePersistentState('routes:limit', ROUTES_PAGE_SIZE)
