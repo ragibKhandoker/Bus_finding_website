@@ -14,6 +14,8 @@ import { useBusRoutes } from '../../controllers/useBusRoutes'
 import { usePersistentState } from '../../controllers/usePersistentState'
 import { RouteTile, RoutesStatus } from '../components/BusRoutes'
 import { PageHeading } from '../components/common'
+import { VoiceSearchButton } from '../components/VoiceSearch'
+import { readRouteSearch, splitFromTo } from '../../models/voiceQuery'
 import { pageFromPath, previousUrl, routeFromPath } from '../../controllers/router'
 
 export const ROUTES_PAGE_SIZE = 24
@@ -27,16 +29,31 @@ export function BusRoutesPage({ navigate }) {
   const [type, setType] = usePersistentState('routes:type', 'all')
   const [limit, setLimit] = usePersistentState('routes:limit', ROUTES_PAGE_SIZE)
   const term = query.trim().toLowerCase()
+  // "Uttara → Motijheel" (or "Uttara to Motijheel", "উত্তরা থেকে মতিঝিল"): the routes stopping at both places.
+  const pair = term ? splitFromTo(term) : null
+  const has = (text, part) => text && (text.toLowerCase().includes(part) || t(text).toLowerCase().includes(part))
   // Matches the English names stored in the database and their Bangla, so either language can be typed.
   const buses = state.status === 'ready' ? state.buses.filter((bus) => bus.routeNumber && (type === 'all' || bus.busType === type) &&
-    (!term || [bus.busName, bus.operator, bus.routeNumber, ...(bus.stops || []).map((s) => s.name)]
-      .some((text) => text && (text.toLowerCase().includes(term) || t(text).toLowerCase().includes(term))))) : []
+    (!term || [bus.busName, bus.operator, bus.routeNumber, ...(bus.stops || []).map((s) => s.name)].some((text) => has(text, term)) ||
+      (pair && [pair.from, pair.to].every((part) => (bus.stops || []).some((s) => has(s.name, part)))))) : []
+  // A search said out loud: a bus, a route number, a stop, or two places.
+  const [voiceSlot, setVoiceSlot] = useState(null) // where the voice card shows: under the search box
+  const onVoice = (readings) => {
+    const said = readRouteSearch(readings, state.status === 'ready' ? state.buses : [])
+    if (!said) return null
+    // Nothing said fits a bus, route or stop: keep the list as it is rather than search for the wrong words.
+    if (said.kind === 'text') return t('No bus, route or stop matched “{said}”. Try again.', { said: said.said })
+    const next = said.kind === 'route' ? `${t(said.from)} → ${t(said.to)}` : said.kind === 'number' ? said.text : t(said.text)
+    setQuery(next); setLimit(ROUTES_PAGE_SIZE)
+    return t('Showing routes for “{query}”', { query: next })
+  }
   const filter = (next) => { setType(next); setLimit(ROUTES_PAGE_SIZE) }
   return <div className="page inner-page">
     <PageHeading eyebrow={t('ROUTE DATABASE')} title={t('Bus routes in Dhaka')} description={t('Every route in the database. Open a route to see its stops in order, the fare and where each stop is.')} icon={Route} />
     <section className="panel routes-toolbar">
-      <label className="hp-route-search"><Search size={16} /><input value={query} onChange={(e) => { setQuery(e.target.value); setLimit(ROUTES_PAGE_SIZE) }} placeholder={t('Search a bus or a stop')} /></label>
+      <label className="hp-route-search"><Search size={16} /><input value={query} onChange={(e) => { setQuery(e.target.value); setLimit(ROUTES_PAGE_SIZE) }} placeholder={t('Search a bus or a stop')} /><VoiceSearchButton slot={voiceSlot} onResult={onVoice} examples={['Raida', 'DBR 12', 'Uttara to Motijheel']} /></label>
       <div className="segmented routes-filter">{['all', ...BUS_TYPES].map((option) => <button key={option} className={type === option ? 'selected' : ''} onClick={() => filter(option)}>{option === 'all' ? t('All buses') : t(option)}</button>)}</div>
+      <div className="voice-slot" ref={setVoiceSlot} />
     </section>
     <section className="results-area">
       {RoutesStatus({ state, onRetry: load }) || <>

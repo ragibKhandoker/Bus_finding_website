@@ -1,0 +1,40 @@
+/* Voice search: the mic button and the listening card at the bottom of the screen. */
+.voice-button{display:grid;place-items:center;width:34px;height:34px;flex:none;border:1.5px solid color-mix(in srgb,var(--green) 75%,transparent);border-radius:50%;background:color-mix(in srgb,var(--green) 22%,var(--surface));color:color-mix(in srgb,var(--green) 55%,var(--ink));cursor:pointer;transition:background .15s,color .15s,box-shadow .15s}
+.voice-button:hover,.segmented>.voice-button.voice-pill:hover{background:var(--green);border-color:var(--green);color:#fff}
+.voice-button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+.voice-button.is-listening,.segmented>.voice-button.voice-pill.is-listening{background:#e0483e;border-color:#e0483e;color:#fff;animation:voice-pulse 1.3s ease-out infinite}
+@keyframes voice-pulse{0%{box-shadow:0 0 0 0 rgba(224,72,62,.45)}100%{box-shadow:0 0 0 12px rgba(224,72,62,0)}}
+
+/* In Bus routes it sits inside the search box. */
+.hp-route-search .voice-button{width:30px;height:30px;margin-left:auto;margin-right:-6px}
+.hp-route-search input{flex:1;min-width:0}
+
+.voice-slot:empty{display:none}
+.voice-slot{margin-top:12px}
+.voice-card{display:flex;align-items:center;gap:12px;width:100%;padding:10px 10px 10px 12px;box-sizing:border-box;
+  border:1px solid color-mix(in srgb,var(--green) 40%,transparent);border-radius:12px;background:color-mix(in srgb,var(--green) 9%,var(--surface));color:var(--ink);animation:voice-in .16s ease-out}
+@keyframes voice-in{from{opacity:0;transform:translateY(-4px)}}
+/* No spot given: a small solid strip at the bottom of the screen. */
+.voice-card.is-floating{position:fixed;left:50%;bottom:16px;z-index:1000;width:min(440px,calc(100vw - 32px));transform:translateX(-50%);background:#fff;box-shadow:0 14px 34px -14px rgba(16,44,32,.45);animation:none}
+html:is([data-theme="dark"],[data-theme="night"]) .voice-card.is-floating{background:#1f2a25}
+.voice-orb{position:relative;display:grid;place-items:center;width:34px;height:34px;flex:none;border:0;border-radius:50%;background:#e0483e;color:#fff;cursor:pointer}
+.voice-orb .voice-ring{position:absolute;inset:-4px;border-radius:50%;border:2px solid rgba(224,72,62,.5);animation:voice-ring 1.4s ease-out infinite}
+@keyframes voice-ring{from{transform:scale(.9);opacity:1}to{transform:scale(1.3);opacity:0}}
+.voice-orb.is-done{background:var(--green);cursor:default}
+.voice-orb.is-error{background:color-mix(in srgb,var(--ink) 12%,var(--surface));color:var(--ink);cursor:default}
+.voice-text{flex:1;min-width:0;display:grid;gap:2px}
+.voice-heard{margin:0;font-size:14px;font-weight:700;line-height:1.35;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.voice-hint{margin:0;font-size:12px;line-height:1.45;color:var(--muted)}
+.voice-hint em{margin:0 2px;font-style:normal;font-weight:700;color:var(--ink)}
+.voice-error{margin:0;font-size:12.5px;line-height:1.5;color:var(--ink)}
+.voice-retry{flex:none}
+.voice-langs{display:flex;flex:none;gap:2px;padding:2px;border-radius:8px;background:color-mix(in srgb,var(--ink) 8%,transparent)}
+.voice-langs button{border:0;border-radius:6px;padding:4px 9px;background:transparent;color:var(--muted);font-size:11.5px;font-weight:700;cursor:pointer}
+.voice-langs button.selected{background:var(--surface);color:var(--green);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.voice-close{display:grid;place-items:center;width:26px;height:26px;flex:none;border:0;border-radius:7px;background:transparent;color:var(--muted);cursor:pointer}
+.voice-close:hover{background:color-mix(in srgb,var(--ink) 8%,transparent);color:var(--ink)}
+@media(max-width:520px){.voice-card{flex-wrap:wrap;gap:8px 10px}.voice-text{flex-basis:calc(100% - 90px)}.voice-close{order:3}.voice-langs,.voice-retry{order:4;margin-left:44px}}
+@media(prefers-reduced-motion:reduce){.voice-button.is-listening,.voice-orb .voice-ring,.voice-card{animation:none}}
+/* Bus routes: the card takes a full row under the search box and filters. */
+.routes-toolbar:has(>.voice-slot:not(:empty)){flex-wrap:wrap}
+.routes-toolbar>.voice-slot{flex-basis:100%;margin-top:0}

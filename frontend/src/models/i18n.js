@@ -40,6 +40,9 @@ export const formatDateTime = (value) => value ? new Date(value).toLocaleString(
 const english = Object.fromEntries(Object.entries(bn).map(([en, bangla]) => [bangla, en]))
 export const toEnglish = (text) => english[text?.trim()] ?? text
 
+// The Bangla for an English name, whatever the interface language, e.g. 'Uttara' → 'উত্তরা' (voice search).
+export const toBangla = (text) => bn[text] ?? text
+
 // Translates English UI text. Text with no Bangla entry is shown in English.
 // {name} placeholders are filled from vars; numbers are written in the current language's digits.
 export function t(text, vars) {

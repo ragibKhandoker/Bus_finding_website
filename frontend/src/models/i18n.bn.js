@@ -3061,4 +3061,18 @@ export default {
   'Your driver registration has been submitted successfully. Our administration team is reviewing your documents. Please wait until an administrator verifies your account.': 'আপনার ড্রাইভার রেজিস্ট্রেশন সফলভাবে জমা হয়েছে। আমাদের অ্যাডমিন টিম আপনার কাগজপত্র যাচাই করছে। অ্যাডমিন আপনার অ্যাকাউন্ট যাচাই না করা পর্যন্ত অনুগ্রহ করে অপেক্ষা করুন।',
   'Please wait for admin verification': 'অ্যাডমিনের যাচাইয়ের জন্য অপেক্ষা করুন',
   'Your driver dashboard opens once an administrator approves your application. You will get a notification as soon as they decide — you can close this page meanwhile.': 'অ্যাডমিন আপনার আবেদন অনুমোদন করলেই ড্রাইভার ড্যাশবোর্ড খুলবে। সিদ্ধান্ত হওয়ামাত্র আপনি নোটিফিকেশন পাবেন — এর মধ্যে এই পেজটি বন্ধ করতে পারেন।',
+  // ---- Voice search ----
+  'Search by voice': 'ভয়েসে খুঁজুন',
+  'Voice search': 'ভয়েস সার্চ',
+  'Stop listening': 'শোনা বন্ধ করুন',
+  'Listening…': 'শুনছি…',
+  'Try saying': 'বলে দেখুন',
+  'Language you speak': 'আপনি যে ভাষায় বলবেন',
+  'Uttara to Motijheel': 'উত্তরা থেকে মতিঝিল',
+  'Microphone access is blocked. Allow the microphone for this site in your browser settings, then try again.': 'মাইক্রোফোন ব্যবহারের অনুমতি বন্ধ আছে। ব্রাউজারের সেটিংসে এই সাইটের জন্য মাইক্রোফোন চালু করে আবার চেষ্টা করুন।',
+  'Nothing was heard. Tap the mic and say where you are going.': 'কিছু শোনা যায়নি। মাইকে চাপ দিয়ে বলুন কোথায় যাবেন।',
+  'Voice search needs an internet connection.': 'ভয়েস সার্চের জন্য ইন্টারনেট সংযোগ লাগবে।',
+  'Voice search could not start. Please try again.': 'ভয়েস সার্চ চালু করা যায়নি। আবার চেষ্টা করুন।',
+  'No bus, route or stop matched “{said}”. Try again.': '“{said}” কোনো বাস, রুট বা স্টপের সাথে মেলেনি। আবার চেষ্টা করুন।',
+  'Showing routes for “{query}”': '“{query}” এর রুট দেখানো হচ্ছে',
 }
