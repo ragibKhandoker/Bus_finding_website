@@ -176,3 +176,35 @@
   .bus-search-form:not(:has(.swap-button)){display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:8px!important}
   .bus-search-form:not(:has(.swap-button))>.button{width:100%;margin-top:4px}
 }
+
+/* Phones, bus result cards: the fare column (Starts from · ৳10 · Board · Log trip) sat beside the route and left it
+   ~150px, so route numbers broke ("DBR-/107"), stop names wrapped word by word and lines touched. Now the route has the
+   full card width; fare and the two buttons form a separate row underneath, and the ♡ sits in the top corner. */
+@media(max-width:760px){
+  html body .bus-result{display:grid!important;grid-template-columns:auto minmax(0,1fr);gap:12px;position:relative;padding:16px!important}
+  html body .bus-result>*{grid-column:1/-1}
+  html body .bus-result>.bus-result-icon{grid-column:1;width:38px;height:38px}
+  html body .bus-result>.bus-result-main{grid-column:2}
+  .bus-result:has(.bus-result-side>.favorite) .bus-title{padding-right:32px}
+  .results-heading .result-count{white-space:nowrap;flex:none}
+  .bus-result .bus-title{flex-wrap:wrap;gap:6px 8px;line-height:1.25}
+  .bus-result .bus-title h3{font-size:16px;line-height:1.25}
+  .bus-result .route-badge{white-space:nowrap;font-size:12px;line-height:1.2;padding:4px 9px}
+  .bus-result .bus-details{flex-wrap:wrap;font-size:13px;line-height:1.4;gap:4px 7px;margin-top:6px}
+  .bus-result .stop-line{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;font-size:14px;line-height:1.35;margin-top:12px}
+  .bus-result .stop-line>span:not(.stop-track){min-width:0;overflow-wrap:anywhere}
+  .bus-result .stop-track{flex:none;width:34px}
+  .bus-result .stop-count{font-size:13px;line-height:1.55;margin-top:8px}
+  .bus-result .bus-card-actions{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin-top:12px}
+  .bus-result .bus-card-actions .bus-details-link{margin-left:0;font-size:13.5px}
+  /* Fare row: "STARTS FROM ৳10 per ride" on one line, then Board and Log trip side by side, equal width. */
+  html body .bus-result>.bus-result-side{display:flex;flex-direction:row;flex-wrap:wrap;align-items:baseline;justify-content:flex-start;gap:6px 8px;min-width:0;padding-top:12px;border-top:1px solid var(--au-line,rgba(127,140,160,.25))}
+  .bus-result-side>.favorite{position:absolute;top:12px;right:12px;margin:0}
+  .bus-result-side>.fare-label{font-size:11px;letter-spacing:.8px}
+  .bus-result-side>b{font-size:19px;line-height:1}
+  .bus-result-side>small{margin:0!important;font-size:12.5px}
+  .bus-result-side>:is(.button,.board-state){flex:1 1 calc(50% - 4px);justify-content:center;min-height:40px;margin-top:6px;font-size:14px!important;white-space:nowrap;align-self:stretch}
+  .bus-result-side{align-items:center!important}
+  .bus-result-side>small{align-self:baseline}
+  html body .bus-result .bus-reviews{margin-left:0;flex:none;padding-top:10px}
+}
