@@ -65,3 +65,66 @@
   .cp-hero h1{font-size:clamp(23px,7vw,27px);overflow-wrap:anywhere}
   .cp-hero p{overflow-wrap:anywhere}
 }
+
+/* Phones: "How will you use SmartCommute?" as two compact app-style choice cards, both on one screen: a small photo,
+   the label, title and a short description beside it, then the full-width button. The feature list is left for
+   wider screens. The photo credit (required by the photos' licences) stays, in small type under each card. */
+@media(max-width:760px){
+  .dv-choose-head h1{font-size:24px}
+  .dv-choose-head p{font-size:14px;line-height:1.5}
+  .dv-choose-grid{gap:12px}
+  .dv-choose .dv-choice{display:grid;grid-template-columns:76px minmax(0,1fr);column-gap:14px;row-gap:3px;align-items:start;padding:14px;border-radius:18px;transform:none!important}
+  .dv-choose .dv-choice-photo,.dv-choose .dv-choice-body{display:contents}
+  .dv-choose .dv-choice-photo::after,.dv-choose .dv-choice-icon{display:none}
+  .dv-choose .dv-choice-photo img{grid-column:1;grid-row:1/span 3;width:76px;height:76px;border-radius:14px;object-fit:cover}
+  .dv-choose .dv-choice-eyebrow{grid-column:2;grid-row:1;font-size:10.5px!important}
+  .dv-choose .dv-choice-eyebrow::before{display:none!important}
+  .dv-choose .dv-choice h2{grid-column:2;grid-row:2;font-size:18px;line-height:1.2}
+  .dv-choose .dv-choice p{grid-column:2;grid-row:3;font-size:13px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .dv-choose .dv-choice ul{display:none}
+  .dv-choose .dv-choice-button{grid-column:1/-1;grid-row:4;height:46px;margin-top:12px}
+  .dv-choose .dv-choice-note{grid-column:1/-1;grid-row:5;margin-top:4px}
+  .dv-choose .dv-photo-credit{grid-column:1/-1;grid-row:6;position:static;margin-top:2px;text-align:center;font-size:10px;color:var(--muted);text-shadow:none;opacity:.8}
+}
+@media(max-width:760px){
+  /* driver.css sets this page to width:100%, which on phones put the cards against the screen edges. */
+  .page.dv-choose{width:calc(100% - 28px);padding-top:22px}
+  .dv-choose-head{margin-bottom:14px}
+  .dv-choose .dv-choice p{-webkit-line-clamp:2}
+}
+@media(max-width:760px){
+  /* The choice buttons: compact, under the text (not full width), as in an app. */
+  .dv-choose .dv-choice-button{grid-column:2;grid-row:4;justify-self:start;width:auto!important;height:38px!important;margin-top:10px;
+    padding:0 16px!important;border-radius:11px!important;font-size:13.5px!important;gap:6px}
+  .dv-choose .dv-choice-button svg{width:15px;height:15px}
+  .dv-choose .dv-choice-note{grid-column:2;grid-row:5;text-align:left;font-size:11.5px}
+}
+@media(max-width:760px){
+  main .dv-choose .button.dv-choice-button{min-height:38px}
+}
+@media(max-width:760px){
+  /* Both choice buttons the same size: each fills the text column of its card (both cards have the same columns). */
+  main .dv-choose .button.dv-choice-button{justify-self:stretch;width:100%!important;justify-content:center}
+}
+
+/* Phones: the sign-in / sign-up dialog compact enough that "Create your commuter account" fits on one screen
+   without scrolling: shorter fields, tighter spacing, a smaller title, the password rules in small type, and the
+   developer-only "Connected to …" line hidden. */
+@media(max-width:760px){
+  .modal-backdrop .auth-modal{padding:14px 16px 12px}
+  .modal-backdrop .auth-modal .auth-header{margin-bottom:10px}
+  .modal-backdrop .auth-modal .auth-header h2{font-size:19px;line-height:1.2}
+  .modal-backdrop .auth-modal .auth-header p{font-size:13px}
+  .modal-backdrop .auth-modal .auth-form{gap:8px}
+  .modal-backdrop .auth-modal .auth-row{gap:8px}
+  .modal-backdrop .auth-modal .auth-field{gap:3px}
+  .modal-backdrop .auth-modal .auth-label{font-size:13px}
+  .modal-backdrop .auth-modal .auth-input{height:42px}
+  .modal-backdrop .auth-modal .auth-input input,.modal-backdrop .auth-modal .auth-input select{font-size:15px}
+  .modal-backdrop .auth-modal .auth-rules{margin-top:-2px;gap:0 10px}
+  .modal-backdrop .auth-modal .auth-rules li{font-size:11.5px}
+  .modal-backdrop .auth-modal .auth-hint{font-size:12px}
+  .modal-backdrop .auth-modal :is(.auth-submit,button[type="submit"]){height:44px;margin-top:4px}
+  .modal-backdrop .auth-modal .auth-switch{margin-top:10px;font-size:13.5px}
+  .modal-backdrop .auth-modal .auth-api{display:none}
+}

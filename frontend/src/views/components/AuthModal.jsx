@@ -90,6 +90,8 @@ export function AuthModal({ mode, onMode, onClose, onSuccess, onContinue, onRegi
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  // The confirm field has its own eye, so each password field is shown or hidden on its own.
+  const [showConfirm, setShowConfirm] = useState(false)
   const [forgot, setForgot] = useState(false)
   // A user's "forgot password" form replaces the sign-in form; admins only get a note.
   const userForgot = forgot && mode === 'login'
@@ -133,7 +135,7 @@ export function AuthModal({ mode, onMode, onClose, onSuccess, onContinue, onRegi
       onSuccess(data.user, data.token, { admin, password: data.user?.mustChangePassword ? form.password : '' })
     } catch (e) { setError(errorText(e)) } finally { setLoading(false) }
   }
-  const changeMode = (next) => { setError(''); setShowPassword(false); setForgot(false); onMode(next) }
+  const changeMode = (next) => { setError(''); setShowPassword(false); setShowConfirm(false); setForgot(false); onMode(next) }
   const chooseRole = (role) => { if (role === 'admin') { changeMode('admin'); return } setLoginRole(role); changeMode('login') }
   // "Create one" opens the account-type choice (commuter or driver) when the app provides it.
   const switchMode = () => (!signup && onRegister ? onRegister() : changeMode(signup ? 'login' : 'signup'))
@@ -146,6 +148,7 @@ export function AuthModal({ mode, onMode, onClose, onSuccess, onContinue, onRegi
     return () => { document.body.style.overflow = previous; window.removeEventListener('keydown', onKey) }
   }, [onClose])
   const eye = <button type="button" className="auth-eye" onClick={() => setShowPassword(!showPassword)} aria-label={showPassword ? t('Hide password') : t('Show password')}>{showPassword ? <EyeOff size={17} /> : <Eye size={17} />}</button>
+  const confirmEye = <button type="button" className="auth-eye" onClick={() => setShowConfirm(!showConfirm)} aria-label={showConfirm ? t('Hide confirm password') : t('Show confirm password')}>{showConfirm ? <EyeOff size={17} /> : <Eye size={17} />}</button>
 
   return <div className="modal-backdrop" onMouseDown={(event) => event.target === event.currentTarget && onClose()}>
     <section className="auth-modal panel" role="dialog" aria-modal="true" aria-labelledby="auth-title">
@@ -205,8 +208,9 @@ export function AuthModal({ mode, onMode, onClose, onSuccess, onContinue, onRegi
         </ul>}
 
         {signup && <AuthField label={t('Confirm password')} icon={Lock} tone={confirmTone}
-          hint={confirmTone === 'ok' ? <><Check size={14} /> {t('Passwords match')}</> : confirmTone === 'bad' ? <><X size={14} /> {t('Passwords do not match')}</> : ''}>
-          <input type={showPassword ? 'text' : 'password'} autoComplete="new-password" value={form.confirmPassword} onChange={set('confirmPassword')} placeholder={t('Type the same password again')} aria-invalid={confirmTone === 'bad'} />
+          hint={confirmTone === 'ok' ? <><Check size={14} /> {t('Passwords match')}</> : confirmTone === 'bad' ? <><X size={14} /> {t('Passwords do not match')}</> : ''}
+          action={confirmEye}>
+          <input type={showConfirm ? 'text' : 'password'} autoComplete="new-password" value={form.confirmPassword} onChange={set('confirmPassword')} placeholder={t('Type the same password again')} aria-invalid={confirmTone === 'bad'} />
         </AuthField>}
 
         {error && <div className="auth-error" role="alert"><CircleAlert size={17} /><span>{error}</span></div>}

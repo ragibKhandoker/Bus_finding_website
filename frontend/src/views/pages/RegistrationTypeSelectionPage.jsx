@@ -46,7 +46,7 @@ export function RegistrationTypeSelectionPage({ navigate, openCommuterSignup, op
           <h2>{t(title)}</h2>
           <p>{t(text)}</p>
           <ul>{points.map(([PointIcon, label]) => <li key={label}><PointIcon size={16} aria-hidden="true" /> {t(label)}</li>)}</ul>
-          <button type="button" className={`button ${id === 'driver' ? 'button-dark' : 'button-green'} dv-choice-button`} onClick={() => choose(id)} disabled={signedIn}>
+          <button type="button" className="button button-green dv-choice-button" onClick={() => choose(id)} disabled={signedIn}>
             {t(button)} <ArrowRight size={16} />
           </button>
           <small className="dv-choice-note">{t(note)}</small>

@@ -3404,4 +3404,6 @@ export default {
   'Photos': 'ছবি',
   'Show photo {n} of {total}': '{total}টির মধ্যে {n} নম্বর ছবি দেখুন',
   'Main sections': 'প্রধান অংশ',
+  'Show confirm password': 'নিশ্চিত পাসওয়ার্ড দেখুন',
+  'Hide confirm password': 'নিশ্চিত পাসওয়ার্ড লুকান',
 }

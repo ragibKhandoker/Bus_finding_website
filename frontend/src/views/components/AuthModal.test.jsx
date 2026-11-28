@@ -69,3 +69,24 @@ describe('sign in by role', () => {
     expect(onSuccess).not.toHaveBeenCalled()
   })
 })
+
+describe('sign up password fields', () => {
+  it('gives Confirm password its own eye, independent of the Password field', async () => {
+    const user = userEvent.setup()
+    render(<AuthModal mode="signup" onMode={() => {}} onClose={() => {}} onSuccess={() => {}} />)
+    const dialog = screen.getByRole('dialog')
+    const password = within(dialog).getByPlaceholderText('Create a password')
+    const confirm = within(dialog).getByPlaceholderText('Type the same password again')
+    expect(confirm.type).toBe('password')
+
+    await user.click(within(dialog).getByRole('button', { name: 'Show confirm password' }))
+    expect(confirm.type).toBe('text')
+    expect(password.type).toBe('password') // only the confirm field is shown
+
+    await user.click(within(dialog).getByRole('button', { name: 'Show password' }))
+    expect(password.type).toBe('text')
+    await user.click(within(dialog).getByRole('button', { name: 'Hide confirm password' }))
+    expect(confirm.type).toBe('password')
+    expect(password.type).toBe('text')
+  })
+})
