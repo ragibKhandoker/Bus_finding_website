@@ -155,3 +155,24 @@
   .modal-backdrop .auth-modal .auth-tabs{gap:3px}
   .modal-backdrop .auth-modal .auth-tabs button{gap:5px;padding:0 4px;font-size:13.5px;min-width:0}
 }
+
+/* Phones, "Find your bus": the route search was three columns (from · swap · to) of ~124px, which cut the place
+   names ("e.g. Uttar…"). Now From and To are full-width rows with the ⇅ swap button beside them, and Search buses
+   spans the width. The "Sign in to find routes" note reads as one sentence instead of four squeezed columns. */
+@media(max-width:760px){
+  .bus-search-form:has(.swap-button){display:grid!important;grid-template-columns:minmax(0,1fr) auto!important;gap:8px 10px!important}
+  .bus-search-form:has(.swap-button)>.field:first-of-type{grid-column:1;grid-row:1}
+  .bus-search-form:has(.swap-button)>.swap-button{grid-column:2;grid-row:1/span 2;align-self:center}
+  .bus-search-form:has(.swap-button)>.field:last-of-type{grid-column:1;grid-row:2}
+  .bus-search-form:has(.swap-button)>.button{grid-column:1/-1;grid-row:3;width:100%;margin-top:4px}
+  .bus-search-form .field{min-width:0}
+  .bus-search-form .field input{min-width:0;width:100%;text-overflow:ellipsis}
+  .signin-hint{display:block!important;font-size:13px;line-height:1.55}
+  .signin-hint>svg{display:inline-block;vertical-align:-3px;margin-right:6px}
+  .signin-hint>button{display:inline;padding:0;font-size:inherit;white-space:nowrap}
+}
+@media(max-width:760px){
+  /* Search by bus: the same full-width Search buses button as the route search. */
+  .bus-search-form:not(:has(.swap-button)){display:grid!important;grid-template-columns:minmax(0,1fr)!important;gap:8px!important}
+  .bus-search-form:not(:has(.swap-button))>.button{width:100%;margin-top:4px}
+}
