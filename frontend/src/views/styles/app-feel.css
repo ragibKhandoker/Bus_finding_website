@@ -128,3 +128,22 @@
   .modal-backdrop .auth-modal .auth-switch{margin-top:10px;font-size:13.5px}
   .modal-backdrop .auth-modal .auth-api{display:none}
 }
+
+/* Phones: smooth scrolling. Measured in the emulator, two things made scroll frames drop (the page juddered/shook):
+   the fixed full-screen backdrop layer (big gradients + grain, re-composited under the content every frame) and
+   large blurred box-shadows on cards. Both off here: the backdrop becomes a static gradient painted with the page,
+   and shadows are reduced to a small, cheap one on cards (their borders keep them distinct). Focus rings stay. */
+@media(max-width:760px){
+  body::before,body::after{display:none!important}
+  html:root:root{background:linear-gradient(180deg,color-mix(in srgb,var(--au-blob-1) 22%,var(--au-base)) 0,var(--au-base) 520px) no-repeat,var(--au-base)}
+  *:not(:focus):not(:focus-within):not(:focus-visible),
+  *::before,*::after{box-shadow:none!important;text-shadow:none!important}
+  :is(.panel,.cp-panel,.cp-card,.sug-panel,.sug-card,.pf-panel,.dv-choice,.hp-route,.bus-result,.ride-card,.route-bus,.extra-panel,.tp-card,.hp-hero-stats){
+    box-shadow:0 1px 3px rgba(15,40,30,.10)!important}
+}
+
+/* Phones: fine 1px line grids and dot patterns shimmer (moiré) while a page scrolls, which reads as a wave over the
+   screen. They are faint decoration only, so they are off on phones. */
+@media(max-width:760px){
+  .hp-hero::before,.cr-hero::before{display:none!important}
+}

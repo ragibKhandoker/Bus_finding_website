@@ -1,0 +1,29 @@
+# Render Blueprint for the SmartCommute backend (ASP.NET, built from backend/Dockerfile).
+# In Render: New → Blueprint → pick this repository. Render then creates the service and redeploys it on every push to
+# main. Fill in the values marked "sync: false" when Render asks (they are secrets and never stored in the repo).
+services:
+  - type: web
+    name: smartcommute-api
+    runtime: docker
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    plan: free
+    region: singapore
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      # The Neon connection string (Neon dashboard → Connection details).
+      - key: ConnectionStrings__DefaultConnection
+        sync: false
+      # A long random secret for sign-in tokens, made by Render.
+      - key: Jwt__Secret
+        generateValue: true
+      - key: Admin__Email
+        sync: false
+      - key: Admin__Password
+        sync: false
+      # The deployed website's address, so the browser may call this API from it.
+      - key: Cors__AllowedOrigins__0
+        value: https://smartcommute-dhaka.vercel.app

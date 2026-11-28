@@ -84,3 +84,54 @@
 .pf-hint{font-size:11.5px;color:var(--muted);line-height:1.4}
 /* "Optional" (and "Same as phone" after it) sit on the right of the label, with the label text on the left. */
 .pf-field>span>em{margin-left:auto}
+
+/* ---- Password & security: sign-in style fields with their own eyes, a strength meter, live rules ---- */
+.pw-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px 18px}
+.pw-current,.pw-wide{grid-column:1/-1}
+.pw-current{max-width:calc(50% - 9px)}
+.pw-new,.pw-confirm{display:grid;gap:8px;align-content:start}
+.pw-panel .auth-input{height:46px;background:var(--surface)}
+.pw-panel .auth-input input{font-size:15px}
+.pw-panel .auth-label{font-size:13.5px;font-weight:700;color:var(--ink)}
+
+.pw-meter{display:flex;align-items:center;gap:10px}
+.pw-bars{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;flex:1}
+.pw-bars i{height:5px;border-radius:99px;background:color-mix(in srgb,var(--ink) 12%,transparent);transition:background .2s ease}
+.pw-meter small{font-size:12px;color:var(--muted);white-space:nowrap}
+.pw-meter small b{font-weight:800}
+.pw-meter.s1 .pw-bars i.on,.pw-meter.s1 small b{background:#d9534f;color:#c8352a}
+.pw-meter.s2 .pw-bars i.on,.pw-meter.s2 small b{background:#e3a008;color:#b87d03}
+.pw-meter.s3 .pw-bars i.on,.pw-meter.s3 small b{background:#2bb07d;color:#16803c}
+.pw-meter.s4 .pw-bars i.on,.pw-meter.s4 small b{background:var(--green);color:var(--green)}
+.pw-meter small b{background:none!important}
+
+.pw-rules{display:grid;gap:4px;margin:0;padding:0;list-style:none}
+.pw-rules li{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--muted);transition:color .15s}
+.pw-rules li.ok{color:#16803c;font-weight:600}
+.pw-rules li svg{flex:none}
+.pw-dot{width:6px;height:6px;margin:0 3.5px;border-radius:50%;background:color-mix(in srgb,var(--ink) 25%,transparent);flex:none}
+
+.pw-success{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding:12px 14px;border:1px solid color-mix(in srgb,#16803c 35%,transparent);border-left:3px solid #16803c;border-radius:10px;background:color-mix(in srgb,#16803c 7%,var(--surface))}
+.pw-success>span{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#16803c;color:#fff;flex:none}
+.pw-success div{display:grid;gap:2px}
+.pw-success b{font-size:14px;color:var(--ink)}
+.pw-success small{font-size:12.5px;color:var(--muted)}
+
+.pw-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding-top:14px;border-top:1px solid color-mix(in srgb,var(--ink) 10%,transparent)}
+.pw-actions p{display:flex;align-items:center;gap:6px;margin:0;font-size:12.5px;color:var(--muted)}
+.pw-submit{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 20px}
+
+@media(max-width:640px){
+  .pw-form{grid-template-columns:1fr;gap:14px}
+  .pw-current{max-width:none}
+  .pw-actions{flex-direction:column;align-items:stretch}
+  .pw-submit{justify-content:center;width:100%}
+}
+
+/* Edit profile is the page's main action (the theme's primary colour, like Update password); Sign out is a clear
+   red button. */
+.pf-edit-button{display:inline-flex;align-items:center;gap:7px;padding-left:16px;padding-right:16px}
+.profile-page .pf-signout{border:0;background:#c8352a;color:#fff;font-weight:700;box-shadow:0 8px 20px -12px rgba(200,53,42,.7);transition:background .15s,transform .12s}
+.profile-page .pf-signout:hover{background:#a92b22}
+.profile-page .pf-signout:active{transform:scale(.98)}
+.profile-page .pf-signout svg{color:#fff}

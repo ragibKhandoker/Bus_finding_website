@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { ArrowRight, BadgeCheck, CalendarDays, Check, CircleAlert, Copy, KeyRound, Lock, LogOut, Inbox, LayoutDashboard, Mail, MessageCircle, Siren, Pencil, Phone, Plus, Route, ShieldCheck, Users, X } from 'lucide-react'
+import { ArrowRight, BadgeCheck, CalendarDays, Check, CircleAlert, Copy, Eye, EyeOff, KeyRound, Lock, LogOut, Inbox, LayoutDashboard, Mail, MessageCircle, Siren, Pencil, Phone, Plus, Route, ShieldCheck, Users, X } from 'lucide-react'
 import { apiRequest as request } from '../../models/api'
 import { formatDate, formatNumber, t } from '../../models/i18n'
 import { usePersistentState } from '../../controllers/usePersistentState'
 import { saveSessionUser } from '../../models/session'
 import { errorText } from '../../models/messages'
 import { PageHeading, SignInPrompt } from '../components/common'
-import { SelectMenu } from '../components/AuthModal'
+import { AuthField, SelectMenu } from '../components/AuthModal'
 import { BIO_LIMIT, DHAKA_AREAS, GENDERS, PROFILE_FIELDS, formatWhatsApp, profileFormOf, profileProblem } from '../../models/user'
 import { ADMIN_FOCUS_KEY } from '../../controllers/router'
 import { changed } from '../../models/notifications'
@@ -91,7 +91,7 @@ export function ProfilePage({ user, token, signedIn, updateUser, signOut, openAu
         <section className="pf-panel">
           <header className="pf-panel-head">
             <div><h2>{t('Personal information')}</h2><p>{editing ? t('Update your details and save when you are done.') : t('This is how you appear to other SmartCommute users.')}</p></div>
-            {!editing && <button className="button button-outline button-small" onClick={() => { setSaved(false); setEditing(true) }}><Pencil size={14} /> {t('Edit profile')}</button>}
+            {!editing && <button className="button button-green button-small pf-edit-button" onClick={() => { setSaved(false); setEditing(true) }}><Pencil size={14} /> {t('Edit profile')}</button>}
           </header>
           {saved && !editing && <div className="pf-success" role="status"><span className="pf-success-icon"><Check size={16} /></span><div><b>{t('Your profile has been updated.')}</b><small>{t('Your new details are saved and visible on your profile.')}</small></div><button onClick={() => setSaved(false)} aria-label={t('Dismiss')}><X size={16} /></button></div>}
           {editing ? <form className="pf-form" noValidate onSubmit={save}>
@@ -197,11 +197,36 @@ export function AdminProfilePage({ user, token, signOut, notify, navigate }) {
   </div>
 }
 
+// How strong a new password is, 0–4, from its length and the kinds of characters in it.
+export function passwordStrength(password) {
+  if (!password) return 0
+  let score = 0
+  if (password.length >= 6) score++
+  if (password.length >= 10) score++
+  if (/[A-Za-z]/.test(password) && /\d/.test(password)) score++
+  if (/[^A-Za-z0-9]/.test(password) || (/[a-z]/.test(password) && /[A-Z]/.test(password))) score++
+  return score
+}
+const STRENGTH_LABELS = ['Too short', 'Weak', 'Fair', 'Good', 'Strong']
+
 export function PasswordPanel({ token, notify }) {
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' })
+  const [show, setShow] = useState({ currentPassword: false, newPassword: false, confirmPassword: false })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
-  const set = (key) => (event) => setForm({ ...form, [key]: event.target.value })
+  const [done, setDone] = useState(false)
+  const set = (key) => (event) => { setForm({ ...form, [key]: event.target.value }); setError(''); setDone(false) }
+  const eye = (key, name) => <button type="button" className="auth-eye" onClick={() => setShow((s) => ({ ...s, [key]: !s[key] }))}
+    aria-label={show[key] ? t('Hide {field}', { field: name }) : t('Show {field}', { field: name })}>{show[key] ? <EyeOff size={17} /> : <Eye size={17} />}</button>
+
+  const rules = [
+    { ok: form.newPassword.length >= 6, text: 'At least 6 characters' },
+    { ok: /[A-Za-z]/.test(form.newPassword), text: 'At least one letter' },
+    { ok: /\d/.test(form.newPassword), text: 'At least one number' },
+  ]
+  const strength = form.newPassword.length < 6 ? 0 : passwordStrength(form.newPassword)
+  const confirmTone = !form.confirmPassword ? '' : form.confirmPassword === form.newPassword ? 'ok' : 'bad'
+
   const submit = async (event) => {
     event.preventDefault()
     const problem = !form.currentPassword ? 'Please enter your current password.'
@@ -212,17 +237,48 @@ export function PasswordPanel({ token, notify }) {
     setSaving(true); setError('')
     try {
       await request('/auth/password', { token, method: 'PUT', body: JSON.stringify({ currentPassword: form.currentPassword, newPassword: form.newPassword }) })
-      setForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); notify(t('Password updated.'))
+      setForm({ currentPassword: '', newPassword: '', confirmPassword: '' })
+      setShow({ currentPassword: false, newPassword: false, confirmPassword: false })
+      setDone(true)
+      notify(t('Password updated.'))
     } catch (e) { setError(errorText(e)) } finally { setSaving(false) }
   }
-  return <section className="pf-panel">
-    <header className="pf-panel-head"><div><h2>{t('Password & security')}</h2><p>{t('Use at least 6 characters with a letter and a number.')}</p></div><span className="pf-panel-icon"><KeyRound size={18} /></span></header>
-    <form className="pf-form" noValidate onSubmit={submit}>
-      <label className="pf-field pf-wide"><span>{t('Current password')}</span><input type="password" autoComplete="current-password" value={form.currentPassword} onChange={set('currentPassword')} /></label>
-      <label className="pf-field"><span>{t('New password')}</span><input type="password" autoComplete="new-password" value={form.newPassword} onChange={set('newPassword')} /></label>
-      <label className="pf-field"><span>{t('Confirm new password')}</span><input type="password" autoComplete="new-password" value={form.confirmPassword} onChange={set('confirmPassword')} /></label>
-      {error && <div className="auth-error pf-wide" role="alert"><CircleAlert size={17} /><span>{error}</span></div>}
-      <div className="pf-actions pf-wide"><button className="button button-dark" disabled={saving}>{saving ? t('Updating…') : t('Update password')}</button></div>
+
+  return <section className="pf-panel pw-panel">
+    <header className="pf-panel-head"><div><h2>{t('Password & security')}</h2><p>{t('Change the password you use to sign in to SmartCommute.')}</p></div><span className="pf-panel-icon"><KeyRound size={18} /></span></header>
+    {done && <div className="pw-success" role="status"><span><Check size={16} /></span><div><b>{t('Password updated')}</b><small>{t('Use your new password the next time you sign in.')}</small></div></div>}
+    <form className="pw-form" noValidate onSubmit={submit}>
+      <div className="pw-current">
+        <AuthField label={t('Current password')} icon={Lock} action={eye('currentPassword', t('current password'))}>
+          <input type={show.currentPassword ? 'text' : 'password'} autoComplete="current-password" value={form.currentPassword} onChange={set('currentPassword')} placeholder={t('Enter your current password')} />
+        </AuthField>
+      </div>
+
+      <div className="pw-new">
+        <AuthField label={t('New password')} icon={KeyRound} action={eye('newPassword', t('new password'))}>
+          <input type={show.newPassword ? 'text' : 'password'} autoComplete="new-password" value={form.newPassword} onChange={set('newPassword')} placeholder={t('Create a new password')} />
+        </AuthField>
+        <div className={`pw-meter s${strength}`} aria-live="polite">
+          <span className="pw-bars" aria-hidden="true">{[1, 2, 3, 4].map((n) => <i key={n} className={strength >= n ? 'on' : ''} />)}</span>
+          <small>{form.newPassword ? <>{t('Strength')}: <b>{t(STRENGTH_LABELS[strength])}</b></> : t('Password strength')}</small>
+        </div>
+        <ul className="pw-rules" aria-label={t('Password requirements')}>
+          {rules.map((rule) => <li key={rule.text} className={rule.ok ? 'ok' : ''}>{rule.ok ? <Check size={13} /> : <span className="pw-dot" />}{t(rule.text)}</li>)}
+        </ul>
+      </div>
+
+      <div className="pw-confirm">
+        <AuthField label={t('Confirm new password')} icon={ShieldCheck} tone={confirmTone} action={eye('confirmPassword', t('confirm password'))}
+          hint={confirmTone === 'ok' ? <><Check size={14} /> {t('Passwords match')}</> : confirmTone === 'bad' ? <><X size={14} /> {t('Passwords do not match')}</> : ''}>
+          <input type={show.confirmPassword ? 'text' : 'password'} autoComplete="new-password" value={form.confirmPassword} onChange={set('confirmPassword')} placeholder={t('Type the new password again')} aria-invalid={confirmTone === 'bad'} />
+        </AuthField>
+      </div>
+
+      {error && <div className="auth-error pw-wide" role="alert"><CircleAlert size={17} /><span>{error}</span></div>}
+      <div className="pw-actions pw-wide">
+        <p><Lock size={14} /> {t('Choose a password you do not use on other sites.')}</p>
+        <button className="button button-green pw-submit" disabled={saving}>{saving ? t('Updating…') : <><KeyRound size={16} /> {t('Update password')}</>}</button>
+      </div>
     </form>
   </section>
 }
