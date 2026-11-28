@@ -20,6 +20,8 @@ export const PAGE_PATHS = {
   'Driver statistics': '/driver/statistics', 'Driver operations': '/admin/driver-operations',
   // F23: commuters following a bus live.
   'Live tracking': '/live-tracking',
+  // Boarding by scanning the QR code inside a bus.
+  'Scan QR': '/scan',
 }
 
 // The pages of the driver console (F22), all shown inside its sidebar layout.
@@ -117,6 +119,7 @@ export const PAGE_LOADER_NAMES = {
   'Driver trip history': 'Trip history', 'Driver routes': 'Assigned routes', 'Driver working status': 'Working status', 'Driver statistics': 'Performance & statistics',
   'Driver operations': 'Driver schedules & trips',
   'Live tracking': 'Live bus tracking',
+  'Scan QR': 'Scan bus QR code',
 }
 
 // Which Admin page section a profile shortcut should scroll to.

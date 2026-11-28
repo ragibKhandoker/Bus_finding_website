@@ -195,7 +195,7 @@ public class IndividualBusController(BusService buses) : ApiControllerBase
     [HttpPost("{id:guid}/end-trip")]
     public async Task<IActionResult> EndTrip(Guid id, EndTripRequest? request, [FromServices] TripService trips)
     {
-        var result = await trips.EndAsync(CurrentUserId, id, request?.Destination, request?.Source);
+        var result = await trips.EndAsync(CurrentUserId, id, request?.Destination, request?.Source, request?.Lat, request?.Lng);
         TripRewardOutcome? outcome = null;
         if (result.Ok && result.Trip is not null && HttpContext.RequestServices.GetService<RewardEngine>() is { } rewards)
         {
@@ -213,15 +213,18 @@ public class IndividualBusController(BusService buses) : ApiControllerBase
     public Task<IActionResult> EndTripByBody(EndTripRequest request, [FromServices] TripService trips) =>
         request.BusId is { } id ? EndTrip(id, request, trips) : Task.FromResult<IActionResult>(BadRequestError("busId is required."));
 
-    private IActionResult Answer(TripResult result, TripRewardOutcome? rewards = null)
+    private IActionResult Answer(TripResult result, TripRewardOutcome? rewards = null) =>
+        result.Ok ? StatusCode(result.Status, TripResponses.Body(result, rewards)) : Error(result.Status, result.Message);
+}
+
+// The JSON for a board or end-trip answer, shared by /individual-bus and /trip (QR boarding, /trip/end).
+public static class TripResponses
+{
+    public static object Body(TripResult result, TripRewardOutcome? rewards = null)
     {
-        if (!result.Ok)
-        {
-            return Error(result.Status, result.Message);
-        }
         var message = rewards is { Processed: true, Eligible: true } && (rewards.Cashback > 0 || rewards.FirstTripBonus > 0 || rewards.ReferralRewarded)
             ? $"{result.Message} {rewards.Message}" : result.Message;
-        object body = result.Wallet is null
+        return result.Wallet is null
             ? new { success = true, message, data = TripViewModel.From(result.Trip!) }
             : new
             {
@@ -236,6 +239,5 @@ public class IndividualBusController(BusService buses) : ApiControllerBase
                     rewards.TierUpgraded, rewards.CouponsIssued, rewards.Message,
                 },
             };
-        return StatusCode(result.Status, body);
     }
 }

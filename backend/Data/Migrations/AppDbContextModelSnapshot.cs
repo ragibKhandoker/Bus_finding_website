@@ -413,6 +413,140 @@ namespace SmartCommute.Server.Data.Migrations
                     b.ToTable("bus_photos", (string)null);
                 });
 
+            modelBuilder.Entity("SmartCommute.Server.Models.BusQrCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_id");
+
+                    b.Property<DateTime?>("DeactivatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deactivated_at");
+
+                    b.Property<Guid?>("DeactivatedById")
+                        .HasColumnType("uuid")
+                        .HasColumnName("deactivated_by_id");
+
+                    b.Property<Guid>("IndividualBusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("individual_bus_id");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<DateTime?>("LastScannedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_scanned_at");
+
+                    b.Property<int>("ScanCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("scan_count");
+
+                    b.Property<string>("TokenCipher")
+                        .IsRequired()
+                        .HasMaxLength(400)
+                        .HasColumnType("character varying(400)")
+                        .HasColumnName("token_cipher");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("token_hash");
+
+                    b.HasKey("Id")
+                        .HasName("pk_bus_qr_codes");
+
+                    b.HasIndex("CreatedById")
+                        .HasDatabaseName("ix_bus_qr_codes_created_by_id");
+
+                    b.HasIndex("IndividualBusId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_bus_qr_codes_one_active_per_bus")
+                        .HasFilter("is_active");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_bus_qr_codes_token_hash");
+
+                    b.ToTable("bus_qr_codes", (string)null);
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.BusQrScan", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("IndividualBusId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("individual_bus_id");
+
+                    b.Property<double?>("Latitude")
+                        .HasColumnType("double precision")
+                        .HasColumnName("latitude");
+
+                    b.Property<double?>("Longitude")
+                        .HasColumnType("double precision")
+                        .HasColumnName("longitude");
+
+                    b.Property<Guid>("QrCodeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("qr_code_id");
+
+                    b.Property<string>("TicketHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("ticket_hash");
+
+                    b.Property<Guid?>("TripId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("trip_id");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("used_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_bus_qr_scans");
+
+                    b.HasIndex("QrCodeId")
+                        .HasDatabaseName("ix_bus_qr_scans_qr_code_id");
+
+                    b.HasIndex("TicketHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_bus_qr_scans_ticket_hash");
+
+                    b.HasIndex("UserId", "CreatedAt")
+                        .HasDatabaseName("ix_bus_qr_scans_user_id_created_at");
+
+                    b.ToTable("bus_qr_scans", (string)null);
+                });
+
             modelBuilder.Entity("SmartCommute.Server.Models.BusReminder", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4413,6 +4547,19 @@ namespace SmartCommute.Server.Data.Migrations
                         .HasColumnType("numeric(12,2)")
                         .HasColumnName("base_fare");
 
+                    b.Property<double?>("BoardingLat")
+                        .HasColumnType("double precision")
+                        .HasColumnName("boarding_lat");
+
+                    b.Property<double?>("BoardingLng")
+                        .HasColumnType("double precision")
+                        .HasColumnName("boarding_lng");
+
+                    b.Property<string>("BoardingMethod")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("boarding_method");
+
                     b.Property<string>("BusCode")
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)")
@@ -4448,6 +4595,14 @@ namespace SmartCommute.Server.Data.Migrations
                     b.Property<double>("Distance")
                         .HasColumnType("double precision")
                         .HasColumnName("distance");
+
+                    b.Property<double?>("EndLat")
+                        .HasColumnType("double precision")
+                        .HasColumnName("end_lat");
+
+                    b.Property<double?>("EndLng")
+                        .HasColumnType("double precision")
+                        .HasColumnName("end_lng");
 
                     b.Property<DateTime?>("EndedAt")
                         .HasColumnType("timestamp with time zone")
@@ -5254,6 +5409,47 @@ namespace SmartCommute.Server.Data.Migrations
                     b.Navigation("Bus");
 
                     b.Navigation("UploadedBy");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.BusQrCode", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_bus_qr_codes_users_created_by_id");
+
+                    b.HasOne("SmartCommute.Server.Models.IndividualBus", "IndividualBus")
+                        .WithMany()
+                        .HasForeignKey("IndividualBusId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_bus_qr_codes_individual_buses_individual_bus_id");
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("IndividualBus");
+                });
+
+            modelBuilder.Entity("SmartCommute.Server.Models.BusQrScan", b =>
+                {
+                    b.HasOne("SmartCommute.Server.Models.BusQrCode", "QrCode")
+                        .WithMany()
+                        .HasForeignKey("QrCodeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_bus_qr_scans_bus_qr_codes_qr_code_id");
+
+                    b.HasOne("SmartCommute.Server.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_bus_qr_scans_users_user_id");
+
+                    b.Navigation("QrCode");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("SmartCommute.Server.Models.BusReminder", b =>

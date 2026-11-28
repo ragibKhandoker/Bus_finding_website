@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Maximize2, Minimize2, ArrowDownUp, ArrowRight, ArrowUpRight, BusFront, CircleAlert, Compass, Map as MapIcon, MapPin, Search, ShieldCheck } from 'lucide-react'
 import GoogleMapView, { mapsConfigured } from '../components/GoogleMapView'
+import { ScanQrCard } from '../components/QrScanner'
 import { useActiveTrip } from '../../controllers/useTrips'
 import { ActiveTripPanel, useBoardControls } from '../components/Trips'
 import { BusReviews } from '../components/Reviews'
@@ -293,6 +294,7 @@ export function BusPage({ token, signedIn, user, notify, navigate: goTo, openAut
       {!signedIn && <div className="signin-hint"><ShieldCheck size={15} /> {t('Bus search requires an account.')} <button onClick={openAuth}>{t('Sign in')}</button> {t('to find routes.')}</div>}
     </section>
     <ActiveTripPanel token={token} signedIn={signedIn} notify={notify} />
+    {!activeTrip && <ScanQrCard onOpen={() => goTo('Scan QR')} />}
     {searched?.mode === 'route' && trip && <TripSummary trip={trip} estimate={estimate} onRetry={() => loadEstimate(searched.from, searched.to)} />}
     {searched && <section className={`results-area${showMap ? ' results-with-map' : ''}`}>
       <div className="results-list">

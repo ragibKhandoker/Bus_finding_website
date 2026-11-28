@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { Radio, ArrowRight, BadgeCheck, Bell, BusFront, ChevronDown, CircleHelp, ClipboardList, CreditCard, Gift, Heart, Lightbulb, House, Languages, LayoutDashboard, LayoutGrid, Map as MapIcon, MessageCircle, Menu, PackageSearch, Route, Search, ShieldCheck, Ticket, UserPlus, Users, Wallet, X } from 'lucide-react'
+import { Radio, ArrowRight, BadgeCheck, Bell, BusFront, ChevronDown, CircleHelp, ClipboardList, CreditCard, Gift, Heart, Lightbulb, House, Languages, LayoutDashboard, LayoutGrid, Map as MapIcon, MessageCircle, Menu, PackageSearch, QrCode, Route, Search, ShieldCheck, Ticket, UserPlus, Users, Wallet, X } from 'lucide-react'
 import { MapPage } from './pages/MorePages'
 import { GpayPage } from './pages/Gpay'
 import { VerificationPage } from './pages/Verification'
@@ -30,6 +30,7 @@ import { BusDetailPage, BusRoutesPage } from './pages/BusRoutesPage'
 import { HomePage } from './pages/HomePage'
 import { BusPage } from './pages/BusPage'
 import { TripsPage } from './pages/TripsPage'
+import { ScanBoardPage } from './pages/ScanBoardPage'
 import { WalletPage } from './pages/WalletPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { AdminPage } from './pages/AdminPage'
@@ -96,14 +97,14 @@ const NAV_ITEMS = [['Home', House], ['Find a bus', Search], ['Bus routes', Route
 
 // The phone bottom tab bar: three groups, each opening its main page and lit while any of its pages is open.
 const APP_TABS = [
-  { label: 'Commute', icon: BusFront, target: 'Find a bus', pages: ['Find a bus', 'Bus routes', 'Bus details', 'Live tracking', 'Crowd reports', 'My crowd reports', 'Ride share', 'Ride details', 'My rides', 'Map', 'Favourites', 'Travel preferences', 'My trips'] },
+  { label: 'Commute', icon: BusFront, target: 'Find a bus', pages: ['Find a bus', 'Bus routes', 'Bus details', 'Live tracking', 'Crowd reports', 'My crowd reports', 'Ride share', 'Ride details', 'My rides', 'Map', 'Favourites', 'Travel preferences', 'My trips', 'Scan QR'] },
   { label: 'Payments', icon: Wallet, target: 'Wallet', pages: ['Wallet', 'GPay', 'Offers'] },
   { label: 'Community', icon: Users, target: 'Complaints', pages: ['Complaints', 'Route suggestions', 'Lost & found', 'Friends', 'Messages', 'Notifications', 'Verification'] },
 ]
 
 // The More menu, in sections. Driver and admin sections appear only for those accounts.
 const MORE_SECTIONS = (isDriver, isAdmin) => [
-  ['Commute', [['Live tracking', 'Live bus tracking', Radio], ['Crowd reports', 'Bus crowd & seats', Users], ['Map', 'Map & fare calculator', MapIcon], ['Favourites', 'Favourite buses', Heart], ['Travel preferences', 'Travel preferences', Route]]],
+  ['Commute', [['Scan QR', 'Scan bus QR code', QrCode], ['Live tracking', 'Live bus tracking', Radio], ['Crowd reports', 'Bus crowd & seats', Users], ['Map', 'Map & fare calculator', MapIcon], ['Favourites', 'Favourite buses', Heart], ['Travel preferences', 'Travel preferences', Route]]],
   ['People', [['Friends', 'Friends', UserPlus], ['Messages', 'Messages', MessageCircle], ['Notifications', 'Notifications', Bell]]],
   ['Payments & rewards', [['Wallet', 'My wallet', Wallet], ['GPay', 'GPay & recharge', CreditCard], ['Offers', 'Offers & rewards', Gift]]],
   ['Help', [['Lost & found', 'Lost & found', PackageSearch], ['Complaints', 'Complaint & Feedback', ClipboardList], ['Route suggestions', 'Suggest a route or stop', Lightbulb], ['Verification', 'Account verification', BadgeCheck], ['Support', 'Contact admin', CircleHelp]]],
@@ -315,7 +316,7 @@ export function App() {
               <Icon size={16} aria-hidden="true" className="nav-icon" /><span>{t(item)}</span></button>
           })}
           <div className="more-nav-wrap" ref={moreRef}>
-            <button className={['Friends', 'Messages', 'Notifications', 'Offers', 'Lost & found', 'Complaints', 'Travel preferences', 'Route suggestions', 'Crowd reports', 'My crowd reports', 'Map', 'Favourites', 'Wallet', 'GPay', 'Verification', 'Admin', 'Driver status', 'Driver verification', 'Driver application', 'Driver operations', 'Live tracking', ...DRIVER_CONSOLE_PAGES].includes(page) ? 'nav-link active' : 'nav-link'} aria-expanded={moreMenu} onClick={() => setMoreMenu(!moreMenu)}><LayoutGrid size={16} aria-hidden="true" className="nav-icon" /><span>{t('More')}</span> <ChevronDown size={13} className="nav-chevron" /></button>
+            <button className={['Friends', 'Messages', 'Notifications', 'Offers', 'Lost & found', 'Complaints', 'Travel preferences', 'Route suggestions', 'Scan QR', 'Crowd reports', 'My crowd reports', 'Map', 'Favourites', 'Wallet', 'GPay', 'Verification', 'Admin', 'Driver status', 'Driver verification', 'Driver application', 'Driver operations', 'Live tracking', ...DRIVER_CONSOLE_PAGES].includes(page) ? 'nav-link active' : 'nav-link'} aria-expanded={moreMenu} onClick={() => setMoreMenu(!moreMenu)}><LayoutGrid size={16} aria-hidden="true" className="nav-icon" /><span>{t('More')}</span> <ChevronDown size={13} className="nav-chevron" /></button>
             {moreMenu && <div className="more-nav-menu">{MORE_SECTIONS(isDriver, isAdmin).map(([heading, items]) => <div key={heading} className="more-nav-section">
               <small className="more-nav-heading">{t(heading)}</small>
               {items.map(([target, label, Icon]) => {
@@ -369,6 +370,7 @@ export function App() {
         {page === 'Ride share' && <RidePage token={token} user={user} signedIn={signedIn} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
         {page === 'Ride details' && <RideDetailsPage key={routeNumber} rideId={routeNumber} token={token} user={user} signedIn={signedIn} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
         {page === 'My rides' && <MyRidesPage token={token} user={user} signedIn={signedIn} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
+        {page === 'Scan QR' && <ScanBoardPage token={token} signedIn={signedIn} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
         {page === 'My trips' && <TripsPage token={token} signedIn={signedIn} notify={notify} navigate={navigate} openAuth={() => setAuthMode('login')} />}
         {page === 'Wallet' && <WalletPage token={token} signedIn={signedIn} openAuth={() => setAuthMode('login')} notify={notify} />}
         {page === 'Profile' && <ProfilePage user={user} token={token} signedIn={signedIn} navigate={navigate} updateUser={setUser} signOut={signOut} openAuth={() => setAuthMode('login')} notify={notify} />}
@@ -419,7 +421,7 @@ export function App() {
           </div>
           {/* On phones each group folds open like an app's settings list; on wider screens all groups are shown. */}
           {[
-            ['Commute', [['Find a bus', 'Find a bus', Search], ['Live tracking', 'Live bus tracking', Radio], ['Crowd reports', 'Bus crowd & seats', Users], ['Ride share', 'Ride share', Users], ['Map', 'Map & fare calculator', MapIcon], ['Favourites', 'Favourite buses', Heart], ['Travel preferences', 'Travel preferences', Route], ['My trips', 'My trips', Ticket]]],
+            ['Commute', [['Find a bus', 'Find a bus', Search], ['Scan QR', 'Scan bus QR code', QrCode], ['Live tracking', 'Live bus tracking', Radio], ['Crowd reports', 'Bus crowd & seats', Users], ['Ride share', 'Ride share', Users], ['Map', 'Map & fare calculator', MapIcon], ['Favourites', 'Favourite buses', Heart], ['Travel preferences', 'Travel preferences', Route], ['My trips', 'My trips', Ticket]]],
             ['Payments', [['Wallet', 'Travel wallet', Wallet], ['GPay', 'GPay & recharge', CreditCard], ['Offers', 'Offers & rewards', Gift]]],
             ['Community', [['Complaints', 'Complaint & Feedback', ClipboardList], ['Route suggestions', 'Suggest a route or stop', Lightbulb], ['Lost & found', 'Lost & found', PackageSearch], ['Friends', 'Friends', UserPlus], ['Messages', 'Messages', MessageCircle], ['Notifications', 'Notifications', Bell], ['Verification', 'Account verification', BadgeCheck]]],
           ].map(([heading, links]) => {

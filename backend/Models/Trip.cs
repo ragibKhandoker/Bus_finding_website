@@ -74,6 +74,17 @@ public class Trip
 
     // Every stop from boarding to getting off, in the order ridden.
     public List<string>? StopsRidden { get; set; }
+
+    // How the rider boarded: "manual" (picked the bus in the app) or "qr" (scanned the code inside the bus).
+    // Null on trips logged by hand and on trips from before this was saved.
+    [MaxLength(10)]
+    public string? BoardingMethod { get; set; }
+
+    // Where the phone was when boarding and when ending the trip, if the rider allowed location.
+    public double? BoardingLat { get; set; }
+    public double? BoardingLng { get; set; }
+    public double? EndLat { get; set; }
+    public double? EndLng { get; set; }
 }
 
 public class FareRecord

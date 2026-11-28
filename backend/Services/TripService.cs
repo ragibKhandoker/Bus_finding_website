@@ -13,6 +13,9 @@ public record TripResult(int Status, string Message, Trip? Trip = null, Wallet? 
     public bool Ok => Status is >= 200 and < 300;
 }
 
+// How a trip was started and where the phone was, when the rider shared it.
+public record BoardingDetails(string Method = BoardingMethods.Manual, double? Lat = null, double? Lng = null);
+
 // Boarding a bus and ending the trip. A rider has at most one active trip (also enforced by a unique index).
 // Ending a trip settles everything in one SaveChanges, which is one database transaction: the trip is completed,
 // the seat freed, the fare saved and the gems credited, or none of it happens.
@@ -103,7 +106,10 @@ public class TripService(AppDbContext db, BusRouteCache routes, WalletService wa
     public Task<Trip?> ActiveTripAsync(Guid userId) =>
         db.Trips.Include(t => t.IndividualBus).FirstOrDefaultAsync(t => t.UserId == userId && t.Status == TripStatus.Active);
 
-    public async Task<TripResult> BoardAsync(Guid userId, Guid vehicleId, string? boardingStop, string? destinationStop)
+    // A stop counts as "where you are" when the phone is within this distance of it.
+    public const double NearStopKm = 1.0;
+
+    public async Task<TripResult> BoardAsync(Guid userId, Guid vehicleId, string? boardingStop, string? destinationStop, BoardingDetails? details = null)
     {
         var vehicle = await db.IndividualBuses.FirstOrDefaultAsync(b => b.Id == vehicleId);
         if (vehicle is null)
@@ -159,6 +165,9 @@ public class TripService(AppDbContext db, BusRouteCache routes, WalletService wa
             Source = route.Stops[from].Name,
             Destination = destination,
             Status = TripStatus.Active,
+            BoardingMethod = details?.Method ?? BoardingMethods.Manual,
+            BoardingLat = ValidLat(details?.Lat, details?.Lng),
+            BoardingLng = ValidLat(details?.Lat, details?.Lng) is null ? null : details?.Lng,
         };
         Snapshot(trip, route, vehicle);
         db.Trips.Add(trip);
@@ -183,8 +192,21 @@ public class TripService(AppDbContext db, BusRouteCache routes, WalletService wa
         return new TripResult(StatusCodes.Status201Created, $"You boarded {route.BusName} at {trip.Source}.", trip);
     }
 
-    // source is only needed when the trip was started without a boarding stop.
-    public async Task<TripResult> EndAsync(Guid userId, Guid vehicleId, string? destinationStop, string? source = null)
+    // Ends the rider's active trip, whichever bus it is on (POST /trip/end). With no stop named, the stop nearest
+    // to the phone's location is used, if one on the route is close enough.
+    public async Task<TripResult> EndActiveAsync(Guid userId, string? destinationStop, double? lat, double? lng)
+    {
+        var active = await db.Trips.AsNoTracking().FirstOrDefaultAsync(t => t.UserId == userId && t.Status == TripStatus.Active);
+        if (active?.IndividualBusId is not { } vehicleId)
+        {
+            return new TripResult(StatusCodes.Status400BadRequest, "You do not have an active trip.");
+        }
+        return await EndAsync(userId, vehicleId, destinationStop, null, lat, lng);
+    }
+
+    // source is only needed when the trip was started without a boarding stop. lat/lng: where the phone is, used to
+    // pick the stop when none is named.
+    public async Task<TripResult> EndAsync(Guid userId, Guid vehicleId, string? destinationStop, string? source = null, double? lat = null, double? lng = null)
     {
         var trip = await db.Trips.Include(t => t.IndividualBus)
             .FirstOrDefaultAsync(t => t.UserId == userId && t.IndividualBusId == vehicleId && t.Status == TripStatus.Active);
@@ -206,7 +228,18 @@ public class TripService(AppDbContext db, BusRouteCache routes, WalletService wa
         {
             return new TripResult(StatusCodes.Status400BadRequest, "Choose the stop where you got on.");
         }
-        var target = string.IsNullOrWhiteSpace(destinationStop) ? trip.Destination : destinationStop;
+        var hasLocation = ValidLat(lat, lng) is not null;
+        var target = string.IsNullOrWhiteSpace(destinationStop) ? null : destinationStop;
+        if (target is null && hasLocation)
+        {
+            var near = NearestStop(route, lat!.Value, lng!.Value, i => CheckRide(route, from, i, route.Stops[i].Name) is null);
+            if (near is not { Km: <= NearStopKm })
+            {
+                return new TripResult(StatusCodes.Status400BadRequest, "No stop on this route is near you. Choose the stop where you got off.");
+            }
+            target = route.Stops[near.Value.Index].Name;
+        }
+        target ??= trip.Destination;
         if (string.IsNullOrWhiteSpace(target))
         {
             return new TripResult(StatusCodes.Status400BadRequest, "Choose the stop where you got off.");
@@ -227,6 +260,11 @@ public class TripService(AppDbContext db, BusRouteCache routes, WalletService wa
         trip.Status = TripStatus.Completed;
         trip.EndedAt = DateTime.UtcNow;
         trip.GemsEarned = gems;
+        if (hasLocation)
+        {
+            trip.EndLat = lat;
+            trip.EndLng = lng;
+        }
         Snapshot(trip, route, trip.IndividualBus);
         trip.StopsRidden = StopsBetween(route, from, to);
 
@@ -271,6 +309,29 @@ public class TripService(AppDbContext db, BusRouteCache routes, WalletService wa
             trip.BusCode = vehicle.BusCode;
         }
     }
+
+    // The route's stop closest to a point (among those allowed), with its distance in km; null if none is allowed.
+    public static (int Index, double Km)? NearestStop(BusViewModel route, double lat, double lng, Func<int, bool>? allowed = null)
+    {
+        (int Index, double Km)? best = null;
+        for (var i = 0; i < route.Stops.Count; i++)
+        {
+            if (allowed is not null && !allowed(i))
+            {
+                continue;
+            }
+            var km = GeoService.HaversineKm(lat, lng, route.Stops[i].Lat, route.Stops[i].Lng);
+            if (best is null || km < best.Value.Km)
+            {
+                best = (i, km);
+            }
+        }
+        return best;
+    }
+
+    // The latitude when lat/lng are a real point (not missing, not 0,0), else null.
+    public static double? ValidLat(double? lat, double? lng) =>
+        lat is >= -90 and <= 90 && lng is >= -180 and <= 180 && !(lat == 0 && lng == 0) ? lat : null;
 
     // The stops from one index to another inclusive, in the order ridden (backwards on a return journey).
     public static List<string> StopsBetween(BusViewModel route, int from, int to) => from <= to

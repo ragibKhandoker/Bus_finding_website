@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import { ArrowLeft, ArrowRight, BusFront, ChevronDown, Map as MapIcon, MapPin, Route, Search } from 'lucide-react'
 import { BusReviews } from '../components/Reviews'
 import { BusPhoto } from '../components/BusPhoto'
+import { BusQrManager } from '../components/BusQrManager'
 import { useFavoriteStatus } from '../../controllers/useFavorites'
 import { FavoriteButton } from './Favorites'
 import { canFavourite, favouriteApi } from '../../models/favorites'
@@ -170,6 +171,9 @@ export function BusDetailPage({ routeNumber, token, user, signedIn, notify, navi
       </ol>
       <p className="route-note">{t('Stop lists come from public listings and the locations are approximate.')}</p>
     </section>
+    {/* QR codes of this route's buses: only admins and drivers assigned to the route see them. */}
+    {signedIn && ['admin', 'driver'].includes(user?.role?.toLowerCase()) && <BusQrManager token={token} routeId={bus._id} notify={notify}
+      title={t('QR codes of {bus} buses', { bus: t(bus.busName) })} />}
     <section className="panel route-reviews"><BusReviews bus={bus} user={user} token={token} signedIn={signedIn} notify={notify} openAuth={openAuth} defaultOpen /></section>
   </div>
 }

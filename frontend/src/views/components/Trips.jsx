@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react'
-import { ArrowRight, BusFront, CheckCircle2, ChevronDown, Clock3, Gem, Lock, MapPin, Play, Receipt, Route, Square, Timer, X } from 'lucide-react'
+import { ArrowRight, BusFront, CheckCircle2, ChevronDown, Clock3, Gem, LocateFixed, Lock, MapPin, Play, QrCode, Receipt, Route, Square, Timer, X } from 'lucide-react'
 import { apiRequest as request } from '../../models/api'
 import { formatDate, formatNumber, formatTime, t } from '../../models/i18n'
 import { errorText } from '../../models/messages'
 import { announceTripChange, destinationsFrom, stopsOf } from '../../models/trips'
+import { NEAR_STOP_KM, currentPoint, nearestStop } from '../../models/busQr'
 import { formatClock, useActiveTrip, useElapsed } from '../../controllers/useTrips'
 import { SelectMenu } from './AuthModal'
 import { LiveRide } from './LiveRide'
@@ -44,16 +45,30 @@ export function ActiveTripPanel({ token, signedIn, notify, onCompleted }) {
   const [ending, setEnding] = useState(false)
   const [error, setError] = useState('')
   const [finished, setFinished] = useState(null) // { trip, wallet } of the trip just completed
+  const [locating, setLocating] = useState(false)
+  const [point, setPoint] = useState(null) // where the phone was when "Find my stop" was used, sent with End trip
 
   const stops = stopsOf(route)
   const choices = trip ? destinationsFrom(stops, trip.source, route?.runsBothWays) : []
   useEffect(() => { setDestination(trip?.destination || ''); setError('') }, [trip?._id, trip?.destination])
 
+  // "Find my stop": the stop you can get off at that is nearest to the phone, if one is within 1 km.
+  const findMyStop = async () => {
+    setLocating(true); setError('')
+    const here = await currentPoint(12_000, 0)
+    setLocating(false)
+    if (!here) { setError(t('Your location is not available. Allow location for this site, or choose the stop yourself.')); return }
+    const near = nearestStop(route?.stops, here, choices)
+    if (!near || near.km > NEAR_STOP_KM) { setError(t('No stop on this route is near you. Choose the stop where you got off.')); return }
+    setPoint(here)
+    setDestination(near.name)
+  }
+
   const end = async () => {
     if (!destination) { setError(t('Choose the stop where you got off.')); return }
     setEnding(true); setError('')
     try {
-      const data = await request(`/individual-bus/${encodeURIComponent(trip.individualBusId)}/end-trip`, { token, method: 'POST', body: JSON.stringify({ destination }) })
+      const data = await request(`/individual-bus/${encodeURIComponent(trip.individualBusId)}/end-trip`, { token, method: 'POST', body: JSON.stringify({ destination, ...(point ? { lat: point.lat, lng: point.lng } : {}) }) })
       // The ride is over: the live map switches off, so it does not start by itself on the next trip.
       try { sessionStorage.removeItem(`${PERSIST_PREFIX}trip:live-map`) } catch { /* storage blocked */ }
       setFinished({ trip: data.data, wallet: data.wallet })
@@ -102,7 +117,10 @@ export function ActiveTripPanel({ token, signedIn, notify, onCompleted }) {
       </div>}
       <LiveRide route={route} source={trip.source} destination={destination || trip.destination} />
       <div className="trip-panel-end">
-        <StopSelect label={t('Getting off at')} value={destination} stops={choices} onChange={setDestination} tone="end" />
+        <StopSelect label={t('Getting off at')} value={destination} stops={choices} onChange={(next) => { setDestination(next); setPoint(null) }} tone="end" />
+        <button type="button" className="button button-outline trip-locate" onClick={findMyStop} disabled={locating || ending} aria-busy={locating}>
+          {locating ? <><span className="button-spinner dark" aria-hidden="true" /> {t('Finding…')}</> : <><LocateFixed size={14} /> {t('Find my stop')}</>}
+        </button>
         <button type="button" className={`button button-dark${ending ? ' is-loading' : ''}`} onClick={end} disabled={ending} aria-busy={ending}>
           {ending ? <><span className="button-spinner" aria-hidden="true" /> {t('Ending trip…')}</> : <><Square size={14} /> {t('End trip')}</>}
         </button>
@@ -258,6 +276,7 @@ export function TripRow({ trip, onOpenRoute }) {
           {t(trip.busName || 'Public transit')}
           {trip.routeNumber && <span className="trip-chip">{trip.routeNumber}</span>}
           {trip.busCode && <span className="trip-chip is-code">{trip.busCode}</span>}
+          {trip.boardingMethod === 'qr' && <span className="trip-chip is-qr" title={t('Boarded by scanning the bus QR code')}><QrCode size={11} /> {t('QR')}</span>}
           <span className="trip-when">{formatDate(started)} · {formatTime(started)}</span>
           {duration && !active && <span className="trip-chip is-time"><Timer size={11} aria-hidden="true" /> {duration}</span>}
         </small>

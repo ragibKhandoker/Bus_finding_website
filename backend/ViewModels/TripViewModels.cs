@@ -33,6 +33,11 @@ public class TripViewModel : EntityViewModel
     public List<string> StopsRidden { get; init; } = [];
     public double? DurationMinutes { get; init; }
 
+    // "manual" or "qr"; null for trips logged by hand.
+    public string? BoardingMethod { get; init; }
+    public double? BoardingLat { get; init; }
+    public double? BoardingLng { get; init; }
+
     public static TripViewModel From(Trip t) => new()
     {
         Id = t.Id.ToString(),
@@ -56,6 +61,9 @@ public class TripViewModel : EntityViewModel
         BaseFare = t.BaseFare,
         PerKmFare = t.PerKmFare,
         StopsRidden = t.StopsRidden ?? [],
+        BoardingMethod = t.BoardingMethod,
+        BoardingLat = t.BoardingLat,
+        BoardingLng = t.BoardingLng,
         // Only for trips ridden (boarded, then ended); a trip logged by hand has no real start time.
         DurationMinutes = t.EndedAt is { } end && (t.IndividualBusId is not null || t.BusCode is not null) ? Math.Round(Math.Max(0, (end - t.CreatedAt).TotalMinutes), 1) : null,
     };
@@ -85,6 +93,10 @@ public class EndTripRequest
 
     [StringLength(100)]
     public string? Source { get; set; }
+
+    // Where the phone is; with no Destination, the nearest stop on the route is used.
+    [Range(-90, 90)] public double? Lat { get; set; }
+    [Range(-180, 180)] public double? Lng { get; set; }
 }
 
 public class AddTripRequest

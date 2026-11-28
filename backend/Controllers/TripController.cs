@@ -10,6 +10,29 @@ namespace SmartCommute.Server.Controllers;
 [Route("trip")]
 public class TripController(TripService trips, BusRouteCache routes) : ApiControllerBase
 {
+    // Boards the bus whose QR code the rider just scanned (POST /bus/verify-qr gave the one-time scanTicket). The bus
+    // comes from the ticket on the server, never from the request; the ticket works once.
+    [HttpPost("board-by-qr")]
+    public async Task<IActionResult> BoardByQr(BoardByQrRequest request, [FromServices] BusQrService qr)
+    {
+        var result = await qr.BoardAsync(CurrentUserId, request);
+        return result.Ok ? StatusCode(result.Status, TripResponses.Body(result)) : Error(result.Status, result.Message);
+    }
+
+    // Ends the rider's active trip, whichever bus it is on: at the stop named, or at the stop nearest to lat/lng.
+    // Saves the fare and distance, credits the gems once, then runs the reward engine as ending from the bus does.
+    [HttpPost("end")]
+    public async Task<IActionResult> End(EndActiveTripRequest request)
+    {
+        var result = await trips.EndActiveAsync(CurrentUserId, request.Destination, request.Lat, request.Lng);
+        TripRewardOutcome? outcome = null;
+        if (result.Ok && result.Trip is not null && HttpContext.RequestServices.GetService<RewardEngine>() is { } rewards)
+        {
+            outcome = await rewards.ProcessTripSafelyAsync(result.Trip.Id);
+        }
+        return result.Ok ? StatusCode(result.Status, TripResponses.Body(result, outcome)) : Error(result.Status, result.Message);
+    }
+
     // Logs a finished trip straight into history (no boarding, no gems). Gems are only earned by boarding a bus and
     // ending the trip, so a client cannot claim rewards for trips it made up.
     [HttpPost("add")]

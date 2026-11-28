@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { ArrowRight, ArrowUpRight, BusFront, Clock3, Gift, GraduationCap, History, Map as MapIcon, MessageCircle, Route, Search, ShieldCheck, Smartphone, UserRound, Users, Wallet } from 'lucide-react'
+import { ArrowRight, ArrowUpRight, BusFront, Clock3, Gift, GraduationCap, History, Map as MapIcon, MessageCircle, Route, Search, ShieldCheck, Smartphone, UserRound, Users, Wallet, QrCode } from 'lucide-react'
 import womenBusDriver from '../../assets/home/women-bus-driver.jpg'
 import womenBusFleet from '../../assets/home/women-bus-fleet.jpg'
 import cityBus from '../../assets/home/dhaka-nagar-paribahan-bus.jpg'
@@ -68,6 +68,7 @@ export function HomePage({ user, token, signedIn, navigate, openAuth }) {
               <button type="button" className={`button button-green hp-hero-cta${opening === 'Find a bus' ? ' is-loading' : ''}`} disabled={Boolean(opening)} aria-busy={opening === 'Find a bus'} onClick={() => openPage('Find a bus')}>{opening === 'Find a bus' ? <><span className="button-spinner" aria-hidden="true" /> {t('Opening…')}</> : <><Search size={18} /> {t('Find your bus')}</>}</button>
               <button type="button" className={`button button-outline hp-hero-secondary${opening === 'Bus routes' ? ' is-loading' : ''}`} disabled={Boolean(opening)} aria-busy={opening === 'Bus routes'} onClick={() => openPage('Bus routes')}>{opening === 'Bus routes' ? <><span className="button-spinner dark" aria-hidden="true" /> {t('Opening…')}</> : <><Route size={17} /> {t('Browse all routes')}</>}</button>
             </div>
+            <button type="button" className="hp-hero-scan" onClick={() => navigate('Scan QR')}><QrCode size={17} aria-hidden="true" /> <span>{t('On the bus? Scan its QR code to start your trip')}</span> <ArrowRight size={15} aria-hidden="true" /></button>
 
             <div className="hp-hero-stats">
               <span><b>{busStats.status === 'ready' ? formatNumber(busStats.routes) : '—'}</b><small>{t('Bus routes')}</small></span>

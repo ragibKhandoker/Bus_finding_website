@@ -77,6 +77,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<TravelPreference> TravelPreferences => Set<TravelPreference>();
     public DbSet<RouteSuggestion> RouteSuggestions => Set<RouteSuggestion>();
     public DbSet<RouteSuggestionStop> RouteSuggestionStops => Set<RouteSuggestionStop>();
+    public DbSet<BusQrCode> BusQrCodes => Set<BusQrCode>();
+    public DbSet<BusQrScan> BusQrScans => Set<BusQrScan>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder builder)
     {
@@ -226,6 +228,24 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             e.HasIndex(x => x.UserId).IsUnique().HasFilter("status = 'active'").HasDatabaseName("ix_trips_one_active_per_user");
             e.HasOne(x => x.IndividualBus).WithMany().HasForeignKey(x => x.IndividualBusId).OnDelete(DeleteBehavior.SetNull);
             e.Property(x => x.Version).IsRowVersion();
+        });
+
+        b.Entity<BusQrCode>(e =>
+        {
+            e.HasIndex(x => x.TokenHash).IsUnique();
+            // One active code per vehicle; the database enforces it even if two admins generate at once.
+            e.HasIndex(x => x.IndividualBusId).IsUnique().HasFilter("is_active").HasDatabaseName("ix_bus_qr_codes_one_active_per_bus");
+            e.HasOne(x => x.IndividualBus).WithMany().HasForeignKey(x => x.IndividualBusId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.CreatedBy).WithMany().HasForeignKey(x => x.CreatedById).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        b.Entity<BusQrScan>(e =>
+        {
+            e.HasIndex(x => x.TicketHash).IsUnique();
+            e.HasIndex(x => new { x.UserId, x.CreatedAt });
+            e.HasIndex(x => x.QrCodeId);
+            e.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            e.HasOne(x => x.QrCode).WithMany().HasForeignKey(x => x.QrCodeId).OnDelete(DeleteBehavior.Cascade);
         });
 
         b.Entity<FareRecord>(e =>

@@ -10,6 +10,7 @@ import { useTripActions } from '../components/driver/ops/TripActionModals'
 import { LiveLocationCard } from '../components/driver/ops/LiveLocationCard'
 import { driverRequests } from '../../models/driverRequests'
 import { useDriverData } from './driver/useDriverData'
+import { BusQrManager } from '../components/BusQrManager'
 
 // /driver/dashboard: everything a verified driver needs at a glance, from the database. Pending or rejected
 // drivers see their verification status instead (DriverLayout).
@@ -38,6 +39,10 @@ function DashboardBody({ token, navigate, notify }) {
     </section>}
 
     <LiveLocationCard token={token} notify={notify} refreshKey={d.activeTrip?.id || 'none'} />
+
+    {/* The QR code riders scan inside the driver's bus to board it. */}
+    {d.assignments.length > 0 && <BusQrManager token={token} notify={notify} title="My bus QR code"
+      description={t('Print this code and keep it where passengers can see it. Passengers scan it to board your bus.')} />}
 
     <div className="do-cards">
       <DashboardSummaryCard icon={BusFront} label="Assigned Bus" action={main ? 'View Bus Details' : undefined} onAction={() => navigate('Driver bus')}>

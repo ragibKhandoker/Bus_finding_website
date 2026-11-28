@@ -248,6 +248,7 @@ builder.Services.AddScoped<BusCrowdReportService>();
 builder.Services.AddScoped<GpayService>();
 builder.Services.AddScoped<WalletService>();
 builder.Services.AddScoped<TripService>();
+builder.Services.AddScoped<BusQrService>();
 builder.Services.AddScoped<FareService>();
 builder.Services.AddScoped<NotificationService>();
 builder.Services.AddScoped<ImageStorageService>();
