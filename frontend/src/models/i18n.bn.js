@@ -3400,4 +3400,8 @@ export default {
   'Suggestion updated. It is still waiting for review.': 'পরামর্শ হালনাগাদ হয়েছে। এটি এখনো যাচাইয়ের অপেক্ষায় আছে।',
   'Only suggestions that are still pending can be edited.': 'শুধু অপেক্ষমাণ পরামর্শই এডিট করা যায়।',
   'An admin reviewed this suggestion while you were editing it. Refresh to see the result.': 'আপনি এডিট করার সময় একজন অ্যাডমিন এটি যাচাই করেছেন। ফলাফল দেখতে রিফ্রেশ করুন।',
+  'Display': 'ডিসপ্লে',
+  'Photos': 'ছবি',
+  'Show photo {n} of {total}': '{total}টির মধ্যে {n} নম্বর ছবি দেখুন',
+  'Main sections': 'প্রধান অংশ',
 }

@@ -101,3 +101,48 @@ html[data-theme="dark"] .topbar .more-nav-menu,html[data-theme="night"] .topbar 
   .topbar .top-signup{display:none}
   .topbar .top-actions .button{height:38px;padding:0 12px;font-size:13px}
 }
+
+/* Small phones (Realme C25s and most Android phones are 360px wide): brand, menu, theme, language and Sign in must all
+   fit on one row. Everything steps down a size together; nothing is hidden that is not also in the menu. */
+@media(max-width:480px){
+  .topbar{gap:5px;padding:0 10px}
+  .topbar .brand{margin-right:0;gap:6px;min-width:0}
+  .topbar .brand-icon{width:34px;height:34px;border-radius:11px}
+  .topbar .brand>span:last-child{font-size:14px;letter-spacing:-.4px;white-space:nowrap}
+  .topbar .mobile-menu{width:36px;height:36px;border-radius:11px}
+  .topbar .top-actions{gap:4px;margin-left:0}
+  .topbar .theme-toggle,.topbar .lang-toggle{width:34px;height:34px;border-radius:10px}
+  .topbar .top-actions .button{height:34px;padding:0 11px;font-size:13px;border-radius:10px;white-space:nowrap}
+  .topbar .top-actions .button svg{display:none}
+  .topbar .profile-chip{height:36px}
+}
+/* The narrowest phones (320–340px): the bus icon alone is the home link. */
+@media(max-width:340px){
+  .topbar .brand>span:last-child{display:none}
+}
+
+/* Phones: the open menu is a solid sheet (the header's glass let the page text show through it) and scrolls on its
+   own when "More" makes it taller than the screen. The extra `html body` outranks aurora.css's theme rules. */
+@media(max-width:700px){
+  html body .topbar .nav-links.open{
+    background:var(--au-popup,var(--surface))!important;
+    -webkit-backdrop-filter:none!important;backdrop-filter:none!important;
+    max-height:calc(100dvh - 62px - 16px);overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  }
+  html body .topbar .nav-links.open .more-nav-menu{background:color-mix(in srgb,var(--ink) 5%,var(--au-popup,var(--surface)))!important}
+}
+
+/* Theme and language inside the phone menu ("Display"). Hidden everywhere else. */
+.topbar .nav-display{display:none}
+@media(max-width:600px){
+  /* The bar keeps brand, menu, Sign up and Sign in (or the profile when signed in). */
+  .topbar .top-actions>.theme-switch,.topbar .top-actions>.lang-toggle{display:none}
+  .topbar .top-actions .top-signup{display:inline-flex}
+  .topbar .nav-links.open .nav-display{display:grid;gap:8px;margin-top:6px;padding:10px 6px 4px;border-top:1px solid var(--nb-border)}
+  .topbar .nav-display .more-nav-heading{padding:0 6px}
+  .topbar .nav-display-themes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px;padding:4px;border-radius:12px;background:var(--nb-track)}
+  .topbar .nav-display-themes button,.topbar .nav-display-lang{display:inline-flex;align-items:center;justify-content:center;gap:6px;height:40px;border:0;border-radius:9px;
+    background:transparent;color:var(--muted);font:inherit;font-size:14px;font-weight:700;cursor:pointer}
+  .topbar .nav-display-themes button.selected{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(15,45,32,.12),inset 0 0 0 1px var(--nb-border)}
+  .topbar .nav-display-lang{justify-content:flex-start;padding:0 12px;border:1px solid var(--nb-border);background:var(--surface);color:var(--ink)}
+}

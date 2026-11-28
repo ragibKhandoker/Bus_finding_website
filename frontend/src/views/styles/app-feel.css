@@ -1,0 +1,67 @@
+/* Phones: scrolling that feels like a native app. Loaded after aurora.css.
+
+   1. The page backdrop (aurora.css body::before) is a fixed layer whose gradients are placed by percentage. On a phone
+      the browser's address bar slides in and out while scrolling, which resizes fixed layers, so the whole backdrop
+      kept stretching and shifting ("elastic"). Here it is sized to the largest viewport (lvh), which never changes, and
+      its drifting animation and blur are switched off (they also made scrolling heavy on phones).
+   2. Android's stretch-overscroll and pull-to-refresh pulled the page like rubber at the top and bottom; an app does
+      neither. */
+@media(max-width:760px){
+  html,body{overscroll-behavior-y:none}
+  body::before{
+    inset:auto!important;top:-6vmax!important;left:-6vmax!important;
+    width:calc(100vw + 12vmax)!important;height:calc(100lvh + 12vmax)!important;
+    animation:none!important;filter:none!important;will-change:auto!important;transform:none!important;
+  }
+  body::after{inset:auto!important;top:0!important;left:0!important;width:100vw!important;height:100lvh!important}
+  /* No grey/blue flash on tap, as in an app. */
+  html{-webkit-tap-highlight-color:transparent}
+}
+
+/* Phones: nothing moves or re-blurs while the page scrolls.
+   - Glass blur (header and cards) had to be recomputed every scroll frame; on phones it made frames drop and the page
+     judder. It is off here, and the light theme's glass is made nearly opaque so text stays clear without it.
+   - Cards and home-page sections no longer rise/fade in as they are scrolled to: they are simply there. */
+@media(max-width:760px){
+  :root{--au-blur:none}
+  html:not([data-theme="dark"]):not([data-theme="night"]){--au-glass:rgba(250,255,252,.9);--au-glass-strong:rgba(252,255,253,.95)}
+  .reveal-pending{opacity:1!important}
+  .reveal-in{animation:none!important}
+  .hp-motion :is(.hp-section,.hp-cta) :is(.hp-section-head,.hp-services>*,.hp-steps>*,.hp-tools>*,.hp-routes),
+  .hp-motion .hp-cta{opacity:1!important;animation:none!important}
+}
+
+/* Phones: a fixed bottom tab bar with three groups (Commute, Payments, Community), as in a mobile app. The footer's
+   long link lists are hidden there; its brand line and copyright stay. Wider screens have no tab bar. */
+.app-tabbar{display:none}
+@media(max-width:760px){
+  .app-tabbar{position:fixed;left:0;right:0;bottom:0;z-index:16;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));
+    padding:6px 10px calc(6px + env(safe-area-inset-bottom));background:var(--au-popup,var(--surface));
+    border-top:1px solid color-mix(in srgb,var(--ink) 10%,transparent);box-shadow:0 -10px 26px -18px rgba(15,45,32,.4)}
+  .app-tabbar button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;height:56px;padding:0;border:0;background:none;
+    color:var(--muted);font:inherit;font-size:12px;font-weight:700;cursor:pointer}
+  .app-tabbar-icon{display:grid;place-items:center;width:56px;height:30px;border-radius:999px;transition:background .15s ease,transform .12s ease}
+  .app-tabbar button.active{color:var(--green)}
+  .app-tabbar button.active .app-tabbar-icon{background:color-mix(in srgb,var(--green) 16%,transparent)}
+  .app-tabbar button:active .app-tabbar-icon{transform:scale(.92)}
+  /* Room under the page so the bar never covers its end, and toasts sit above the bar. */
+  body{padding-bottom:calc(68px + env(safe-area-inset-bottom))}
+  .toast{bottom:calc(84px + env(safe-area-inset-bottom))}
+  .site-footer .site-footer-col{display:none!important}
+}
+
+/* Phones: with the glass blur off, the sticky header must be solid or the page shows through it while scrolling. */
+@media(max-width:760px){
+  html body .topbar{background:var(--au-popup,var(--surface))!important}
+}
+
+/* Phones: the green page banner (cp-hero, used by Complaints and Travel preferences) kept its text as wide as the
+   one-line label above the heading (aurora.css gives labels width:max-content), so the heading and text ran past the
+   banner's edge and were cut off. The text column now stays inside the banner and the label may wrap. */
+@media(max-width:760px){
+  .cp-hero>div:first-child{flex:1 1 100%;min-width:0}
+  .cp-hero .cp-eyebrow{display:block!important;width:auto!important;max-width:100%;letter-spacing:.12em!important;line-height:1.45}
+  .cp-hero .cp-eyebrow::before{display:none!important}
+  .cp-hero h1{font-size:clamp(23px,7vw,27px);overflow-wrap:anywhere}
+  .cp-hero p{overflow-wrap:anywhere}
+}

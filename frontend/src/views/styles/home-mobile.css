@@ -89,3 +89,29 @@
   .hp-tools{grid-template-columns:1fr}
   .hp-photos .hp-photo{flex-basis:90%}
 }
+
+/* 340–380px phones (Realme C25s and most Androids are 360px): the two hero buttons stay side by side, one step
+   smaller so "Browse all routes" fits on one line. Outranks aurora.css's !important size for narrow phones. */
+@media(max-width:380px){
+  .home-page .hp-hero-actions{grid-template-columns:1fr 1fr;gap:8px}
+  .home-page .hp-hero-actions :is(.hp-hero-cta,.hp-hero-secondary){min-width:0;height:46px;font-size:13px!important;letter-spacing:-.01em;
+    padding-left:8px!important;padding-right:8px!important;gap:5px!important}
+  .home-page .hp-hero-actions :is(.hp-hero-cta,.hp-hero-secondary) svg{width:15px;height:15px;flex:none}
+}
+/* Only the very narrowest phones stack them. */
+@media(max-width:330px){.home-page .hp-hero-actions{grid-template-columns:1fr}}
+
+/* The phone photo row: dots under it show which picture is in view (tap one to go there), and a finger on a picture
+   always scrolls the row instead of picking the image up. Hidden on wider screens, where the photos are a collage. */
+.hp-photo-dots{display:none}
+@media(max-width:760px){
+  .hp-preview.hp-photos{touch-action:pan-x pan-y}
+  .hp-photos img{-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none}
+  .hp-photo-dots{display:flex;justify-content:center;align-items:center;gap:6px;margin-top:-10px}
+  .hp-photo-dots button{width:8px;height:8px;padding:0;border:0;border-radius:999px;background:color-mix(in srgb,var(--ink) 25%,transparent);
+    cursor:pointer;transition:width .2s ease,background .2s ease}
+  .hp-photo-dots button.active{width:22px;background:var(--green)}
+  /* A bigger touch area than the dot itself. */
+  .hp-photo-dots button{position:relative}
+  .hp-photo-dots button::after{content:"";position:absolute;inset:-10px -4px}
+}

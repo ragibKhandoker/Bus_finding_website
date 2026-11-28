@@ -38,6 +38,23 @@ export function HomePage({ user, token, signedIn, navigate, openAuth }) {
   const firstName = user?.name?.split(' ')[0]
   const pageRef = useRef(null)
   useScrollMotion(pageRef)
+  // The phone photo row: which picture is in view, and moving to one when its dot is tapped.
+  const photosRef = useRef(null)
+  const [activePhoto, setActivePhoto] = useState(0)
+  const photoOffset = (row, i) => {
+    const photo = row.children[i]
+    return photo ? photo.getBoundingClientRect().left - row.getBoundingClientRect().left + row.scrollLeft - (parseFloat(getComputedStyle(row).paddingLeft) || 0) : 0
+  }
+  const onPhotosScroll = () => {
+    const row = photosRef.current
+    if (!row) return
+    const distances = [...row.children].map((_, i) => Math.abs(photoOffset(row, i) - row.scrollLeft))
+    setActivePhoto(distances.indexOf(Math.min(...distances)))
+  }
+  const showPhoto = (i) => {
+    const row = photosRef.current
+    if (row) row.scrollTo({ left: photoOffset(row, i), behavior: 'smooth' })
+  }
   return (
     <div className="home-page" ref={pageRef}>
       <section className="hp-hero">
@@ -65,19 +82,26 @@ export function HomePage({ user, token, signedIn, navigate, openAuth }) {
             </ul>
           </div>
 
-          <div className="hp-preview hp-photos">
+          {/* On phones this is a swipeable row; draggable={false} keeps a finger on a photo scrolling the row instead
+              of starting an image drag. */}
+          <div className="hp-preview hp-photos" ref={photosRef} onScroll={onPhotosScroll}>
             <figure className="hp-photo hp-photo-fleet">
-              <img src={womenBusFleet} alt={t('A row of pink women-only double-decker buses')} width="857" height="482" decoding="async" fetchPriority="high" />
+              <img src={womenBusFleet} alt={t('A row of pink women-only double-decker buses')} width="857" height="482" decoding="async" fetchPriority="high" draggable={false} />
               <figcaption>{t('Women-only buses')}</figcaption>
             </figure>
             <figure className="hp-photo hp-photo-driver">
-              <img src={womenBusDriver} alt={t('A woman driver at the wheel of a pink bus')} width="960" height="540" decoding="async" />
+              <img src={womenBusDriver} alt={t('A woman driver at the wheel of a pink bus')} width="960" height="540" decoding="async" draggable={false} />
               <figcaption>{t('Women at the wheel')}</figcaption>
             </figure>
             <figure className="hp-photo hp-photo-city">
-              <img src={cityBus} alt={t('A green Dhaka Nagar Paribahan city bus on the road')} width="1111" height="630" decoding="async" />
+              <img src={cityBus} alt={t('A green Dhaka Nagar Paribahan city bus on the road')} width="1111" height="630" decoding="async" draggable={false} />
               <figcaption>{t('Dhaka Nagar Paribahan')}</figcaption>
             </figure>
+          </div>
+          {/* Phones only (home-mobile.css): which photo is showing, and a tap to go to another. */}
+          <div className="hp-photo-dots" role="group" aria-label={t('Photos')}>
+            {[0, 1, 2].map((i) => <button key={i} type="button" className={activePhoto === i ? 'active' : ''} aria-current={activePhoto === i ? 'true' : undefined}
+              aria-label={t('Show photo {n} of {total}', { n: i + 1, total: 3 })} onClick={() => showPhoto(i)} />)}
           </div>
         </div>
       </section>

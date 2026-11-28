@@ -25,7 +25,7 @@ import { formatNumber, getLang, setLang, t } from '../models/i18n'
 import { getTheme, setTheme, syncThemeColor } from '../models/theme'
 import { continueLastSession, endSession, forgetLastSession, loadSession, saveSessionUser, startSession } from '../models/session'
 import { ADMIN_FOCUS_KEY, NAVIGATE_EVENT, PAGE_LOADER_MS, PAGE_LOADER_NAMES, PAGE_PATHS, DRIVER_CONSOLE_PAGES, busPath, currentUrl, driverApplicationPath, driverTripPath, historyIndex, pageFromPath, paramFromPath, pushEntry, replaceEntry, ridePath } from '../controllers/router'
-import { ThemeMenu } from './components/common'
+import { THEME_OPTIONS, ThemeMenu } from './components/common'
 import { BusDetailPage, BusRoutesPage } from './pages/BusRoutesPage'
 import { HomePage } from './pages/HomePage'
 import { BusPage } from './pages/BusPage'
@@ -65,6 +65,8 @@ import './styles/motion.css'
 import './styles/aurora.css'
 // The sign-in dialog's text, kept plain and high-contrast over the glass theme.
 import './styles/auth-readable.css'
+// Phones: steady backdrop and no rubber-band overscroll, so scrolling feels like an app.
+import './styles/app-feel.css'
 
 export function PageLoader({ page }) {
   return (
@@ -90,6 +92,13 @@ const shortName = (name) => {
 
 // The main links, each with its icon.
 const NAV_ITEMS = [['Home', House], ['Find a bus', Search], ['Bus routes', Route], ['Ride share', Users], ['My trips', Ticket]]
+
+// The phone bottom tab bar: three groups, each opening its main page and lit while any of its pages is open.
+const APP_TABS = [
+  { label: 'Commute', icon: BusFront, target: 'Find a bus', pages: ['Find a bus', 'Bus routes', 'Bus details', 'Live tracking', 'Crowd reports', 'My crowd reports', 'Ride share', 'Ride details', 'My rides', 'Map', 'Favourites', 'Travel preferences', 'My trips'] },
+  { label: 'Payments', icon: Wallet, target: 'Wallet', pages: ['Wallet', 'GPay', 'Offers'] },
+  { label: 'Community', icon: Users, target: 'Complaints', pages: ['Complaints', 'Route suggestions', 'Lost & found', 'Friends', 'Messages', 'Notifications', 'Verification'] },
+]
 
 // The More menu, in sections. Driver and admin sections appear only for those accounts.
 const MORE_SECTIONS = (isDriver, isAdmin) => [
@@ -316,6 +325,16 @@ export function App() {
               })}
             </div>)}</div>}
           </div>
+          {/* Phones only (shown by navbar.css): theme and language live here, so the bar has room for Sign up and Sign in. */}
+          <div className="nav-display" role="group" aria-label={t('Display')}>
+            <small className="more-nav-heading">{t('Display')}</small>
+            <div className="nav-display-themes" role="radiogroup" aria-label={t('Theme')}>
+              {THEME_OPTIONS.map(({ value, icon: Icon, label }) => <button key={value} type="button" role="radio" aria-checked={theme === value}
+                className={theme === value ? 'selected' : ''} onClick={() => changeTheme(value)}><Icon size={15} aria-hidden="true" /> {t(label)}</button>)}
+            </div>
+            <button type="button" className="nav-display-lang" onClick={toggleLang}>
+              <Languages size={15} aria-hidden="true" /> {lang === 'bn' ? 'Switch to English' : 'বাংলায় দেখুন'}</button>
+          </div>
         </nav>
         <div className="top-actions">
           <ThemeMenu theme={theme} onChange={changeTheme} />
@@ -415,6 +434,15 @@ export function App() {
         </div>
         <div className="site-footer-bottom"><span>© {formatNumber(new Date().getFullYear(), { useGrouping: false })} {t('SmartCommute Dhaka')}</span><span>{t('Making every trip a little simpler.')}</span></div>
       </footer>
+      {/* Phones only (app-feel.css): a fixed bottom tab bar, as in a mobile app. Each tab opens its group's main page and
+          is highlighted while any page of that group is open. */}
+      <nav className="app-tabbar" aria-label={t('Main sections')}>
+        {APP_TABS.map(({ label, icon: Icon, target, pages }) => {
+          const current = pages.includes(page)
+          return <button key={label} type="button" className={current ? 'active' : ''} aria-current={current ? 'page' : undefined} onClick={() => navigate(target)}>
+            <span className="app-tabbar-icon"><Icon size={21} aria-hidden="true" /></span><span>{t(label)}</span></button>
+        })}
+      </nav>
       <Toaster toasts={toasts} onDismiss={dismissToast} onRemove={removeToast} />
       {isAdmin && <AdminAlert alert={adminAlert} onView={openAdminAlert} onClose={dismissAdminAlert} />}
       {authMode && <AuthModal mode={authMode} onMode={setAuthMode} onClose={() => setAuthMode('')} onContinue={continueAs}
