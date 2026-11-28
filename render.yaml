@@ -3,7 +3,7 @@
 # main. Fill in the values marked "sync: false" when Render asks (they are secrets and never stored in the repo).
 services:
   - type: web
-    name: smartcommute-api
+    name: smartcommute-dhaka-api
     runtime: docker
     rootDir: backend
     dockerfilePath: ./Dockerfile
