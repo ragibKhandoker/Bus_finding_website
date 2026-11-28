@@ -3423,4 +3423,5 @@ export default {
   'current password': 'বর্তমান পাসওয়ার্ড',
   'new password': 'নতুন পাসওয়ার্ড',
   'confirm password': 'নিশ্চিত পাসওয়ার্ড',
+  'A new version of SmartCommute is ready.': 'SmartCommute-এর নতুন সংস্করণ এসেছে।',
 }

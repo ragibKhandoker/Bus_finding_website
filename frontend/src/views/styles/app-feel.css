@@ -147,3 +147,11 @@
 @media(max-width:760px){
   .hp-hero::before,.cr-hero::before{display:none!important}
 }
+
+/* Sign-in role tabs: the icon never shrinks (on phones "Commuter" took its room and squeezed it to 0px), and on narrow
+   phones the label steps down a little so icon and label both fit. */
+.modal-backdrop .auth-modal .auth-tabs button svg{flex:none}
+@media(max-width:420px){
+  .modal-backdrop .auth-modal .auth-tabs{gap:3px}
+  .modal-backdrop .auth-modal .auth-tabs button{gap:5px;padding:0 4px;font-size:13.5px;min-width:0}
+}

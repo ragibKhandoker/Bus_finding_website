@@ -53,6 +53,7 @@ import { AdminDriverApplicationDetailsPage } from './pages/AdminDriverApplicatio
 import { AuthModal } from './components/AuthModal'
 import { PageErrorBoundary } from './components/PageErrorBoundary'
 import { Toaster, useToasts } from './components/Toaster'
+import { UpdateBanner } from './components/UpdateBanner'
 import { clearPersistentState } from '../controllers/usePersistentState'
 import { stopLiveShare } from '../models/liveLocation'
 import { captureReferralFromUrl } from '../models/promotions'
@@ -444,6 +445,7 @@ export function App() {
         })}
       </nav>
       <Toaster toasts={toasts} onDismiss={dismissToast} onRemove={removeToast} />
+      <UpdateBanner />
       {isAdmin && <AdminAlert alert={adminAlert} onView={openAdminAlert} onClose={dismissAdminAlert} />}
       {authMode && <AuthModal mode={authMode} onMode={setAuthMode} onClose={() => setAuthMode('')} onContinue={continueAs}
         onRegister={() => { setAuthMode(''); navigate('Register') }} onSuccess={(nextUser, nextToken, { admin = false, password = '' } = {}) => {
