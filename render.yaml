@@ -24,6 +24,13 @@ services:
         sync: false
       - key: Admin__Password
         sync: false
+      # Encrypts driver licence and NID numbers (base64 of 32 random bytes, made by Render). Keep it once drivers
+      # have registered: changing it makes the stored numbers unreadable.
+      - key: DriverVerification__EncryptionKey
+        generateValue: true
+      # Optional: Google Maps server key for road distances.
+      - key: GoogleMaps__ServerApiKey
+        sync: false
       # The deployed website's address, so the browser may call this API from it.
       - key: Cors__AllowedOrigins__0
         value: https://smartcommute-dhaka.vercel.app
