@@ -208,3 +208,15 @@
   .bus-result-side>small{align-self:baseline}
   html body .bus-result .bus-reviews{margin-left:0;flex:none;padding-top:10px}
 }
+
+/* Phones, community reviews (bus details page and bus cards): the reviews kept a 55px left indent meant to line up
+   with the card icon on desktop, so on a phone the box was pushed right and ran past the card edge. They now use the
+   card's full width, never grow past it, and the star row and "Post review" line wrap instead of overflowing. */
+@media(max-width:760px){
+  html body .bus-reviews{margin-left:0!important;flex:none!important;width:100%;min-width:0;max-width:100%;box-sizing:border-box}
+  .bus-reviews .review-content,.bus-reviews .review-content>*{min-width:0;max-width:100%;box-sizing:border-box}
+  .bus-reviews .review-content *{min-width:0}
+  .bus-reviews textarea{width:100%;box-sizing:border-box}
+  .bus-reviews .star-picker-label{white-space:nowrap}
+  .bus-reviews .extra-empty-copy{font-size:13.5px;color:var(--au-muted,inherit)}
+}
